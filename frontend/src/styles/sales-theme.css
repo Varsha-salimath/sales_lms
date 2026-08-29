@@ -1,0 +1,334 @@
+/* Infinity Learn Sales LMS — matches infinitylearn.com (solid blue, no glass) */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+
+:root {
+	--il-blue: #0075ff;
+	--il-blue-dark: #005fe0;
+	--il-blue-deep: #0047b3;
+	--il-yellow: #ffd000;
+	--il-ink: #12263f;
+	--il-muted: #5b6b82;
+	--il-paper: #f4f8ff;
+	--il-card: #ffffff;
+	--il-border: #d7e4f7;
+	--il-radius: 20px;
+	--il-radius-sm: 12px;
+	--il-shadow: 0 8px 24px rgba(0, 117, 255, 0.08);
+	--il-navy: #12263f;
+	--il-violet: #0075ff;
+	--il-magenta: #0075ff;
+	--il-gradient: #0075ff;
+
+	--genius-primary: #0075ff;
+	--genius-secondary: #005fe0;
+	--genius-cyan: #ffd000;
+	--genius-success: #16a34a;
+	--genius-bg: #f4f8ff;
+	--genius-card: #ffffff;
+	--genius-navy: #12263f;
+	--genius-ink: #12263f;
+	--genius-muted: #5b6b82;
+	--genius-border: #d7e4f7;
+	--genius-blue: #0075ff;
+	--genius-blue-dark: #005fe0;
+	--genius-blue-light: #e8f2ff;
+	--genius-red: #e11d48;
+	--genius-surface: #f4f8ff;
+	--genius-surface-elevated: #ffffff;
+	--genius-radius: 20px;
+	--genius-radius-sm: 12px;
+	--genius-shadow: 0 8px 24px rgba(0, 117, 255, 0.08);
+	--genius-shadow-hover: 0 12px 28px rgba(0, 117, 255, 0.14);
+	--genius-gradient: #0075ff;
+	--genius-gradient-soft: #e8f2ff;
+	--genius-hero-glow: none;
+}
+
+html,
+body,
+#app {
+	background: var(--il-paper) !important;
+	font-family: Poppins, 'Segoe UI', sans-serif;
+}
+
+.bg-genius-gradient,
+.genius-hero-surface,
+.sales-hero {
+	background: var(--il-blue) !important;
+	position: relative;
+	overflow: hidden;
+}
+
+.genius-hero-surface::before,
+.sales-hero::before,
+.sales-hero::after {
+	display: none;
+}
+
+.genius-card,
+.sales-card {
+	background: var(--il-card);
+	border: 1px solid var(--il-border);
+	border-radius: var(--il-radius);
+	box-shadow: var(--genius-shadow);
+}
+
+.genius-card-hover,
+.sales-card-hover {
+	transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.genius-card-hover:hover,
+.sales-card-hover:hover {
+	transform: translateY(-2px);
+	box-shadow: var(--genius-shadow-hover);
+	border-color: #9cc4ff;
+}
+
+.genius-fade-up,
+.sales-fade-up {
+	animation: salesFadeUp 0.5s ease-out both;
+}
+
+.genius-fade-up-delay,
+.sales-fade-up-delay {
+	animation: salesFadeUp 0.5s ease-out 0.08s both;
+}
+
+.sales-chip {
+	display: inline-flex;
+	align-items: center;
+	border-radius: 999px;
+	padding: 0.2rem 0.7rem;
+	font-size: 0.72rem;
+	font-weight: 650;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	background: #e8f2ff;
+	color: var(--il-blue);
+}
+
+.sales-chip-assessment {
+	background: #fff6cc;
+	color: #9a7b00;
+}
+
+.sales-chip-activity,
+.sales-chip-calling {
+	background: #e8f2ff;
+	color: var(--il-blue-dark);
+}
+
+.sales-chip-break,
+.sales-chip-lunch {
+	background: #eef2f7;
+	color: #5b6b82;
+}
+
+.il-btn-white {
+	background: #fff;
+	color: var(--il-blue);
+	border-radius: 999px;
+	font-weight: 700;
+}
+
+.il-btn-blue {
+	background: var(--il-blue);
+	color: #fff;
+	border-radius: 999px;
+	font-weight: 700;
+}
+
+@keyframes salesFadeUp {
+	from {
+		opacity: 0;
+		transform: translateY(12px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+button.bg-surface-gray-7,
+.bg-surface-gray-7 {
+	background-color: var(--il-blue) !important;
+	color: #ffffff !important;
+}
+
+button.bg-surface-gray-7:hover,
+.bg-surface-gray-7:hover {
+	background-color: var(--il-blue-dark) !important;
+}
+
+.text-ink-gray-9 {
+	color: var(--il-ink) !important;
+}
+
+.bg-surface-blue-2 {
+	background-color: var(--genius-blue-light) !important;
+	color: var(--il-ink) !important;
+}
+
+.bg-surface-blue-3 {
+	background-color: var(--il-blue) !important;
+	color: #ffffff !important;
+}
+
+[role='progressbar'] > div,
+.progress-bar-fill {
+	background: var(--il-blue) !important;
+}
+
+.bg-surface-cards {
+	background: var(--il-card) !important;
+	border-radius: var(--il-radius) !important;
+	box-shadow: var(--genius-shadow);
+}
+
+.sales-step {
+	display: flex;
+	min-width: 108px;
+	flex: 1;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.15rem;
+	border: 1px solid var(--il-border);
+	border-radius: 16px;
+	background: #fff;
+	padding: 0.7rem 0.8rem;
+	text-align: left;
+}
+
+.sales-step-num {
+	font-size: 0.72rem;
+	font-weight: 700;
+	color: var(--il-blue);
+}
+
+.sales-step-label {
+	font-size: 0.85rem;
+	font-weight: 650;
+	color: var(--il-ink);
+}
+
+.sales-step-state {
+	font-size: 0.68rem;
+	color: var(--il-muted);
+}
+
+.sales-step.completed {
+	border-color: #86efac;
+	background: #f0fdf4;
+}
+
+.sales-step.in_progress,
+.sales-step.available {
+	border-color: #9cc4ff;
+	background: #e8f2ff;
+}
+
+.sales-step.locked,
+.sales-step.empty {
+	opacity: 0.55;
+}
+
+.sales-sim-panel {
+	display: flex;
+	min-height: 640px;
+	flex-direction: column;
+	border-radius: 28px;
+	background: linear-gradient(180deg, #005fe0 0%, #003a8c 100%);
+	padding: 1.4rem 1.1rem 1.1rem;
+}
+
+.sales-sim-orb {
+	width: 92px;
+	height: 92px;
+	margin: 0.4rem auto 0;
+	border-radius: 999px;
+	background: radial-gradient(circle at 35% 30%, #fff 0%, #ffd000 38%, #0075ff 100%);
+	box-shadow: 0 0 0 8px rgba(255, 255, 255, 0.12);
+}
+
+.sales-sim-orb.live {
+	animation: salesOrbPulse 2.2s ease-in-out infinite;
+}
+
+.sales-sim-orb.speaking {
+	animation: salesOrbSpeak 0.45s ease-in-out infinite;
+}
+
+.sales-sim-thread {
+	flex: 1;
+	margin-top: 1rem;
+	overflow-y: auto;
+	padding-right: 0.2rem;
+}
+
+.sales-sim-bubble {
+	max-width: 90%;
+	margin-bottom: 0.65rem;
+	border-radius: 16px;
+	padding: 0.65rem 0.8rem;
+	font-size: 0.85rem;
+	line-height: 1.45;
+}
+
+.sales-sim-bubble.customer,
+.sales-sim-bubble.system {
+	background: rgba(255, 255, 255, 0.12);
+	color: #fff;
+}
+
+.sales-sim-bubble.learner {
+	margin-left: auto;
+	background: #ffd000;
+	color: #12263f;
+}
+
+.sales-sim-composer {
+	display: flex;
+	gap: 0.5rem;
+	margin-top: 0.75rem;
+}
+
+.sales-sim-input {
+	flex: 1;
+	border: 0;
+	border-radius: 999px;
+	padding: 0.7rem 1rem;
+	font-size: 0.85rem;
+}
+
+.sales-sim-send {
+	border: 0;
+	border-radius: 999px;
+	background: #ffd000;
+	color: #12263f;
+	padding: 0.7rem 1rem;
+	font-size: 0.8rem;
+	font-weight: 700;
+}
+
+@keyframes salesOrbPulse {
+	0%,
+	100% {
+		transform: scale(1);
+		box-shadow: 0 0 0 8px rgba(255, 255, 255, 0.12);
+	}
+	50% {
+		transform: scale(1.06);
+		box-shadow: 0 0 0 14px rgba(255, 208, 0, 0.18);
+	}
+}
+
+@keyframes salesOrbSpeak {
+	0%,
+	100% {
+		transform: scale(1);
+	}
+	50% {
+		transform: scale(1.12);
+	}
+}

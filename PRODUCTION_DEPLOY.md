@@ -1,0 +1,242 @@
+# Sales LMS — Production deploy
+
+| Item | Value |
+|------|--------|
+| Bitbucket repo | `<SALES_LMS_BITBUCKET_URL>` |
+| Branch | `main` |
+| Prod domain | `saleslms.infinitylearn.com` |
+| Site name (`SITE_NAME`) | `saleslms.infinitylearn.com` |
+| VM path | `<VM_PATH>` e.g. `/var/www/sales-lms/sales_lms` |
+| Database (`DB_NAME` / `DB_USER`) | `salesapp` |
+| Cloud SQL host | `<DB_HOST>` (private IP) |
+| App port | **8080** (LB → VM `:8080`) |
+| Redis | Compose only — `REDIS_HOST=redis`, `REDIS_PORT=6379`, `REDIS_USERNAME=` empty |
+| Login | `Administrator` / `ADMIN_PASSWORD` from `.env` |
+
+**Never commit** `.env`.
+
+---
+
+## Before you start
+
+- VM: Docker Engine + Compose v2, Git access to Bitbucket, outbound Cloud SQL `:5432` and SMTP `:587`.
+- Prod `.env`: `COMPOSE_PROFILES=` (empty — no embedded Postgres).
+- `SITE_NAME` ≠ `DB_NAME` (site = domain, db = `salesapp`).
+- `DB_ROOT_USERNAME` ≠ `salesapp` (use `postgres` or another privileged Cloud SQL user).
+- Do **not** use Redis Cloud (Frappe 16 CLIENT TRACKING breaks).
+- SMTP required — compose/entrypoint fail without `SMTP_*` and `DEFAULT_SENDER`.
+- Docker deploy does **not** copy local course DB state — import CRT Excel after boot.
+- Before build: `data/` should contain `CRT-Schedule.xlsx` only — delete `data/_audit_dump.json` and `data/_sched_rest.txt` if present.
+
+Prod `.env` minimum:
+
+```env
+COMPOSE_PROFILES=
+APP_PORT=8080
+SITE_NAME=saleslms.infinitylearn.com
+HOST_NAME=https://saleslms.infinitylearn.com
+ADMIN_PASSWORD=<strong-secret>
+
+DB_TYPE=postgres
+DB_HOST=<cloud-sql-private-ip>
+DB_PORT=5432
+DB_NAME=salesapp
+DB_USER=salesapp
+DB_PASSWORD=<salesapp-password>
+DB_ROOT_USERNAME=postgres
+DB_ROOT_PASSWORD=<privileged-user-password>
+
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_USERNAME=
+REDIS_PASSWORD=<redis-password>
+
+SMTP_HOST=<smtp-host>
+SMTP_PORT=587
+SMTP_USER=<smtp-user>
+SMTP_PASSWORD=<smtp-password>
+SMTP_TLS=1
+SMTP_SSL=0
+DEFAULT_SENDER=donotreply@wizklub.com
+DEFAULT_SENDER_NAME=Sales LMS
+
+UPSTREAM_REAL_IP_ADDRESS=<lb-cidr-or-ip>
+UPSTREAM_REAL_IP_HEADER=X-Forwarded-For
+UPSTREAM_REAL_IP_RECURSIVE=on
+```
+
+---
+
+## Commands (run in order)
+
+### 0. Prerequisites (on Sales VM)
+
+```bash
+nc -vz <DB_HOST> 5432
+nc -vz <SMTP_HOST> 587
+docker ps   # confirm no old genius/sales stacks conflicting on :8080
+```
+
+### 1. Get code
+
+```bash
+git clone <SALES_LMS_BITBUCKET_URL>
+cd <repo-folder>    # e.g. sales_lms under <VM_PATH>
+git checkout main
+git pull origin main
+```
+
+### 2. Create prod `.env`
+
+```bash
+cp .env.example .env
+chmod 600 .env
+# Edit .env — prod values above. COMPOSE_PROFILES must be empty.
+```
+
+### 3. Build images (backend first)
+
+```bash
+docker compose --env-file .env build backend
+docker compose --env-file .env build frontend
+```
+
+### 4. Start stack
+
+```bash
+docker compose --env-file .env up -d
+docker compose --env-file .env ps
+```
+
+Expected containers:
+
+| Container | Role |
+|-----------|------|
+| `sales_lms_frontend` | nginx — **only** host port `0.0.0.0:8080→8080` |
+| `sales_lms_backend` | Frappe + worker + schedule + socketio |
+| `sales_lms_redis` | Compose Redis (internal) |
+| **No** `sales_lms_db` | Prod uses Cloud SQL only |
+
+Watch bootstrap:
+
+```bash
+docker compose --env-file .env logs -f backend
+```
+
+Wait until site is created and workers are running (Ctrl+C to exit logs).
+
+### 5. VM smoke checks (before LB cutover)
+
+```bash
+curl -fsS http://127.0.0.1:8080/api/method/ping
+# expect: {"message":"pong"}
+
+curl -fsSI http://127.0.0.1:8080/lms
+# expect: HTTP 200, Server nginx, Sales LMS HTML
+
+curl -fsSI http://127.0.0.1:8080/lms/dashboard
+# expect: 200 or redirect to login — NOT foreign JSON / uvicorn 403
+```
+
+**FAIL** if `server: uvicorn` or `Invalid authorization code`.
+
+### 6. Public smoke checks (after LB → this VM `:8080`)
+
+```bash
+curl -fsS https://saleslms.infinitylearn.com/api/method/ping
+curl -fsSI https://saleslms.infinitylearn.com/lms
+```
+
+**FAIL** if response shows `server: uvicorn` or auth-gateway JSON errors.
+
+### 7. Import CRT schedule (required)
+
+```bash
+docker compose --env-file .env exec -w /home/frappe/frappe-bench backend \
+  bench --site saleslms.infinitylearn.com execute lms.lms.sales_crt.preview_import --kwargs "{'use_bundled': 1}"
+
+docker compose --env-file .env exec -w /home/frappe/frappe-bench backend \
+  bench --site saleslms.infinitylearn.com execute lms.lms.sales_crt.import_schedule --kwargs "{'use_bundled': 1}"
+```
+
+Or upload a newer workbook at `/lms/crt/import` (dry-run first).
+
+### 8. App smoke (browser)
+
+1. Open `https://saleslms.infinitylearn.com/lms`
+2. Login: `Administrator` / `ADMIN_PASSWORD`
+3. Desk → Learning workspace loads
+4. Sales CRT course and `/lms/crt` show Day 1 … Day N
+5. Desk → Email Account exists (SMTP bootstrap)
+
+### 9. Security hardening (required for prod)
+
+Run **after** step 8. Use strong `ADMIN_PASSWORD` in `.env` **before** first boot (step 4).
+
+```bash
+docker compose --env-file .env exec -w /home/frappe/frappe-bench backend \
+  bench --site saleslms.infinitylearn.com set-config developer_mode 0
+
+docker compose --env-file .env exec -w /home/frappe/frappe-bench backend \
+  bench --site saleslms.infinitylearn.com execute frappe.db.set_single_value \
+  --args '["LMS Settings", "allow_guest_access", 0]'
+
+docker compose --env-file .env exec -w /home/frappe/frappe-bench backend \
+  bench --site saleslms.infinitylearn.com execute frappe.db.set_single_value \
+  --args '["LMS Settings", "disable_signup", 1]'
+
+docker compose --env-file .env exec -w /home/frappe/frappe-bench backend \
+  bench --site saleslms.infinitylearn.com clear-cache
+```
+
+Do **not** run `ensure_demo_learner` on prod.
+
+### 10. Backup
+
+```bash
+docker volume ls | grep sales
+```
+
+| What | Where |
+|------|--------|
+| Site files | Docker volume `sales_sites` |
+| App data | Cloud SQL database `salesapp` |
+| Redis | Volume `sales_redis_data` (cache only) |
+
+---
+
+## Later updates
+
+```bash
+cd <VM_PATH>/sales_lms
+git pull origin main
+
+docker compose --env-file .env build backend
+docker compose --env-file .env build frontend
+docker compose --env-file .env up -d
+
+curl -fsS http://127.0.0.1:8080/api/method/ping
+```
+
+Re-run step **7** only when the CRT Excel workbook changed.
+
+---
+
+## Ops commands
+
+```bash
+docker compose --env-file .env ps
+docker compose --env-file .env logs -f backend
+docker compose --env-file .env logs -f frontend
+docker compose --env-file .env restart backend
+docker compose --env-file .env exec backend bash
+
+docker compose --env-file .env exec -w /home/frappe/frappe-bench backend \
+  bench --site saleslms.infinitylearn.com console
+```
+
+---
+
+## Day-0 cutover order (one line)
+
+VM prep → clone → `.env` → build backend → build frontend → `up -d` → local `ping` + `/lms` → LB to `:8080` → public verify → CRT Excel import → login test → security hardening (step 9).

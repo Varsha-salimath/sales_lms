@@ -1,0 +1,191 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-06-10 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "batch",
+  "gmail_account",
+  "drive_file_id",
+  "column_break_meta",
+  "title",
+  "recording_date",
+  "recording_time",
+  "section_break_media",
+  "duration_minutes",
+  "file_size_mb",
+  "session_number",
+  "column_break_links",
+  "watch_url",
+  "thumbnail_url",
+  "section_break_status",
+  "synced_at",
+  "is_archived",
+  "is_unavailable"
+ ],
+ "fields": [
+  {
+   "fieldname": "batch",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Batch",
+   "options": "LMS Batch"
+  },
+  {
+   "fieldname": "gmail_account",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Gmail Account"
+  },
+  {
+   "fieldname": "drive_file_id",
+   "fieldtype": "Data",
+   "label": "Drive File ID",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "column_break_meta",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "fieldname": "recording_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Recording Date"
+  },
+  {
+   "fieldname": "recording_time",
+   "fieldtype": "Time",
+   "label": "Recording Time"
+  },
+  {
+   "fieldname": "section_break_media",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "duration_minutes",
+   "fieldtype": "Int",
+   "label": "Duration (Minutes)"
+  },
+  {
+   "fieldname": "file_size_mb",
+   "fieldtype": "Float",
+   "label": "File Size (MB)",
+   "precision": "2"
+  },
+  {
+   "fieldname": "session_number",
+   "fieldtype": "Int",
+   "label": "Session Number"
+  },
+  {
+   "fieldname": "column_break_links",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "watch_url",
+   "fieldtype": "Small Text",
+   "label": "Watch URL"
+  },
+  {
+   "fieldname": "thumbnail_url",
+   "fieldtype": "Small Text",
+   "label": "Thumbnail URL"
+  },
+  {
+   "fieldname": "section_break_status",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "synced_at",
+   "fieldtype": "Datetime",
+   "label": "Synced At"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_archived",
+   "fieldtype": "Check",
+   "label": "Is Archived"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_unavailable",
+   "fieldtype": "Check",
+   "label": "Is Unavailable"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-10 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "LMS",
+ "name": "LMS Recording",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Moderator",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Course Creator",
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Batch Evaluator",
+   "share": 1
+  },
+  {
+   "read": 1,
+   "role": "LMS Student"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "recording_date",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title",
+ "track_changes": 1
+}

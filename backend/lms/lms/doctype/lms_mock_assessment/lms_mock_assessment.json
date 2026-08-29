@@ -1,0 +1,281 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-06-03 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "batch",
+  "member",
+  "column_break_links",
+  "status",
+  "section_break_general",
+  "instructor_name",
+  "mock_date",
+  "batch_brand",
+  "grade_observed",
+  "column_break_general_2",
+  "evaluator_name",
+  "duration_minutes",
+  "topic_observed",
+  "assessment_type",
+  "column_break_general_3",
+  "attendance_percent",
+  "assessment_score_percent",
+  "section_break_evaluation",
+  "evaluation_sections",
+  "section_break_overall",
+  "overall_rating",
+  "strengths",
+  "areas_of_improvement",
+  "column_break_flags",
+  "needs_mentorship",
+  "remock_needed",
+  "needs_retraining",
+  "section_break_attachment",
+  "attachment",
+  "published_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Mock Title",
+   "reqd": 1
+  },
+  {
+   "fieldname": "batch",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Batch",
+   "options": "LMS Batch",
+   "reqd": 1
+  },
+  {
+   "fieldname": "member",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Member",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_links",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Draft\nPublished"
+  },
+  {
+   "fieldname": "section_break_general",
+   "fieldtype": "Section Break",
+   "label": "General Details"
+  },
+  {
+   "fieldname": "instructor_name",
+   "fieldtype": "Data",
+   "label": "Instructor Name"
+  },
+  {
+   "fieldname": "mock_date",
+   "fieldtype": "Date",
+   "label": "Date of Mock"
+  },
+  {
+   "fieldname": "batch_brand",
+   "fieldtype": "Data",
+   "label": "Batch / School Brand"
+  },
+  {
+   "fieldname": "grade_observed",
+   "fieldtype": "Select",
+   "label": "Grade Observed",
+   "options": "Grade 1\nGrade 2\nGrade 3\nGrade 4\nGrade 5\nGrade 6\nGrade 7\nGrade 8\nGrade 9"
+  },
+  {
+   "fieldname": "column_break_general_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "evaluator_name",
+   "fieldtype": "Data",
+   "label": "Evaluator Name"
+  },
+  {
+   "fieldname": "duration_minutes",
+   "fieldtype": "Select",
+   "label": "Duration of Mock (minutes)",
+   "options": "15\n30\n45\n60"
+  },
+  {
+   "fieldname": "topic_observed",
+   "fieldtype": "Data",
+   "label": "Topic Observed"
+  },
+  {
+   "fieldname": "assessment_type",
+   "fieldtype": "Select",
+   "label": "Type of Assessment",
+   "options": "Mock\nVIVA\nDemo"
+  },
+  {
+   "fieldname": "column_break_general_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "attendance_percent",
+   "fieldtype": "Float",
+   "label": "Attendance Percentage"
+  },
+  {
+   "fieldname": "assessment_score_percent",
+   "fieldtype": "Float",
+   "label": "Assessment Score (%)"
+  },
+  {
+   "fieldname": "section_break_evaluation",
+   "fieldtype": "Section Break",
+   "label": "Evaluation Sections"
+  },
+  {
+   "fieldname": "evaluation_sections",
+   "fieldtype": "JSON",
+   "label": "Evaluation Sections"
+  },
+  {
+   "fieldname": "section_break_overall",
+   "fieldtype": "Section Break",
+   "label": "Overall Observation"
+  },
+  {
+   "fieldname": "overall_rating",
+   "fieldtype": "Int",
+   "label": "Overall Rating (1-5)"
+  },
+  {
+   "fieldname": "strengths",
+   "fieldtype": "Small Text",
+   "label": "Strengths Identified"
+  },
+  {
+   "fieldname": "areas_of_improvement",
+   "fieldtype": "Small Text",
+   "label": "Areas of Improvement"
+  },
+  {
+   "fieldname": "column_break_flags",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "needs_mentorship",
+   "fieldtype": "Check",
+   "label": "Needs 1:1 Mentorship"
+  },
+  {
+   "default": "0",
+   "fieldname": "remock_needed",
+   "fieldtype": "Check",
+   "label": "Re-mock Needed"
+  },
+  {
+   "default": "0",
+   "fieldname": "needs_retraining",
+   "fieldtype": "Check",
+   "label": "Needs Retraining"
+  },
+  {
+   "fieldname": "section_break_attachment",
+   "fieldtype": "Section Break",
+   "label": "Attachment"
+  },
+  {
+   "fieldname": "attachment",
+   "fieldtype": "Attach",
+   "label": "Attachment"
+  },
+  {
+   "fieldname": "published_on",
+   "fieldtype": "Datetime",
+   "label": "Published On",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-03 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "LMS",
+ "name": "LMS Mock Assessment",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Moderator",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Course Creator",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Batch Evaluator",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "LMS Student"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title"
+}

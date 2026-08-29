@@ -1,0 +1,50 @@
+{
+ "actions": [],
+ "autoname": "field:scenario_key",
+ "creation": "2026-08-29 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "scenario_key",
+  "title",
+  "enabled",
+  "sort_order",
+  "source_crt",
+  "customer_name",
+  "customer_role",
+  "column_break_1",
+  "objective",
+  "context",
+  "instructions",
+  "script_json"
+ ],
+ "fields": [
+  { "fieldname": "scenario_key", "fieldtype": "Data", "in_list_view": 1, "label": "Key", "reqd": 1, "unique": 1 },
+  { "fieldname": "title", "fieldtype": "Data", "in_list_view": 1, "label": "Title", "reqd": 1 },
+  { "default": "1", "fieldname": "enabled", "fieldtype": "Check", "label": "Enabled" },
+  { "default": "1", "fieldname": "sort_order", "fieldtype": "Int", "label": "Sort" },
+  { "fieldname": "source_crt", "fieldtype": "Data", "label": "Source CRT" },
+  { "fieldname": "customer_name", "fieldtype": "Data", "label": "Customer Name" },
+  { "fieldname": "customer_role", "fieldtype": "Data", "label": "Customer Role" },
+  { "fieldname": "column_break_1", "fieldtype": "Column Break" },
+  { "fieldname": "objective", "fieldtype": "Small Text", "label": "Objective" },
+  { "fieldname": "context", "fieldtype": "Text", "label": "Context" },
+  { "fieldname": "instructions", "fieldtype": "Text", "label": "Instructions" },
+  { "fieldname": "script_json", "fieldtype": "Long Text", "label": "Script JSON" }
+ ],
+ "links": [],
+ "modified": "2026-08-29 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "LMS",
+ "name": "Sales OJT Scenario",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  { "create": 1, "delete": 1, "read": 1, "role": "System Manager", "write": 1 },
+  { "create": 1, "delete": 1, "read": 1, "role": "Moderator", "write": 1 },
+  { "read": 1, "role": "LMS Student" }
+ ],
+ "sort_field": "sort_order",
+ "sort_order": "ASC",
+ "title_field": "title"
+}

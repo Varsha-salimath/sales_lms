@@ -1,0 +1,233 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "hash",
+ "creation": "2026-08-14 16:30:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "learner",
+  "learner_name",
+  "learner_email",
+  "course",
+  "course_title",
+  "column_break_meta",
+  "school_name",
+  "submitted_on",
+  "ratings_section",
+  "overall_rating",
+  "trainer_rating",
+  "column_break_ratings",
+  "relevance",
+  "understanding",
+  "valuable_topic",
+  "confidence",
+  "followability",
+  "future_training",
+  "recommendation",
+  "comments_section",
+  "takeaway",
+  "suggestions"
+ ],
+ "fields": [
+  {
+   "fieldname": "learner",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Learner",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "learner.full_name",
+   "fieldname": "learner_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Learner Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "learner.email",
+   "fieldname": "learner_email",
+   "fieldtype": "Data",
+   "label": "Learner Email",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Course",
+   "options": "LMS Course",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "course.title",
+   "fieldname": "course_title",
+   "fieldtype": "Data",
+   "label": "Course Title",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_meta",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "school_name",
+   "fieldtype": "Data",
+   "label": "School Name",
+   "reqd": 1
+  },
+  {
+   "default": "Now",
+   "fieldname": "submitted_on",
+   "fieldtype": "Datetime",
+   "label": "Submitted On",
+   "reqd": 1
+  },
+  {
+   "fieldname": "ratings_section",
+   "fieldtype": "Section Break",
+   "label": "Ratings"
+  },
+  {
+   "fieldname": "overall_rating",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Overall Experience",
+   "options": "\n1\n2\n3\n4\n5",
+   "reqd": 1
+  },
+  {
+   "fieldname": "trainer_rating",
+   "fieldtype": "Select",
+   "label": "Trainer Delivery Rating",
+   "options": "\n1\n2\n3\n4\n5",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_ratings",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "relevance",
+   "fieldtype": "Select",
+   "label": "Relevance to Teaching Needs",
+   "options": "\nVery relevant\nRelevant\nSomewhat relevant\nNot relevant",
+   "reqd": 1
+  },
+  {
+   "fieldname": "understanding",
+   "fieldtype": "Select",
+   "label": "Understanding of AI Concepts",
+   "options": "\nVery well\nWell\nSomewhat\nNot clearly",
+   "reqd": 1
+  },
+  {
+   "fieldname": "valuable_topic",
+   "fieldtype": "Select",
+   "label": "Most Valuable Topic",
+   "options": "\nIntroduction to AI\nGenerative AI\nPrompt writing\nAI tools\nEthical use of AI",
+   "reqd": 1
+  },
+  {
+   "fieldname": "confidence",
+   "fieldtype": "Select",
+   "label": "Confidence Using AI Tools",
+   "options": "\nVery confident\nConfident\nSomewhat confident\nNot confident",
+   "reqd": 1
+  },
+  {
+   "fieldname": "followability",
+   "fieldtype": "Select",
+   "label": "Webinar Easy to Follow",
+   "options": "\nYes completely\nMostly\nSomewhat\nNo",
+   "reqd": 1
+  },
+  {
+   "fieldname": "future_training",
+   "fieldtype": "Select",
+   "label": "Attend More AI Sessions",
+   "options": "\nYes\nMaybe\nNo",
+   "reqd": 1
+  },
+  {
+   "fieldname": "recommendation",
+   "fieldtype": "Select",
+   "label": "Recommend to Others",
+   "options": "\nDefinitely\nProbably\nMaybe\nNo",
+   "reqd": 1
+  },
+  {
+   "fieldname": "comments_section",
+   "fieldtype": "Section Break",
+   "label": "Comments"
+  },
+  {
+   "fieldname": "takeaway",
+   "fieldtype": "Small Text",
+   "label": "Biggest Takeaway",
+   "reqd": 1
+  },
+  {
+   "fieldname": "suggestions",
+   "fieldtype": "Small Text",
+   "label": "Suggestions"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-08-14 16:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "LMS",
+ "name": "LMS Course Feedback",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Moderator",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "if_owner": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "LMS Student",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "learner_name",
+ "track_changes": 1
+}

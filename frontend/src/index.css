@@ -1,0 +1,41 @@
+@import 'frappe-ui/style.css';
+@import './styles/sales-theme.css';
+@import './styles/codemirror.css';
+.ce-settings__lms-image-layout select.lms-img-native-select {
+	appearance: none;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	padding-inline-end: 2.25rem;
+	background-repeat: no-repeat;
+	background-position: right 0.625rem center;
+	background-size: 1rem;
+	cursor: pointer;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+.tc-table {
+	position: relative;
+}
+
+.lms-table-col-resizer {
+	position: absolute;
+	z-index: 4;
+	cursor: col-resize;
+	background: transparent;
+}
+
+.lms-table-col-resizer.lms-table-resizer--active {
+	background: rgba(59, 130, 246, 0.15);
+}
+
+.lms-table-row-resizer {
+	position: absolute;
+	z-index: 4;
+	cursor: row-resize;
+	background: transparent;
+}
+
+.lms-table-row-resizer.lms-table-resizer--active {
+	background: rgba(59, 130, 246, 0.12);
+}
+

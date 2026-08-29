@@ -1,0 +1,216 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 0,
+ "autoname": "field:session_key",
+ "creation": "2026-08-28 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "session_key",
+  "course",
+  "chapter",
+  "lesson",
+  "column_break_meta",
+  "day_number",
+  "day_label",
+  "session_index",
+  "session_type",
+  "section_schedule",
+  "time_label",
+  "duration_minutes",
+  "stakeholder",
+  "column_break_topic",
+  "topic",
+  "excel_row",
+  "source_sheet",
+  "section_body",
+  "description",
+  "section_links",
+  "content_links"
+ ],
+ "fields": [
+  {
+   "fieldname": "session_key",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Session Key",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Course",
+   "options": "LMS Course",
+   "reqd": 1
+  },
+  {
+   "fieldname": "chapter",
+   "fieldtype": "Link",
+   "label": "Chapter",
+   "options": "Course Chapter"
+  },
+  {
+   "fieldname": "lesson",
+   "fieldtype": "Link",
+   "label": "Lesson",
+   "options": "Course Lesson"
+  },
+  {
+   "fieldname": "column_break_meta",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "day_number",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Day Number",
+   "reqd": 1
+  },
+  {
+   "fieldname": "day_label",
+   "fieldtype": "Data",
+   "label": "Day Label"
+  },
+  {
+   "fieldname": "session_index",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Session Index",
+   "reqd": 1
+  },
+  {
+   "fieldname": "session_type",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Type",
+   "options": "session\nbreak\nlunch\nassessment\nactivity\ncalling",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_schedule",
+   "fieldtype": "Section Break",
+   "label": "Schedule"
+  },
+  {
+   "fieldname": "time_label",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Time"
+  },
+  {
+   "fieldname": "duration_minutes",
+   "fieldtype": "Int",
+   "label": "Duration (minutes)"
+  },
+  {
+   "fieldname": "stakeholder",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "Stakeholder"
+  },
+  {
+   "fieldname": "column_break_topic",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "topic",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Topic",
+   "reqd": 1
+  },
+  {
+   "fieldname": "excel_row",
+   "fieldtype": "Int",
+   "label": "Excel Row"
+  },
+  {
+   "fieldname": "source_sheet",
+   "fieldtype": "Data",
+   "label": "Source Sheet"
+  },
+  {
+   "fieldname": "section_body",
+   "fieldtype": "Section Break",
+   "label": "Description"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Text Editor",
+   "label": "Description"
+  },
+  {
+   "fieldname": "section_links",
+   "fieldtype": "Section Break",
+   "label": "Content Links"
+  },
+  {
+   "fieldname": "content_links",
+   "fieldtype": "Table",
+   "label": "Content Links",
+   "options": "Sales CRT Content Link"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-08-28 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "LMS",
+ "name": "Sales CRT Session",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Moderator",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "LMS Student",
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "All",
+   "share": 1
+  }
+ ],
+ "sort_field": "day_number",
+ "sort_order": "ASC",
+ "title_field": "topic",
+ "track_changes": 1
+}

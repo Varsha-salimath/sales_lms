@@ -1,0 +1,133 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-08-28 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "status",
+  "dry_run",
+  "source_file",
+  "source_sheet",
+  "column_break_counts",
+  "days_count",
+  "sessions_created",
+  "sessions_updated",
+  "sessions_removed",
+  "section_result",
+  "course",
+  "error_message",
+  "summary"
+ ],
+ "fields": [
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Preview\nSuccess\nFailed",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "dry_run",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Dry Run"
+  },
+  {
+   "fieldname": "source_file",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Source File"
+  },
+  {
+   "fieldname": "source_sheet",
+   "fieldtype": "Data",
+   "label": "Source Sheet"
+  },
+  {
+   "fieldname": "column_break_counts",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "days_count",
+   "fieldtype": "Int",
+   "label": "Days"
+  },
+  {
+   "fieldname": "sessions_created",
+   "fieldtype": "Int",
+   "label": "Created"
+  },
+  {
+   "fieldname": "sessions_updated",
+   "fieldtype": "Int",
+   "label": "Updated"
+  },
+  {
+   "fieldname": "sessions_removed",
+   "fieldtype": "Int",
+   "label": "Removed"
+  },
+  {
+   "fieldname": "section_result",
+   "fieldtype": "Section Break",
+   "label": "Result"
+  },
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "label": "Course",
+   "options": "LMS Course"
+  },
+  {
+   "fieldname": "error_message",
+   "fieldtype": "Small Text",
+   "label": "Error"
+  },
+  {
+   "fieldname": "summary",
+   "fieldtype": "Code",
+   "label": "Summary JSON",
+   "options": "JSON"
+  }
+ ],
+ "links": [],
+ "modified": "2026-08-28 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "LMS",
+ "name": "Sales CRT Import Log",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Moderator",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "track_changes": 1
+}

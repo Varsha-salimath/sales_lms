@@ -1,0 +1,25 @@
+# Build context = repo root (docker/Dockerfile)
+.git
+.github
+cypress
+docs
+**/__pycache__
+*.pyc
+.pytest_cache
+*.egg-info
+node_modules
+frontend/node_modules
+backend/lms/public/frontend
+docker/docker-compose*.yml
+
+# Dev scratch under data/ (LeadSquared URLs, schedule dumps — not for images)
+data/_*
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa
+id_rsa.pub

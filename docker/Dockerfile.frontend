@@ -1,0 +1,13 @@
+# Sales LMS — FRONTEND image (nginx reverse proxy + static assets from backend).
+# Build after backend image exists:
+#   docker build -f docker/Dockerfile.frontend \
+#     --build-arg BACKEND_IMAGE=sales-lms-backend:local \
+#     -t sales-lms-frontend:local .
+#
+# Same runtime base as backend so nginx-entrypoint.sh and site assets work.
+
+ARG BACKEND_IMAGE=sales-lms-backend:local
+FROM ${BACKEND_IMAGE}
+
+# Default command overridden in compose to nginx-entrypoint.sh
+CMD ["nginx-entrypoint.sh"]
