@@ -137,6 +137,11 @@ cypress/downloads/
 # Dev scratch (sensitive CRM / schedule dumps — not source)
 data/_*
 
+# CRT workbook — internal SharePoint / form links; obtain from secure share (not public git)
+data/CRT-Schedule.xlsx
+backend/lms/lms/data/CRT-Schedule.xlsx
+**/CRT-Schedule.xlsx
+
 # Misc
 tags
 frappe-ui

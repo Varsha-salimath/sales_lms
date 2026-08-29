@@ -93,6 +93,7 @@ services:
       LMS_ALLOW_GUEST_ACCESS: ${LMS_ALLOW_GUEST_ACCESS:-}
       LMS_DISABLE_SIGNUP: ${LMS_DISABLE_SIGNUP:-}
       ALLOW_DEMO_LEARNER: ${ALLOW_DEMO_LEARNER:-}
+      DEMO_LEARNER_PASSWORD: ${DEMO_LEARNER_PASSWORD:-}
     depends_on:
       redis:
         condition: service_started

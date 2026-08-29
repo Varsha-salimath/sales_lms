@@ -17,6 +17,10 @@ if git rev-parse --git-dir >/dev/null 2>&1; then
 		echo "BLOCKED: data/_* dev scratch files are staged." >&2
 		failed=1
 	fi
+	if echo "$staged" | grep -Eq 'CRT-Schedule\.xlsx|data/.*\.xlsx'; then
+		echo "BLOCKED: CRT-Schedule.xlsx is staged — curriculum file must not be committed." >&2
+		failed=1
+	fi
 else
 	echo "WARN: not a git repository — skipping staged-file checks."
 fi

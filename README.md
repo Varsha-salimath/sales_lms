@@ -8,7 +8,9 @@ Infinity Learn **Sales LMS** — Frappe LMS for Sales Classroom Readiness Traini
 | **Local / prod app port** | **8080** (same everywhere) |
 | **CRT course slug** | `sales-crt` |
 
-**Never commit** `.env` or secrets. Copy from `.env.example` only.
+**Never commit** `.env`, secrets, or **`CRT-Schedule.xlsx`** (internal curriculum links).  
+**Official repo (deploy):** Bitbucket `CodeRepoInfinitylearn/saleslms` — private.  
+Do **not** mirror this project to a **public** GitHub repo.
 
 For a full from-scratch production runbook, see **[PRODUCTION_DEPLOY.md](PRODUCTION_DEPLOY.md)**.
 
@@ -25,7 +27,7 @@ For a full from-scratch production runbook, see **[PRODUCTION_DEPLOY.md](PRODUCT
 | `docker/Dockerfile.backend` | Backend image |
 | `docker/Dockerfile.frontend` | Frontend image (`FROM` backend) |
 | `docker/entrypoint-backend.sh` | Site bootstrap + serve / worker / socketio |
-| `data/CRT-Schedule.xlsx` | CRT curriculum workbook (import this; not auto-loaded on boot) |
+| `data/CRT-Schedule.xlsx` | CRT workbook — **local/prod only** (see `data/README.md`; not in git) |
 
 No parallel compose stacks. No MariaDB/MySQL. No Redis Cloud as default.
 

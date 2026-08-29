@@ -684,7 +684,12 @@ def ensure_demo_learner(email: str | None = None, password: str | None = None):
 			frappe.PermissionError,
 		)
 	email = (email or "learner@sales.localhost").strip().lower()
-	password = password or "Learner@123"
+	password = password or os.environ.get("DEMO_LEARNER_PASSWORD")
+	if not password:
+		frappe.throw(
+			_("Set DEMO_LEARNER_PASSWORD in the environment or pass password explicitly."),
+			frappe.ValidationError,
+		)
 	if frappe.db.exists("User", email):
 		user = frappe.get_doc("User", email)
 		user.enabled = 1
@@ -717,7 +722,7 @@ def ensure_demo_learner(email: str | None = None, password: str | None = None):
 			{"doctype": "LMS Enrollment", "course": COURSE_SLUG, "member": email}
 		).insert(ignore_permissions=True)
 	frappe.db.commit()
-	return {"email": email, "password": password, "roles": frappe.get_roles(email)}
+	return {"email": email, "roles": frappe.get_roles(email)}
 
 
 def import_bundled_schedule():

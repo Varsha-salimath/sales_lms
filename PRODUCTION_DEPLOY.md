@@ -26,7 +26,7 @@
 - Do **not** use Redis Cloud (Frappe 16 CLIENT TRACKING breaks).
 - SMTP required — compose/entrypoint fail without `SMTP_*` and `DEFAULT_SENDER`.
 - Docker deploy does **not** copy local course DB state — import CRT Excel after boot.
-- Before build: `data/` should contain `CRT-Schedule.xlsx` only (no `data/_*` scratch files).
+- Before build: copy **`CRT-Schedule.xlsx`** into `data/` from your team secure share (not in git — see `data/README.md`).
 
 Prod `.env` minimum:
 
@@ -62,7 +62,7 @@ SMTP_USER=<smtp-user>
 SMTP_PASSWORD=<smtp-password>
 SMTP_TLS=1
 SMTP_SSL=0
-DEFAULT_SENDER=donotreply@wizklub.com
+DEFAULT_SENDER=donotreply@example.com
 DEFAULT_SENDER_NAME=Sales LMS
 
 UPSTREAM_REAL_IP_ADDRESS=<lb-cidr-or-ip>
