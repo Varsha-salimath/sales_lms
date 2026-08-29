@@ -135,8 +135,7 @@ cypress/screenshots/
 cypress/downloads/
 
 # Dev scratch (sensitive CRM / schedule dumps — not source)
-data/_audit_dump.json
-data/_sched_rest.txt
+data/_*
 
 # Misc
 tags

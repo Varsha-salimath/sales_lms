@@ -29,6 +29,10 @@ DEFAULT_SENDER="${DEFAULT_SENDER:?Set DEFAULT_SENDER}"
 DEFAULT_SENDER_NAME="${DEFAULT_SENDER_NAME:-Sales LMS}"
 SMTP_TLS="${SMTP_TLS:-1}"
 SMTP_SSL="${SMTP_SSL:-0}"
+DEVELOPER_MODE="${DEVELOPER_MODE:-0}"
+LMS_ALLOW_GUEST_ACCESS="${LMS_ALLOW_GUEST_ACCESS:-}"
+LMS_DISABLE_SIGNUP="${LMS_DISABLE_SIGNUP:-}"
+ALLOW_DEMO_LEARNER="${ALLOW_DEMO_LEARNER:-}"
 
 wait_tcp() {
 	local host="$1" port="$2" label="$3" tries="${4:-90}"
@@ -102,6 +106,21 @@ bootstrap_smtp() {
 	exit 1
 }
 
+apply_lms_security() {
+	echo "Applying LMS security (DEVELOPER_MODE=${DEVELOPER_MODE})..."
+	bench --site "${SITE_NAME}" execute lms.lms.setup_security.ensure_lms_security_from_env
+}
+
+assert_prod_admin_password() {
+	if [[ "${DEVELOPER_MODE}" != "0" ]]; then
+		return 0
+	fi
+	if [[ "${ADMIN_PASSWORD}" == "admin" ]]; then
+		echo "FATAL: DEVELOPER_MODE=0 requires a strong ADMIN_PASSWORD (not 'admin')." >&2
+		exit 1
+	fi
+}
+
 ensure_site() {
 	if [[ -d "sites/${SITE_NAME}" ]]; then
 		echo "Site ${SITE_NAME} exists — migrate."
@@ -109,8 +128,11 @@ ensure_site() {
 		bench --site "${SITE_NAME}" migrate || true
 		bench --site "${SITE_NAME}" set-config host_name "${HOST_NAME}" || true
 		bootstrap_smtp
+		apply_lms_security
 		return 0
 	fi
+
+	assert_prod_admin_password
 
 	echo "Creating site ${SITE_NAME} (postgres db=${DB_NAME})..."
 	# Frappe postgres root connection uses database named after DB_ROOT_USERNAME.
@@ -159,10 +181,10 @@ PY
 	bench --site "${SITE_NAME}" install-app payments
 	bench --site "${SITE_NAME}" install-app lms
 	bench --site "${SITE_NAME}" set-config host_name "${HOST_NAME}"
-	bench --site "${SITE_NAME}" set-config developer_mode 1 || true
-	bench --site "${SITE_NAME}" clear-cache
 	bench use "${SITE_NAME}"
 	bootstrap_smtp
+	apply_lms_security
+	bench --site "${SITE_NAME}" clear-cache
 	echo "Site ready: ${SITE_NAME}"
 	echo "NOTE: CRT course content is empty until Excel import runs."
 }

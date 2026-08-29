@@ -2,7 +2,7 @@
 
 | Item | Value |
 |------|--------|
-| Bitbucket repo | `<SALES_LMS_BITBUCKET_URL>` |
+| Bitbucket repo | `https://github.com/Varsha-salimath/sales_lms` |
 | Branch | `main` |
 | Prod domain | `saleslms.infinitylearn.com` |
 | Site name (`SITE_NAME`) | `saleslms.infinitylearn.com` |
@@ -26,7 +26,7 @@
 - Do **not** use Redis Cloud (Frappe 16 CLIENT TRACKING breaks).
 - SMTP required — compose/entrypoint fail without `SMTP_*` and `DEFAULT_SENDER`.
 - Docker deploy does **not** copy local course DB state — import CRT Excel after boot.
-- Before build: `data/` should contain `CRT-Schedule.xlsx` only — delete `data/_audit_dump.json` and `data/_sched_rest.txt` if present.
+- Before build: `data/` should contain `CRT-Schedule.xlsx` only (no `data/_*` scratch files).
 
 Prod `.env` minimum:
 
@@ -36,6 +36,11 @@ APP_PORT=8080
 SITE_NAME=saleslms.infinitylearn.com
 HOST_NAME=https://saleslms.infinitylearn.com
 ADMIN_PASSWORD=<strong-secret>
+
+DEVELOPER_MODE=0
+LMS_ALLOW_GUEST_ACCESS=0
+LMS_DISABLE_SIGNUP=1
+ALLOW_DEMO_LEARNER=0
 
 DB_TYPE=postgres
 DB_HOST=<cloud-sql-private-ip>
@@ -80,7 +85,7 @@ docker ps   # confirm no old genius/sales stacks conflicting on :8080
 ### 1. Get code
 
 ```bash
-git clone <SALES_LMS_BITBUCKET_URL>
+git clone https://github.com/Varsha-salimath/sales_lms.git
 cd <repo-folder>    # e.g. sales_lms under <VM_PATH>
 git checkout main
 git pull origin main
@@ -169,27 +174,33 @@ Or upload a newer workbook at `/lms/crt/import` (dry-run first).
 4. Sales CRT course and `/lms/crt` show Day 1 … Day N
 5. Desk → Email Account exists (SMTP bootstrap)
 
-### 9. Security hardening (required for prod)
+### 9. Security (automatic on boot)
 
-Run **after** step 8. Use strong `ADMIN_PASSWORD` in `.env` **before** first boot (step 4).
+Set these in prod `.env` **before** step 4. The backend entrypoint applies them on every start:
+
+| Variable | Prod value |
+|----------|------------|
+| `DEVELOPER_MODE` | `0` |
+| `LMS_ALLOW_GUEST_ACCESS` | `0` |
+| `LMS_DISABLE_SIGNUP` | `1` |
+| `ALLOW_DEMO_LEARNER` | `0` |
+
+`DEVELOPER_MODE=0` also blocks weak `ADMIN_PASSWORD=admin` on first site create.
+
+Optional verify after boot:
 
 ```bash
 docker compose --env-file .env exec -w /home/frappe/frappe-bench backend \
-  bench --site saleslms.infinitylearn.com set-config developer_mode 0
-
-docker compose --env-file .env exec -w /home/frappe/frappe-bench backend \
-  bench --site saleslms.infinitylearn.com execute frappe.db.set_single_value \
-  --args '["LMS Settings", "allow_guest_access", 0]'
-
-docker compose --env-file .env exec -w /home/frappe/frappe-bench backend \
-  bench --site saleslms.infinitylearn.com execute frappe.db.set_single_value \
-  --args '["LMS Settings", "disable_signup", 1]'
-
-docker compose --env-file .env exec -w /home/frappe/frappe-bench backend \
-  bench --site saleslms.infinitylearn.com clear-cache
+  bench --site saleslms.infinitylearn.com execute lms.lms.setup_security.ensure_lms_security_from_env
 ```
 
-Do **not** run `ensure_demo_learner` on prod.
+Do **not** run `ensure_demo_learner` on prod (`ALLOW_DEMO_LEARNER=0` disables it).
+
+Before step 3 (build), run locally (optional):
+
+```bash
+bash scripts/check-secrets.sh
+```
 
 ### 10. Backup
 
@@ -239,4 +250,4 @@ docker compose --env-file .env exec -w /home/frappe/frappe-bench backend \
 
 ## Day-0 cutover order (one line)
 
-VM prep → clone → `.env` → build backend → build frontend → `up -d` → local `ping` + `/lms` → LB to `:8080` → public verify → CRT Excel import → login test → security hardening (step 9).
+VM prep → clone → `.env` (incl. security vars) → build backend → build frontend → `up -d` → local verify → LB to `:8080` → public verify → CRT Excel import → login test.

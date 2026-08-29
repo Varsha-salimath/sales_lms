@@ -678,6 +678,11 @@ def preview_import(file_url: str | None = None, file_name: str | None = None, us
 @frappe.whitelist()
 def ensure_demo_learner(email: str | None = None, password: str | None = None):
 	"""Create or reset a learner-only account for local/user-side testing."""
+	if not cint(frappe.conf.get("allow_demo_learner")):
+		frappe.throw(
+			_("Demo learner setup is disabled on this site."),
+			frappe.PermissionError,
+		)
 	email = (email or "learner@sales.localhost").strip().lower()
 	password = password or "Learner@123"
 	if frappe.db.exists("User", email):
