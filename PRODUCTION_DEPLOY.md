@@ -2,7 +2,7 @@
 
 | Item | Value |
 |------|--------|
-| Bitbucket repo | `https://github.com/Varsha-salimath/sales_lms` |
+| Bitbucket repo | `git@bitbucket.org:CodeRepoInfinitylearn/saleslms.git` |
 | Branch | `main` |
 | Prod domain | `saleslms.infinitylearn.com` |
 | Site name (`SITE_NAME`) | `saleslms.infinitylearn.com` |
@@ -85,7 +85,7 @@ docker ps   # confirm no old genius/sales stacks conflicting on :8080
 ### 1. Get code
 
 ```bash
-git clone https://github.com/Varsha-salimath/sales_lms.git
+git clone git@bitbucket.org:CodeRepoInfinitylearn/saleslms.git
 cd <repo-folder>    # e.g. sales_lms under <VM_PATH>
 git checkout main
 git pull origin main
