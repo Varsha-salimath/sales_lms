@@ -14,7 +14,7 @@ def extend_lesson_upload_limit():
 
 
 def rewrite_progress_like_filters():
-	"""Postgres cannot ILIKE a numeric progress column (MariaDB-era LIKE '%100%')."""
+	"""Rewrite MariaDB-era progress LIKE filters (MySQL/Postgres-safe)."""
 	if not frappe.form_dict:
 		return
 

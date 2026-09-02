@@ -8,5 +8,8 @@
 	<SalesOnboardingHome v-else />
 </template>
 <script setup>
+import { inject } from 'vue'
 import SalesOnboardingHome from '@/pages/Sales/SalesOnboardingHome.vue'
+
+const user = inject('$user')
 </script>

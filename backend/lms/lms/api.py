@@ -2350,6 +2350,9 @@ def get_branding():
 		else:
 			settings.update({field: value})
 
+	if not settings.get("favicon"):
+		settings["favicon"] = {"file_url": "/assets/lms/frontend/favicon.png"}
+
 	return settings
 
 

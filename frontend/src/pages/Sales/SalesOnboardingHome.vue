@@ -1,6 +1,6 @@
 <template>
 	<div class="min-h-screen pb-16" style="background: var(--il-paper)">
-		<div v-if="home.loading" class="grid min-h-[40vh] place-items-center text-sm text-[color:var(--il-muted)]">
+		<div v-if="home.loading || (!home.data && !home.error)" class="grid min-h-[40vh] place-items-center text-sm text-[color:var(--il-muted)]">
 			{{ __('Loading your onboarding…') }}
 		</div>
 		<div
@@ -22,7 +22,7 @@
 					Infinity Learn · Sales CRT
 				</p>
 				<h1 class="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
-					{{ __('Welcome, {0}').format(firstName) }}
+					{{ __('Welcome') }}{{ firstName ? `, ${firstName}` : '' }}
 				</h1>
 				<p class="mt-3 max-w-2xl text-sm leading-6 text-white/85">
 					{{
@@ -159,7 +159,6 @@ const router = useRouter()
 const home = createResource({
 	url: 'lms.lms.sales_journey.get_onboarding_home',
 	auto: true,
-	cache: ['sales-onboarding-home'],
 })
 
 const firstName = computed(() => {

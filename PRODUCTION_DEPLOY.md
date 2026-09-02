@@ -8,21 +8,23 @@
 | Site name (`SITE_NAME`) | `saleslms.infinitylearn.com` |
 | VM path | `<VM_PATH>` e.g. `/var/www/sales-lms/sales_lms` |
 | Database (`DB_NAME` / `DB_USER`) | `salesapp` |
-| Cloud SQL host | `<DB_HOST>` (private IP) |
+| MySQL host | `<DB_HOST>` (AWS POC MariaDB 10.6+ / MySQL-compatible — **not** Genius LMS Postgres on GCP) |
 | App port | **8080** (LB → VM `:8080`) |
 | Redis | Compose only — `REDIS_HOST=redis`, `REDIS_PORT=6379`, `REDIS_USERNAME=` empty |
 | Login | `Administrator` / `ADMIN_PASSWORD` from `.env` |
 
 **Never commit** `.env`.
 
+Frappe uses `DB_TYPE=mariadb` for MySQL-protocol servers. **MariaDB 10.6+ is required** (Oracle MySQL 8 is not supported).
+
 ---
 
 ## Before you start
 
-- VM: Docker Engine + Compose v2, Git access to Bitbucket, outbound Cloud SQL `:5432` and SMTP `:587`.
-- Prod `.env`: `COMPOSE_PROFILES=` (empty — no embedded Postgres).
+- VM: Docker Engine + Compose v2, Git access to Bitbucket, outbound MySQL `:3306` and SMTP `:587`.
+- Prod `.env`: `COMPOSE_PROFILES=` (empty — no embedded MariaDB).
 - `SITE_NAME` ≠ `DB_NAME` (site = domain, db = `salesapp`).
-- `DB_ROOT_USERNAME` ≠ `salesapp` (use `postgres` or another privileged Cloud SQL user).
+- `DB_ROOT_USERNAME` ≠ `salesapp` (use `root` or another privileged MySQL user).
 - Do **not** use Redis Cloud (Frappe 16 CLIENT TRACKING breaks).
 - SMTP required — compose/entrypoint fail without `SMTP_*` and `DEFAULT_SENDER`.
 - Docker deploy does **not** copy local course DB state — import CRT Excel after boot.
@@ -42,13 +44,13 @@ LMS_ALLOW_GUEST_ACCESS=0
 LMS_DISABLE_SIGNUP=1
 ALLOW_DEMO_LEARNER=0
 
-DB_TYPE=postgres
-DB_HOST=<cloud-sql-private-ip>
-DB_PORT=5432
+DB_TYPE=mariadb
+DB_HOST=<aws-mariadb-host>
+DB_PORT=3306
 DB_NAME=salesapp
 DB_USER=salesapp
 DB_PASSWORD=<salesapp-password>
-DB_ROOT_USERNAME=postgres
+DB_ROOT_USERNAME=root
 DB_ROOT_PASSWORD=<privileged-user-password>
 
 REDIS_HOST=redis
@@ -77,7 +79,7 @@ UPSTREAM_REAL_IP_RECURSIVE=on
 ### 0. Prerequisites (on Sales VM)
 
 ```bash
-nc -vz <DB_HOST> 5432
+nc -vz <DB_HOST> 3306
 nc -vz <SMTP_HOST> 587
 docker ps   # confirm no old genius/sales stacks conflicting on :8080
 ```
@@ -120,7 +122,7 @@ Expected containers:
 | `sales_lms_frontend` | nginx — **only** host port `0.0.0.0:8080→8080` |
 | `sales_lms_backend` | Frappe + worker + schedule + socketio |
 | `sales_lms_redis` | Compose Redis (internal) |
-| **No** `sales_lms_db` | Prod uses Cloud SQL only |
+| **No** `sales_lms_db` | Prod uses AWS MariaDB/MySQL-compatible DB only |
 
 Watch bootstrap:
 
@@ -211,7 +213,7 @@ docker volume ls | grep sales
 | What | Where |
 |------|--------|
 | Site files | Docker volume `sales_sites` |
-| App data | Cloud SQL database `salesapp` |
+| App data | AWS MariaDB database `salesapp` |
 | Redis | Volume `sales_redis_data` (cache only) |
 
 ---

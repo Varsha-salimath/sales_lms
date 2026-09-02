@@ -1,12 +1,12 @@
 # Sales LMS — single Compose (local + prod). Only .env values change.
 #
-# Local (embedded Postgres via COMPOSE_PROFILES=embedded-db):
+# Local (embedded MySQL via COMPOSE_PROFILES=embedded-db):
 #   cp .env.example .env
 #   docker compose --env-file .env build backend
 #   docker compose --env-file .env build frontend
 #   docker compose --env-file .env up -d
 #
-# Prod: clear COMPOSE_PROFILES; set DB_HOST to Cloud SQL; same build/up commands.
+# Prod: clear COMPOSE_PROFILES; set DB_HOST to AWS MariaDB/MySQL-compatible host; same build/up commands.
 #
 # Health: curl http://127.0.0.1:${APP_PORT}/api/method/ping
 #
@@ -19,25 +19,26 @@ services:
   db:
     # Started only when COMPOSE_PROFILES includes embedded-db (local default).
     profiles: ["embedded-db"]
-    image: postgres:16-alpine
+    image: mariadb:10.11
     container_name: sales_lms_db
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     environment:
-      # Superuser for bench new-site (must NOT be the same as site DB name / app user).
-      POSTGRES_USER: ${DB_ROOT_USERNAME:-postgres}
-      POSTGRES_PASSWORD: ${DB_ROOT_PASSWORD:?Set DB_ROOT_PASSWORD in .env}
-      POSTGRES_DB: postgres
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Set DB_ROOT_PASSWORD in .env}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d postgres"]
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -uroot -p\"$$MARIADB_ROOT_PASSWORD\" || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 20
-      start_period: 10s
+      start_period: 15s
     networks:
       - sales_net
     restart: unless-stopped
     volumes:
-      - sales_db_data:/var/lib/postgresql/data
-    # Not published — app reaches it as host "db"
+      - sales_db_data:/var/lib/mysql
+      - type: bind
+        source: ./docker/mysql/frappe.cnf
+        target: /etc/mysql/conf.d/frappe.cnf
+        read_only: true
 
   redis:
     image: redis:7-alpine
@@ -65,13 +66,13 @@ services:
       SITE_NAME: ${SITE_NAME:-sales.localhost}
       HOST_NAME: ${HOST_NAME:-http://localhost:8080}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
-      DB_TYPE: postgres
+      DB_TYPE: ${DB_TYPE:-mariadb}
       DB_HOST: ${DB_HOST:-db}
-      DB_PORT: ${DB_PORT:-5432}
+      DB_PORT: ${DB_PORT:-3306}
       DB_NAME: ${DB_NAME:-salesapp}
       DB_USER: ${DB_USER:-salesapp}
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
-      DB_ROOT_USERNAME: ${DB_ROOT_USERNAME:-postgres}
+      DB_ROOT_USERNAME: ${DB_ROOT_USERNAME:-root}
       DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Set DB_ROOT_PASSWORD in .env}
       REDIS_USERNAME: ${REDIS_USERNAME:-}
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}

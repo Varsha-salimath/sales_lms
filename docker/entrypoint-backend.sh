@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Backend entrypoint: configure Redis/Postgres → ensure site → run processes.
+# Backend entrypoint: configure Redis/MySQL → ensure site → run processes.
 set -euo pipefail
 
 cd /home/frappe/frappe-bench
@@ -8,13 +8,13 @@ export PATH="${PATH:-/usr/local/bin:/usr/bin:/bin}"
 SITE_NAME="${SITE_NAME:-sales.localhost}"
 HOST_NAME="${HOST_NAME:-http://localhost:8080}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin}"
-DB_TYPE=postgres
+DB_TYPE="${DB_TYPE:-mariadb}"
 DB_HOST="${DB_HOST:-db}"
-DB_PORT="${DB_PORT:-5432}"
+DB_PORT="${DB_PORT:-3306}"
 DB_NAME="${DB_NAME:-salesapp}"
 DB_USER="${DB_USER:-salesapp}"
 DB_PASSWORD="${DB_PASSWORD:?Set DB_PASSWORD}"
-DB_ROOT_USERNAME="${DB_ROOT_USERNAME:-postgres}"
+DB_ROOT_USERNAME="${DB_ROOT_USERNAME:-root}"
 DB_ROOT_PASSWORD="${DB_ROOT_PASSWORD:-${DB_PASSWORD}}"
 REDIS_PASSWORD="${REDIS_PASSWORD:-sales_local_redis}"
 REDIS_USERNAME="${REDIS_USERNAME:-}"
@@ -33,6 +33,11 @@ DEVELOPER_MODE="${DEVELOPER_MODE:-0}"
 LMS_ALLOW_GUEST_ACCESS="${LMS_ALLOW_GUEST_ACCESS:-}"
 LMS_DISABLE_SIGNUP="${LMS_DISABLE_SIGNUP:-}"
 ALLOW_DEMO_LEARNER="${ALLOW_DEMO_LEARNER:-}"
+
+# Frappe accepts db_type=mariadb for MySQL and MariaDB servers.
+if [[ "${DB_TYPE}" == "mysql" ]]; then
+	DB_TYPE="mariadb"
+fi
 
 wait_tcp() {
 	local host="$1" port="$2" label="$3" tries="${4:-90}"
@@ -59,12 +64,11 @@ PY
 	exit 1
 }
 
-wait_tcp "${DB_HOST}" "${DB_PORT}" "postgres"
+wait_tcp "${DB_HOST}" "${DB_PORT}" "mysql"
 wait_tcp "${REDIS_HOST}" "${REDIS_PORT}" "redis"
 
 ls -1 apps > sites/apps.txt
 
-# Build redis://[username]:password@host:port?protocol=3 (ACL user+pass for prod)
 redis_default_url="$(
 	/home/frappe/frappe-bench/env/bin/python - <<PY
 from urllib.parse import quote
@@ -87,7 +91,7 @@ if [[ -z "${REDIS_SOCKETIO:-}" ]]; then
 	REDIS_SOCKETIO="${redis_default_url}"
 fi
 
-bench set-config -g db_type postgres || true
+bench set-config -g db_type "${DB_TYPE}" || true
 bench set-config -g db_host "${DB_HOST}" || true
 bench set-config -gp db_port "${DB_PORT}" || true
 bench set-config -g redis_cache "${REDIS_CACHE}"
@@ -121,6 +125,20 @@ assert_prod_admin_password() {
 	fi
 }
 
+create_mysql_site() {
+	echo "Creating site ${SITE_NAME} (${DB_TYPE} db=${DB_NAME} on ${DB_HOST}:${DB_PORT})..."
+	bench new-site "${SITE_NAME}" \
+		--force \
+		--db-type "${DB_TYPE}" \
+		--db-name "${DB_NAME}" \
+		--db-host "${DB_HOST}" \
+		--db-port "${DB_PORT}" \
+		--db-root-username "${DB_ROOT_USERNAME}" \
+		--db-root-password "${DB_ROOT_PASSWORD}" \
+		--admin-password "${ADMIN_PASSWORD}" \
+		--set-default
+}
+
 ensure_site() {
 	if [[ -d "sites/${SITE_NAME}" ]]; then
 		echo "Site ${SITE_NAME} exists — migrate."
@@ -133,50 +151,7 @@ ensure_site() {
 	fi
 
 	assert_prod_admin_password
-
-	echo "Creating site ${SITE_NAME} (postgres db=${DB_NAME})..."
-	# Frappe postgres root connection uses database named after DB_ROOT_USERNAME.
-	/home/frappe/frappe-bench/env/bin/python - <<PY
-import psycopg2
-from psycopg2 import sql
-
-root_user = "${DB_ROOT_USERNAME}"
-conn = psycopg2.connect(
-	host="${DB_HOST}",
-	port=int("${DB_PORT}"),
-	user=root_user,
-	password="${DB_ROOT_PASSWORD}",
-	dbname="postgres",
-	connect_timeout=10,
-)
-conn.autocommit = True
-cur = conn.cursor()
-cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (root_user,))
-if not cur.fetchone():
-	cur.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(root_user)))
-	print(f"Created bootstrap database {root_user}")
-else:
-	print(f"Bootstrap database already exists: {root_user}")
-# Ensure site DB exists when name differs from root user
-site_db = "${DB_NAME}"
-if site_db != root_user:
-	cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (site_db,))
-	if not cur.fetchone():
-		cur.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(site_db)))
-		print(f"Created site database {site_db}")
-cur.close()
-conn.close()
-PY
-
-	bench new-site "${SITE_NAME}" \
-		--db-type postgres \
-		--db-name "${DB_NAME}" \
-		--db-host "${DB_HOST}" \
-		--db-port "${DB_PORT}" \
-		--db-root-username "${DB_ROOT_USERNAME}" \
-		--db-root-password "${DB_ROOT_PASSWORD}" \
-		--admin-password "${ADMIN_PASSWORD}" \
-		--set-default
+	create_mysql_site
 
 	bench --site "${SITE_NAME}" install-app payments
 	bench --site "${SITE_NAME}" install-app lms
@@ -191,8 +166,6 @@ PY
 
 ensure_site
 
-# Frappe sites/assets is a symlink to /home/frappe/frappe-bench/assets (NOT on the
-# sites volume). Ensure LMS public assets are linked in this container too.
 ensure_lms_assets() {
 	mkdir -p /home/frappe/frappe-bench/assets
 	ln -sfn /home/frappe/frappe-bench/apps/lms/lms/public /home/frappe/frappe-bench/assets/lms

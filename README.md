@@ -4,7 +4,7 @@ Infinity Learn **Sales LMS** — Frappe LMS for Sales Classroom Readiness Traini
 
 | Item | Value |
 |------|--------|
-| **Stack** | Frappe 16 · Vue 3 · **PostgreSQL** · Redis · Docker |
+| **Stack** | Frappe 16 · Vue 3 · **MariaDB** (MySQL-compatible) · Redis · Docker |
 | **Local / prod app port** | **8080** (same everywhere) |
 | **CRT course slug** | `sales-crt` |
 
@@ -29,7 +29,7 @@ For a full from-scratch production runbook, see **[PRODUCTION_DEPLOY.md](PRODUCT
 | `docker/entrypoint-backend.sh` | Site bootstrap + serve / worker / socketio |
 | `data/CRT-Schedule.xlsx` | CRT workbook — **local/prod only** (see `data/README.md`; not in git) |
 
-No parallel compose stacks. No MariaDB/MySQL. No Redis Cloud as default.
+No parallel compose stacks. No Redis Cloud as default. Frappe uses `DB_TYPE=mariadb` for MySQL/MariaDB servers.
 
 ---
 
@@ -52,7 +52,9 @@ docker compose --env-file .env up -d
 | CRT schedule | http://localhost:8080/lms/crt |
 | Import | http://localhost:8080/lms/crt/import |
 
-`COMPOSE_PROFILES=embedded-db` starts the in-compose Postgres service (`db`). Redis always runs in Compose (known-good path for Frappe 16).
+`COMPOSE_PROFILES=embedded-db` starts the in-compose MariaDB 10.11 service (`db`, port 3306). Redis always runs in Compose (known-good path for Frappe 16).
+
+Frappe uses `DB_TYPE=mariadb` for all MySQL-protocol servers. **MariaDB 10.6+ is required** — Oracle MySQL 8 is not supported by Frappe 16.
 
 A **fresh site has no courses** until you import the Excel.
 
@@ -82,7 +84,9 @@ docker compose --env-file .env exec -w /home/frappe/frappe-bench backend \
 | `frontend` | nginx reverse proxy + static assets | always — **only** host-published port (`APP_PORT`) |
 | `backend` | Frappe + workers + socketio | always — internal |
 | `redis` | cache / queue / socketio | always — internal |
-| `db` | Postgres 16 | only if `COMPOSE_PROFILES=embedded-db` |
+**Switching from an older Postgres-based local setup:** stop the stack, remove volumes `sales_db_data` and `sales_sites`, then rebuild and `up -d` so Frappe creates a fresh MariaDB site.
+
+| `db` | MariaDB 10.11 | only if `COMPOSE_PROFILES=embedded-db` |
 
 ---
 
@@ -108,7 +112,7 @@ Otherwise URIs are built as `redis://[REDIS_USERNAME]:REDIS_PASSWORD@REDIS_HOST:
 
 ## Production anti-footguns
 
-1. **PostgreSQL only.** Site name **must not** equal DB name (`sales.localhost` ≠ `salesapp`).
+1. **MariaDB 10.6+ only** (`DB_TYPE=mariadb`, port 3306). Site name **must not** equal DB name (`sales.localhost` ≠ `salesapp`).
 2. **`DB_ROOT_USERNAME` must not** equal the app DB user (`salesapp`). Root creates databases; app user is runtime.
 3. Never half-create a site then point it at a different DB without cleaning `site_config` + empty DB. **Ask before any wipe.**
 4. **Redis:** Frappe 16 is incompatible with Redis Cloud CLIENT TRACKING (`syntax error`). Default: Compose Redis (`REDIS_HOST=redis`, `6379`).
@@ -123,9 +127,11 @@ Otherwise URIs are built as `redis://[REDIS_USERNAME]:REDIS_PASSWORD@REDIS_HOST:
 
 Same Compose file and env keys — only values change.
 
-1. Clear `COMPOSE_PROFILES` (do **not** start embedded Postgres).
-2. Set Cloud SQL:
-   - `DB_HOST` = private IP
+1. Clear `COMPOSE_PROFILES` (do **not** start embedded MariaDB).
+2. Set AWS POC database (dedicated Sales LMS DB — not Genius LMS Postgres on GCP):
+   - `DB_HOST` = MariaDB/MySQL-compatible host from DevOps
+   - `DB_PORT` = `3306`
+   - `DB_TYPE` = `mariadb`
    - `DB_NAME` / `DB_USER` = **`salesapp`** (site hostname ≠ DB name)
    - `DB_PASSWORD`, `DB_ROOT_USERNAME`, `DB_ROOT_PASSWORD` (root must be able to create DB on first boot; root ≠ salesapp)
 3. Keep **Compose Redis** unless an external Redis is proven with Frappe 16.
@@ -155,7 +161,7 @@ Then import CRT Excel (content is not in the image).
 | Symptom | Check |
 |---------|--------|
 | Compose refuses to start | Missing `DB_PASSWORD` / `REDIS_PASSWORD` / required `SMTP_*` / `DEFAULT_SENDER` |
-| Ping 500 | Postgres reachability / credentials; `docker compose logs backend` |
+| Ping 500 | MariaDB reachability / credentials; `docker compose logs backend` |
 | Redis `syntax error` | You pointed Frappe 16 at Redis Cloud CLIENT TRACKING — switch to Compose Redis |
 | Public domain returns foreign JSON auth errors | LB is not targeting Compose frontend `:8080` |
 | Empty CRT schedule | Expected on a fresh site — run Excel import |
