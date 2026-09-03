@@ -28,8 +28,9 @@ Frappe uses `DB_TYPE=mariadb`. AWS POC database is **MariaDB 11.8.8** (confirmed
 - `DB_ROOT_USERNAME` ≠ `salesapp` (use `root` or another privileged MySQL user).
 - Do **not** use Redis Cloud (Frappe 16 CLIENT TRACKING breaks).
 - SMTP required — compose/entrypoint fail without `SMTP_*` and `DEFAULT_SENDER`.
-- Docker deploy does **not** copy local course DB state — import CRT Excel after boot.
-- Before build: copy **`CRT-Schedule.xlsx`** into `data/` from your team secure share (not in git — see `data/README.md`).
+- **CRT curriculum:** copy **`CRT-Schedule.xlsx`** into `data/` **before** `build backend` (not in git — see `data/README.md`). The file is **baked into the backend image** and **auto-imported on first boot** (idempotent).
+- **Build VM:** backend image compile needs **≥ 4 GB RAM** (or add **4 GB swap**). Vite build fails with **exit 137 (OOM)** on smaller instances.
+- Prod `.env`: escape `$` in passwords (wrap in single quotes) or Compose warns `The "c" variable is not set`.
 
 Prod `.env` minimum:
 
@@ -80,9 +81,20 @@ UPSTREAM_REAL_IP_RECURSIVE=on
 ### 0. Prerequisites (on Sales VM)
 
 ```bash
+free -h    # need ~4GB RAM for backend build, or add swap below
 nc -vz <DB_HOST> 3306
 nc -vz <SMTP_HOST> 587
 docker ps   # confirm no old genius/sales stacks conflicting on :8080
+```
+
+If RAM is under 4 GB, add swap **before** building images:
+
+```bash
+sudo fallocate -l 4G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+free -h
 ```
 
 ### 1. Get code
@@ -94,15 +106,25 @@ git checkout main
 git pull origin main
 ```
 
-### 2. Create prod `.env`
+### 2. Create prod `.env` and CRT data
 
 ```bash
 cp .env.example .env
 chmod 600 .env
 # Edit .env — prod values above. COMPOSE_PROFILES must be empty.
+# Wrap passwords containing $ in single quotes.
 ```
 
-### 3. Build images (backend first)
+Copy the CRT workbook into the repo **before build** (required — build fails without it):
+
+```bash
+cp /path/from/secure-share/CRT-Schedule.xlsx data/CRT-Schedule.xlsx
+ls -la data/CRT-Schedule.xlsx
+```
+
+### 3. Build images (backend first — ~10–15 min)
+
+**Backend must succeed before frontend.** Backend build runs Vite; OOM = exit 137 → add swap (step 0).
 
 ```bash
 docker compose --env-file .env build backend
@@ -157,17 +179,22 @@ curl -fsSI https://saleslms.infinitylearn.com/lms
 
 **FAIL** if response shows `server: uvicorn` or auth-gateway JSON errors.
 
-### 7. Import CRT schedule (required)
+### 7. CRT schedule (auto-import + manual fallback)
+
+On first boot the entrypoint imports **`sales-crt`** from the image-baked Excel (`/opt/sales-lms/data/CRT-Schedule.xlsx`) if the course is empty.
+
+Verify after `up -d`:
+
+```bash
+docker compose --env-file .env logs backend | grep -i "bundled CRT"
+```
+
+Manual re-import (only if auto-import failed or Excel was updated):
 
 ```bash
 docker compose --env-file .env exec -w /home/frappe/frappe-bench backend \
-  bench --site saleslms.infinitylearn.com execute lms.lms.sales_crt.preview_import --kwargs "{'use_bundled': 1}"
-
-docker compose --env-file .env exec -w /home/frappe/frappe-bench backend \
-  bench --site saleslms.infinitylearn.com execute lms.lms.sales_crt.import_schedule --kwargs "{'use_bundled': 1}"
+  bench --site saleslms.infinitylearn.com execute lms.lms.sales_crt.import_bundled_schedule
 ```
-
-Or upload a newer workbook at `/lms/crt/import` (dry-run first).
 
 ### 8. App smoke (browser)
 

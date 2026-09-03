@@ -529,6 +529,8 @@ const getSidebarItems = (forMobile = false) => {
 						'Home',
 						'InstructorHome',
 						'SalesCRT',
+						'Lesson',
+						'GeniusCourseDetail',
 						'SalesEvaluation',
 						'SalesOJT',
 						'SalesOJTSim',
@@ -592,24 +594,18 @@ const getSidebarItems = (forMobile = false) => {
 			hideLabel: true,
 			items: [
 				{
-					label: 'CRT Journey',
-					icon: 'BookOpen',
-					to: 'StudentDashboard',
-					activeFor: ['SalesCRT', 'Lesson', 'GeniusCourseDetail'],
-				},
-				{
 					label: 'Evaluation',
 					icon: 'Award',
 					to: 'SalesEvaluation',
 					activeFor: ['SalesEvaluation'],
-					condition: () => userResource?.data,
+					condition: () => userResource?.data && isAdmin(),
 				},
 				{
 					label: 'OJT',
 					icon: 'Phone',
 					to: 'SalesOJT',
 					activeFor: ['SalesOJT', 'SalesOJTSim'],
-					condition: () => userResource?.data,
+					condition: () => userResource?.data && isAdmin(),
 				},
 				{
 					label: 'Courses',
@@ -723,10 +719,14 @@ const getSidebarItems = (forMobile = false) => {
 
 const isAdmin = () => {
 	const { userResource } = usersStore()
+	const user = userResource?.data
+	if (!user) return false
 	return (
-		userResource?.data?.is_instructor ||
-		userResource?.data?.is_moderator ||
-		userResource.data?.is_evaluator
+		user.is_instructor ||
+		user.is_moderator ||
+		user.is_evaluator ||
+		user.is_system_manager ||
+		user.name === 'Administrator'
 	)
 }
 

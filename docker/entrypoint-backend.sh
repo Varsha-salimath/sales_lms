@@ -115,6 +115,21 @@ apply_lms_security() {
 	bench --site "${SITE_NAME}" execute lms.lms.setup_security.ensure_lms_security_from_env
 }
 
+import_bundled_crt() {
+	if [[ ! -f /opt/sales-lms/data/CRT-Schedule.xlsx ]]; then
+		echo "WARN: /opt/sales-lms/data/CRT-Schedule.xlsx missing — CRT course will be empty."
+		echo "      Copy CRT-Schedule.xlsx into data/ before 'docker compose build backend'."
+		return 0
+	fi
+	echo "Ensuring bundled Sales CRT course from image Excel..."
+	if bench --site "${SITE_NAME}" execute lms.lms.sales_crt.ensure_bundled_crt_bootstrap; then
+		echo "Bundled CRT import complete (or already present)."
+	else
+		echo "WARN: Bundled CRT import failed — check backend logs; import manually via /lms/crt/import"
+	fi
+	bench --site "${SITE_NAME}" execute lms.lms.ojt_engine.seed_ojt_scenarios || true
+}
+
 assert_prod_admin_password() {
 	if [[ "${DEVELOPER_MODE}" != "0" ]]; then
 		return 0
@@ -147,6 +162,7 @@ ensure_site() {
 		bench --site "${SITE_NAME}" set-config host_name "${HOST_NAME}" || true
 		bootstrap_smtp
 		apply_lms_security
+		import_bundled_crt
 		return 0
 	fi
 
@@ -159,9 +175,9 @@ ensure_site() {
 	bench use "${SITE_NAME}"
 	bootstrap_smtp
 	apply_lms_security
+	import_bundled_crt
 	bench --site "${SITE_NAME}" clear-cache
 	echo "Site ready: ${SITE_NAME}"
-	echo "NOTE: CRT course content is empty until Excel import runs."
 }
 
 ensure_site

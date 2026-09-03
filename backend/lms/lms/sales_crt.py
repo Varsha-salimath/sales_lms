@@ -729,6 +729,52 @@ def import_bundled_schedule():
 	return import_schedule(use_bundled=1)
 
 
+def _bundled_excel_path() -> str | None:
+	for candidate in (IMAGE_DATA_PATH, BUNDLED_EXCEL):
+		if os.path.exists(candidate):
+			return candidate
+	return None
+
+
+def _crt_needs_import() -> bool:
+	if not frappe.db.exists("LMS Course", COURSE_SLUG):
+		return True
+	if not frappe.db.exists("DocType", "Sales CRT Session"):
+		return True
+	return frappe.db.count("Sales CRT Session", {"course": COURSE_SLUG}) == 0
+
+
+def ensure_bundled_crt_bootstrap():
+	"""Import image-baked CRT Excel on first boot (Docker entrypoint). Idempotent."""
+	path = _bundled_excel_path()
+	if not path:
+		return {"skipped": True, "reason": "Bundled CRT Excel not found in image."}
+	if not _crt_needs_import():
+		count = frappe.db.count("Sales CRT Session", {"course": COURSE_SLUG})
+		return {"skipped": True, "reason": "CRT course already present.", "session_count": count}
+	previous_user = frappe.session.user
+	frappe.set_user("Administrator")
+	source = os.path.basename(path)
+	try:
+		parsed = parse_crt_workbook(path)
+		result = _apply_import(parsed)
+		log_name = _write_import_log("Success", 0, source, parsed, result, None)
+		frappe.db.commit()
+		return {
+			"imported": True,
+			"course": COURSE_SLUG,
+			"session_count": result.get("session_count"),
+			"import_log": log_name,
+			"source_file": source,
+		}
+	except Exception as exc:
+		frappe.db.rollback()
+		_write_import_log("Failed", 0, source, None, None, str(exc))
+		raise
+	finally:
+		frappe.set_user(previous_user)
+
+
 def import_schedule(file_url: str | None = None, file_name: str | None = None, use_bundled: int = 0):
 	"""Idempotent CRT Excel → LMS Course / chapters / lessons / Sales CRT Session."""
 	_ensure_can_import()

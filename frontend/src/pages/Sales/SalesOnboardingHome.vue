@@ -138,7 +138,7 @@
 					<p v-else class="mt-4 text-sm text-[color:var(--il-muted)]">
 						{{ __('Your next milestone will appear as you progress.') }}
 					</p>
-					<p v-if="home.data.ojt?.locked" class="mt-5 rounded-2xl bg-[#fff7e0] px-4 py-3 text-sm text-[color:var(--il-ink)]">
+					<p v-if="home.data.ojt?.locked && !home.data.is_staff" class="mt-5 rounded-2xl bg-[#fff7e0] px-4 py-3 text-sm text-[color:var(--il-ink)]">
 						<strong>{{ __('OJT locked.') }}</strong>
 						{{ home.data.ojt.reason }}
 					</p>
@@ -210,7 +210,7 @@ const stateLabel = (state) =>
 	})[state] || state
 
 const openCrt = (crt) => {
-	if (crt.state === 'locked' || crt.state === 'empty') return
+	if (!home.data?.is_staff && (crt.state === 'locked' || crt.state === 'empty')) return
 	router.push({ name: 'SalesCRT', params: { crtNumber: String(crt.crt_number) } })
 }
 

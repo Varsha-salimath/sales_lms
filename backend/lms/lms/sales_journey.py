@@ -75,6 +75,7 @@ def _ensure_enrolled(member: str) -> str:
 
 
 def _crt_states(member: str) -> list[dict]:
+	staff = _is_staff(member)
 	outline = get_course_outline(COURSE_SLUG, progress=True) or []
 	crts = []
 	prev_complete = True
@@ -84,9 +85,9 @@ def _crt_states(member: str) -> list[dict]:
 		total = len(lessons)
 		done = sum(1 for les in lessons if les.get("is_complete") or les.get("progress") == "Complete")
 		if not chapter or total == 0:
-			state = "locked" if not prev_complete else "empty"
+			state = "locked" if not staff and not prev_complete else "empty"
 			progress = 0
-		elif not prev_complete:
+		elif not prev_complete and not staff:
 			state = "locked"
 			progress = 0
 		elif done >= total:
@@ -127,7 +128,7 @@ def _crt_states(member: str) -> list[dict]:
 						"title": les.get("title"),
 						"number": les.get("number"),
 						"complete": bool(les.get("is_complete") or les.get("progress") == "Complete"),
-						"locked": bool(les.get("locked")),
+						"locked": False if staff else bool(les.get("locked")),
 					}
 					for les in lessons
 				],
@@ -212,7 +213,14 @@ def _compute_evaluation(member: str, crts: list[dict]) -> dict:
 	}
 
 
-def _ojt_eligibility(crts: list[dict], evaluation) -> dict:
+def _ojt_eligibility(crts: list[dict], evaluation, member: str | None = None) -> dict:
+	member = member or frappe.session.user
+	if _is_staff(member):
+		return {
+			"eligible": True,
+			"locked": False,
+			"reason": "Staff preview — OJT is unlocked for admin access.",
+		}
 	missing = []
 	if not _all_crts_complete(crts):
 		incomplete = [f"CRT {c['crt_number']}" for c in crts if c["state"] != "completed"]
@@ -318,23 +326,31 @@ def get_onboarding_home():
 		}
 	crts = _crt_states(member)
 	evaluation = _evaluation_doc(member)
-	ojt = _ojt_eligibility(crts, evaluation)
+	staff = _is_staff(member)
+	ojt = _ojt_eligibility(crts, evaluation, member)
 	cert = _certificate_eligibility(member, crts, evaluation)
 	current = next((c for c in crts if c["state"] in {"available", "in_progress"}), None)
 	if not current:
 		current = next((c for c in reversed(crts) if c["state"] == "completed"), crts[0])
 	overall = round(sum(c["progress"] for c in crts) / 5, 1)
+	eval_status = evaluation.status if evaluation else None
+	if not eval_status:
+		if staff or _all_crts_complete(crts):
+			eval_status = "Ready"
+		else:
+			eval_status = "Locked"
 	return {
 		"empty": False,
 		"course": COURSE_SLUG,
 		"title": COURSE_TITLE,
 		"learner": {"name": member, "full_name": get_fullname(member)},
+		"is_staff": staff,
 		"overall_progress": overall,
 		"crts": crts,
 		"current": current,
 		"milestones": _session_milestones(crts),
 		"evaluation": {
-			"status": evaluation.status if evaluation else "Locked" if not _all_crts_complete(crts) else "Ready",
+			"status": eval_status,
 			"overall_score": evaluation.overall_score if evaluation else None,
 			"readiness": evaluation.readiness if evaluation else None,
 		},
@@ -379,12 +395,13 @@ def get_evaluation():
 	member = frappe.session.user
 	_ensure_enrolled(member)
 	crts = _crt_states(member)
-	locked = not _all_crts_complete(crts)
+	staff = _is_staff(member)
+	locked = not staff and not _all_crts_complete(crts)
 	doc = _evaluation_doc(member)
 	payload = {
 		"locked": locked,
-		"reason": "Complete CRT 1–5 to unlock your Sales training evaluation." if locked else "",
-		"crts_complete": not locked,
+		"reason": "" if staff else ("Complete CRT 1–5 to unlock your Sales training evaluation." if locked else ""),
+		"crts_complete": staff or not locked,
 		"evaluation": None,
 	}
 	if doc:
@@ -410,7 +427,7 @@ def complete_evaluation():
 	member = frappe.session.user
 	_ensure_enrolled(member)
 	crts = _crt_states(member)
-	if not _all_crts_complete(crts):
+	if not _is_staff(member) and not _all_crts_complete(crts):
 		frappe.throw(_("Complete CRT 1–5 before generating your training evaluation."))
 	computed = _compute_evaluation(member, crts)
 	doc = _evaluation_doc(member)
@@ -442,7 +459,7 @@ def get_ojt_state():
 	seed_ojt_scenarios()
 	crts = _crt_states(member)
 	evaluation = _evaluation_doc(member)
-	elig = _ojt_eligibility(crts, evaluation)
+	elig = _ojt_eligibility(crts, evaluation, member)
 	scenarios = frappe.get_all(
 		"Sales OJT Scenario",
 		filters={"enabled": 1},
@@ -470,7 +487,7 @@ def start_ojt(scenario: str):
 	_ensure_enrolled(member)
 	crts = _crt_states(member)
 	evaluation = _evaluation_doc(member)
-	elig = _ojt_eligibility(crts, evaluation)
+	elig = _ojt_eligibility(crts, evaluation, member)
 	if not elig["eligible"]:
 		frappe.throw(_(elig["reason"]))
 	if not frappe.db.exists("Sales OJT Scenario", scenario):

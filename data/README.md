@@ -1,8 +1,8 @@
 # CRT curriculum data (not in git)
 
-Place **`CRT-Schedule.xlsx`** here before building the Docker backend image or running a bundled import.
+Place **`CRT-Schedule.xlsx`** here before **`docker compose build backend`**. The file is copied into the backend Docker image and auto-imported on site boot.
 
-This workbook contains internal SharePoint, form, and ops links — **do not commit it** to public repositories.
+This workbook contains internal SharePoint, form, and ops links — **do not commit it** to git.
 
 Obtain the current file from your team secure share / IL content owner.
 

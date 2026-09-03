@@ -18,6 +18,9 @@ def should_enforce_sequential_locking(course: str, member: str = None) -> bool:
 		member = frappe.session.user
 	if member == "Guest":
 		return False
+	roles = set(frappe.get_roles(member))
+	if roles & {"System Manager", "Administrator", "Moderator", "Course Creator"}:
+		return False
 	if has_moderator_role(member) or has_course_instructor_role(member):
 		return False
 	if can_modify_course(course) or is_instructor(course):
