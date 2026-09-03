@@ -7,15 +7,16 @@
 | Prod domain | `saleslms.infinitylearn.com` |
 | Site name (`SITE_NAME`) | `saleslms.infinitylearn.com` |
 | VM path | `<VM_PATH>` e.g. `/var/www/sales-lms/sales_lms` |
+| Database engine | **MariaDB 11.8.8** (AWS POC — confirmed; `DB_TYPE=mariadb`, port 3306) |
 | Database (`DB_NAME` / `DB_USER`) | `salesapp` |
-| MySQL host | `<DB_HOST>` (AWS POC MariaDB 10.6+ / MySQL-compatible — **not** Genius LMS Postgres on GCP) |
+| DB host | `<DB_HOST>` (from DevOps — **not** Genius LMS Postgres on GCP) |
 | App port | **8080** (LB → VM `:8080`) |
 | Redis | Compose only — `REDIS_HOST=redis`, `REDIS_PORT=6379`, `REDIS_USERNAME=` empty |
 | Login | `Administrator` / `ADMIN_PASSWORD` from `.env` |
 
 **Never commit** `.env`.
 
-Frappe uses `DB_TYPE=mariadb` for MySQL-protocol servers. **MariaDB 10.6+ is required** (Oracle MySQL 8 is not supported).
+Frappe uses `DB_TYPE=mariadb`. AWS POC database is **MariaDB 11.8.8** (confirmed by DevOps).
 
 ---
 
