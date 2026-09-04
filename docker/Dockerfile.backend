@@ -23,12 +23,17 @@ RUN chmod -R u+rwX /home/frappe/frappe-bench/apps/lms \
 USER frappe
 WORKDIR /home/frappe/frappe-bench
 
+# Propagate to bench → yarn → vite (Frappe subprocesses do not always inherit shell exports).
+ENV NODE_OPTIONS=--max-old-space-size=2048
+
 RUN set -e; \
 	TRACKING=apps/lms/lms/tracking.py; \
 	test -f "$TRACKING"; \
 	echo "OK: cross-DB tracking SQL present in image source."
 
-RUN ["/bin/bash", "-c", "set -e; export NODE_OPTIONS=\"${NODE_OPTIONS:---max-old-space-size=4096}\"; export NVM_DIR=\"${NVM_DIR:-$HOME/.nvm}\"; [ -s \"$NVM_DIR/nvm.sh\" ]; . \"$NVM_DIR/nvm.sh\"; nvm install 24; nvm alias default 24; nvm use 24; ln -sfn \"$NVM_DIR/versions/node/$(nvm version)\" \"$NVM_DIR/versions/node/default\"; npm install -g yarn@1.22.22; if [ ! -d apps/payments ]; then git clone --depth 1 --branch version-16 https://github.com/frappe/payments.git apps/payments; fi; ./env/bin/pip install --no-cache-dir -e ./apps/payments; ./env/bin/pip install --no-cache-dir -e ./apps/lms; ./env/bin/pip install --no-cache-dir openpyxl; mkdir -p apps/lms/frontend/node_modules apps/lms/node_modules; yarn --cwd ./apps/lms install --frozen-lockfile; bench build --app lms; ls -1 apps > sites/apps.txt; ./env/bin/python -c \"import frappe; print('frappe', frappe.__version__)\"; ./env/bin/python -c \"import lms; print('lms', getattr(lms,'__version__', 'unknown'))\""]
+# Do not use ${VAR:-default} in RUN — Docker BuildKit expands $VAR before bash runs,
+# which silently broke the previous NODE_OPTIONS heap fix (Vite OOM at ~1.4 GB).
+RUN ["/bin/bash", "-c", "set -e; export NODE_OPTIONS=\"--max-old-space-size=2048\"; export NVM_DIR=\"$${NVM_DIR:-$$HOME/.nvm}\"; [ -s \"$$NVM_DIR/nvm.sh\" ]; . \"$$NVM_DIR/nvm.sh\"; nvm install 24; nvm alias default 24; nvm use 24; ln -sfn \"$$NVM_DIR/versions/node/$$(nvm version)\" \"$$NVM_DIR/versions/node/default\"; npm install -g yarn@1.22.22; if [ ! -d apps/payments ]; then git clone --depth 1 --branch version-16 https://github.com/frappe/payments.git apps/payments; fi; ./env/bin/pip install --no-cache-dir -e ./apps/payments; ./env/bin/pip install --no-cache-dir -e ./apps/lms; ./env/bin/pip install --no-cache-dir openpyxl; mkdir -p apps/lms/frontend/node_modules apps/lms/node_modules; yarn --cwd ./apps/lms install --frozen-lockfile; NODE_OPTIONS=\"--max-old-space-size=2048\" bench build --app lms; ls -1 apps > sites/apps.txt; ./env/bin/python -c \"import frappe; print('frappe', frappe.__version__)\"; ./env/bin/python -c \"import lms; print('lms', getattr(lms,'__version__', 'unknown'))\""]
 
 ENV PATH="/home/frappe/.nvm/versions/node/default/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/sbin:/bin"
 

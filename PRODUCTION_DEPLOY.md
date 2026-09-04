@@ -29,7 +29,7 @@ Frappe uses `DB_TYPE=mariadb`. AWS POC database is **MariaDB 11.8.8** (confirmed
 - Do **not** use Redis Cloud (Frappe 16 CLIENT TRACKING breaks).
 - SMTP required — compose/entrypoint fail without `SMTP_*` and `DEFAULT_SENDER`.
 - **CRT curriculum:** copy **`CRT-Schedule.xlsx`** into `data/` **before** `build backend` (not in git — see `data/README.md`). The file is **baked into the backend image** and **auto-imported on first boot** (idempotent).
-- **Build VM:** backend image compile needs **≥ 4 GB RAM** plus **≥ 8 GB swap** (or an **8 GB RAM** instance). Vite/Node fails with **exit 134/137 (OOM)** on smaller hosts. The Dockerfile sets `NODE_OPTIONS=--max-old-space-size=4096` for the frontend build.
+- **Build VM:** **Minimum 4 GB RAM** (e.g. AWS `t3.medium`) for `docker compose build backend`. A **2 GB** instance fails Vite with **exit 134 (heap OOM)** even with swap. If stuck on 2 GB RAM, add a **second** swap file (`/swapfile2`, 8 GB) — do not recreate `/swapfile` if it already exists.
 - Prod `.env`: escape `$` in passwords (wrap in single quotes) or Compose warns `The "c" variable is not set`.
 
 Prod `.env` minimum:
@@ -87,15 +87,19 @@ nc -vz <SMTP_HOST> 587
 docker ps   # confirm no old genius/sales stacks conflicting on :8080
 ```
 
-If RAM is under 8 GB, add **8 GB swap** before building images:
+If RAM is under 4 GB, add **extra swap** (use a **new file** if `/swapfile` already exists):
 
 ```bash
-sudo fallocate -l 8G /swapfile
-sudo chmod 600 /swapfile
-sudo mkswap /swapfile
-sudo swapon /swapfile
+free -h
+# Only if Swap total < 12G:
+sudo fallocate -l 8G /swapfile2
+sudo chmod 600 /swapfile2
+sudo mkswap /swapfile2
+sudo swapon /swapfile2
 free -h
 ```
+
+**Do not** run `fallocate` on `/swapfile` again if swap is already active (`Text file busy`).
 
 ### 1. Get code
 
@@ -124,7 +128,7 @@ ls -la data/CRT-Schedule.xlsx
 
 ### 3. Build images (backend first — ~10–15 min)
 
-**Backend must succeed before frontend.** Backend build runs Vite (~10–15 min). OOM = exit 134/137 → add 8 GB swap (step 0) and pull latest `main` (Dockerfile sets Node heap to 4 GB).
+**Backend must succeed before frontend.** Backend build runs Vite (~10–15 min). OOM = exit 134/137 → use **≥4 GB RAM** (or add `/swapfile2` swap) and pull latest `main` (heap limit is set in Dockerfile `ENV`, `bench build`, and `frontend/package.json` via `node --max-old-space-size=2048`).
 
 ```bash
 export DOCKER_BUILDKIT=1

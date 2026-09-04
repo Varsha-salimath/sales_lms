@@ -54,6 +54,12 @@ export default defineConfig(async ({ mode }) => {
 				'@': path.resolve(__dirname, 'src'),
 			},
 		},
+		build: {
+			sourcemap: false,
+			rollupOptions: {
+				maxParallelFileOps: 1,
+			},
+		},
 		optimizeDeps: {
 			include: [
 				'feather-icons',
