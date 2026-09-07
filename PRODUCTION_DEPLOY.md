@@ -113,9 +113,10 @@ git pull origin main
 ### 2. Create prod `.env` and CRT data
 
 ```bash
-cp .env.example .env
+cp .env.prod.example .env
 chmod 600 .env
-# Edit .env — prod values above. COMPOSE_PROFILES must be empty.
+# Edit .env — fill <placeholders>. DevOps: DB_HOST, DB_* passwords, ADMIN_PASSWORD, LB IP.
+# SMTP keys from team. Use Compose Redis (REDIS_HOST=redis), not Redis Cloud.
 # Wrap passwords containing $ in single quotes.
 ```
 
