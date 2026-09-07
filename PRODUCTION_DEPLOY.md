@@ -81,10 +81,11 @@ UPSTREAM_REAL_IP_RECURSIVE=on
 ### 0. Prerequisites (on Sales VM)
 
 ```bash
-free -h    # need ~4GB RAM for backend build, or add swap below
+free -h    # Mem total must be ≥3.8Gi before backend build (Vite needs 4GB Node heap)
 nc -vz <DB_HOST> 3306
-nc -vz <SMTP_HOST> 587
-docker ps   # confirm no old genius/sales stacks conflicting on :8080
+nc -vz email-smtp.ap-south-1.amazonaws.com 587
+ls -la data/CRT-Schedule.xlsx
+docker ps
 ```
 
 If RAM is under 4 GB, add **extra swap** (use a **new file** if `/swapfile` already exists):
@@ -129,7 +130,7 @@ ls -la data/CRT-Schedule.xlsx
 
 ### 3. Build images (backend first — ~10–15 min)
 
-**Backend must succeed before frontend.** Backend build runs Vite (~10–15 min). OOM = exit 134/137 → use **≥4 GB RAM** (or add `/swapfile2` swap) and pull latest `main` (heap limit is set in Dockerfile `ENV`, `bench build`, and `frontend/package.json` via `node --max-old-space-size=2048`).
+**Backend must succeed before frontend.** Backend build runs Vite (~10–15 min). OOM = exit 134/137 → VM must have **≥4 GB RAM** (`free -h` before build). Node heap is **4096 MB** in Dockerfile and `frontend/package.json`. Pull latest `main` before building.
 
 ```bash
 export DOCKER_BUILDKIT=1

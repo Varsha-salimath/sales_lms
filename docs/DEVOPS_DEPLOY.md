@@ -39,10 +39,10 @@ nano .env   # fill <placeholders> from secure credentials (see team)
 **Pre-checks:**
 
 ```bash
+free -h    # Mem total must be ≥3.8Gi before backend build
 nc -vz <DB_HOST> 3306
 nc -vz email-smtp.ap-south-1.amazonaws.com 587
 ls -la data/CRT-Schedule.xlsx
-free -h
 ```
 
 ## 3. Build and start (backend first — ~10–15 min)

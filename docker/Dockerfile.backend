@@ -24,8 +24,8 @@ RUN chmod -R u+rwX /home/frappe/frappe-bench/apps/lms \
 USER frappe
 WORKDIR /home/frappe/frappe-bench
 
-# Propagate to bench → yarn → vite (Frappe subprocesses do not always inherit shell exports).
-ENV NODE_OPTIONS=--max-old-space-size=2048
+# Vite rendering chunks peaks above 2 GB; requires ≥4 GB VM RAM for docker build.
+ENV NODE_OPTIONS=--max-old-space-size=4096
 
 RUN set -e; \
 	TRACKING=apps/lms/lms/tracking.py; \
@@ -35,7 +35,7 @@ RUN set -e; \
 # Heredoc avoids JSON-exec quoting bugs and Docker $VAR pre-expansion (see af4d962).
 RUN <<'BASH'
 set -e
-export NODE_OPTIONS=--max-old-space-size=2048
+export NODE_OPTIONS=--max-old-space-size=4096
 export NVM_DIR=/home/frappe/.nvm
 . "$NVM_DIR/nvm.sh"
 nvm install 24
@@ -51,7 +51,7 @@ fi
 ./env/bin/pip install --no-cache-dir openpyxl
 mkdir -p apps/lms/frontend/node_modules apps/lms/node_modules
 yarn --cwd ./apps/lms install --frozen-lockfile
-NODE_OPTIONS=--max-old-space-size=2048 bench build --app lms
+NODE_OPTIONS=--max-old-space-size=4096 bench build --app lms
 ls -1 apps > sites/apps.txt
 ./env/bin/python -c "import frappe; print('frappe', frappe.__version__)"
 ./env/bin/python -c "import lms; print('lms', getattr(lms, '__version__', 'unknown'))"

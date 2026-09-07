@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "serve": "vite preview",
-    "build": "yarn copy-brand-assets && node --max-old-space-size=2048 ./node_modules/vite/bin/vite.js build --base=/assets/lms/frontend/ && yarn copy-html-entry",
+    "build": "yarn copy-brand-assets && node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js build --base=/assets/lms/frontend/ && yarn copy-html-entry",
     "copy-brand-assets": "cp src/assets/il-logo.png public/favicon.png",
     "copy-html-entry": "cp ../lms/public/frontend/index.html ../lms/www/_lms.html && mkdir -p ../../www && cp ../lms/public/frontend/index.html ../../www/_lms.html",
     "copy-colors-json": "cp node_modules/frappe-ui/tailwind/colors.json src/utils/frappe-ui-colors.json"
