@@ -8,8 +8,8 @@
 | Site name (`SITE_NAME`) | `saleslms.infinitylearn.com` |
 | VM path | `<VM_PATH>` e.g. `/var/www/sales-lms/sales_lms` |
 | Database engine | **MariaDB 11.8.8** (AWS POC — confirmed; `DB_TYPE=mariadb`, port 3306) |
-| Database (`DB_NAME` / `DB_USER`) | `salesapp` |
-| DB host | `<DB_HOST>` (from DevOps — **not** Genius LMS Postgres on GCP) |
+| Database (`DB_NAME` / `DB_USER`) | `saleslms` / `saleslms_admin` (AWS RDS POC) |
+| DB host | `<DB_HOST>` AWS RDS endpoint (MariaDB 11.8.8) |
 | App port | **8080** (LB → VM `:8080`) |
 | Redis | Compose only — `REDIS_HOST=redis`, `REDIS_PORT=6379`, `REDIS_USERNAME=` empty |
 | Login | `Administrator` / `ADMIN_PASSWORD` from `.env` |
@@ -24,8 +24,8 @@ Frappe uses `DB_TYPE=mariadb`. AWS POC database is **MariaDB 11.8.8** (confirmed
 
 - VM: Docker Engine + Compose v2, Git access to Bitbucket, outbound MySQL `:3306` and SMTP `:587`.
 - Prod `.env`: `COMPOSE_PROFILES=` (empty — no embedded MariaDB).
-- `SITE_NAME` ≠ `DB_NAME` (site = domain, db = `salesapp`).
-- `DB_ROOT_USERNAME` ≠ `salesapp` (use `root` or another privileged MySQL user).
+- `SITE_NAME` ≠ `DB_NAME` (site = domain, db = `saleslms` on AWS POC).
+- `DB_ROOT_USERNAME` is RDS master user (`saleslms_admin` on POC — not necessarily `root`).
 - Do **not** use Redis Cloud (Frappe 16 CLIENT TRACKING breaks).
 - SMTP required — compose/entrypoint fail without `SMTP_*` and `DEFAULT_SENDER`.
 - **CRT curriculum:** copy **`CRT-Schedule.xlsx`** into `data/` **before** `build backend` (not in git — see `data/README.md`). The file is **baked into the backend image** and **auto-imported on first boot** (idempotent).
@@ -47,13 +47,13 @@ LMS_DISABLE_SIGNUP=1
 ALLOW_DEMO_LEARNER=0
 
 DB_TYPE=mariadb
-DB_HOST=<aws-mariadb-host>
+DB_HOST=<aws-rds-endpoint>
 DB_PORT=3306
-DB_NAME=salesapp
-DB_USER=salesapp
-DB_PASSWORD=<salesapp-password>
-DB_ROOT_USERNAME=root
-DB_ROOT_PASSWORD=<privileged-user-password>
+DB_NAME=saleslms
+DB_USER=saleslms_admin
+DB_PASSWORD='<rds-password>'
+DB_ROOT_USERNAME=saleslms_admin
+DB_ROOT_PASSWORD='<rds-password>'
 
 REDIS_HOST=redis
 REDIS_PORT=6379
