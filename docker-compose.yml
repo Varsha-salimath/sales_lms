@@ -74,6 +74,8 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
       DB_ROOT_USERNAME: ${DB_ROOT_USERNAME:-root}
       DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Set DB_ROOT_PASSWORD in .env}
+      DB_USE_SSL: ${DB_USE_SSL:-}
+      DB_SSL_CA: ${DB_SSL_CA:-/home/frappe/.aws/rds-global-bundle.pem}
       REDIS_USERNAME: ${REDIS_USERNAME:-}
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
       REDIS_HOST: ${REDIS_HOST:-redis}

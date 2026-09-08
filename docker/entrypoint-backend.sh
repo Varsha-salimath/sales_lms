@@ -16,6 +16,8 @@ DB_USER="${DB_USER:-salesapp}"
 DB_PASSWORD="${DB_PASSWORD:?Set DB_PASSWORD}"
 DB_ROOT_USERNAME="${DB_ROOT_USERNAME:-root}"
 DB_ROOT_PASSWORD="${DB_ROOT_PASSWORD:-${DB_PASSWORD}}"
+DB_USE_SSL="${DB_USE_SSL:-}"
+DB_SSL_CA="${DB_SSL_CA:-/home/frappe/.aws/rds-global-bundle.pem}"
 REDIS_PASSWORD="${REDIS_PASSWORD:-sales_local_redis}"
 REDIS_USERNAME="${REDIS_USERNAME:-}"
 REDIS_HOST="${REDIS_HOST:-redis}"
@@ -66,6 +68,34 @@ PY
 
 wait_tcp "${DB_HOST}" "${DB_PORT}" "mysql"
 wait_tcp "${REDIS_HOST}" "${REDIS_PORT}" "redis"
+
+configure_db_ssl() {
+	# AWS RDS with require_secure_transport=ON rejects plain TCP (MySQL error 3159).
+	local use_ssl="${DB_USE_SSL}"
+	if [[ -z "${use_ssl}" ]]; then
+		if [[ "${DB_HOST}" != "db" && "${DB_HOST}" != "localhost" && "${DB_HOST}" != "127.0.0.1" ]]; then
+			use_ssl="1"
+		fi
+	fi
+	if [[ "${use_ssl}" != "1" ]]; then
+		return 0
+	fi
+
+	local ca_path="${DB_SSL_CA}"
+	mkdir -p "$(dirname "${ca_path}")"
+	if [[ ! -s "${ca_path}" ]]; then
+		echo "Downloading AWS RDS CA bundle for SSL DB connections..."
+		curl -fsSL -o "${ca_path}" \
+			https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
+	fi
+	echo "Enabling MariaDB SSL (db_ssl_ca=${ca_path}) for ${DB_HOST}..."
+	bench set-config -g db_ssl_ca "${ca_path}" || true
+	if [[ -d "sites/${SITE_NAME}" ]]; then
+		bench --site "${SITE_NAME}" set-config db_ssl_ca "${ca_path}" || true
+	fi
+}
+
+configure_db_ssl
 
 ls -1 apps > sites/apps.txt
 
@@ -167,7 +197,10 @@ ensure_site() {
 	fi
 
 	assert_prod_admin_password
+	configure_db_ssl
 	create_mysql_site
+
+	bench --site "${SITE_NAME}" set-config db_ssl_ca "${DB_SSL_CA}" 2>/dev/null || true
 
 	bench --site "${SITE_NAME}" install-app payments
 	bench --site "${SITE_NAME}" install-app lms

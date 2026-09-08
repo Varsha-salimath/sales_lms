@@ -26,6 +26,7 @@ nano .env   # fill <placeholders> from secure credentials (see team)
 | `ADMIN_PASSWORD` | Frappe Administrator login |
 | `DB_HOST` | AWS RDS endpoint |
 | `DB_PASSWORD` / `DB_ROOT_PASSWORD` | RDS `saleslms_admin` password; **single quotes** if password contains `$` |
+| `DB_USE_SSL` | `1` for AWS RDS (`require_secure_transport=ON`) |
 | `REDIS_PASSWORD` | Any strong password (Compose Redis on VM) |
 | `SMTP_USER` / `SMTP_PASSWORD` | AWS SES IAM SMTP credentials |
 | `UPSTREAM_REAL_IP_ADDRESS` | Load balancer / reverse proxy IP or CIDR |

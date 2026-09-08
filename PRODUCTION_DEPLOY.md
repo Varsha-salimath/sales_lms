@@ -31,6 +31,7 @@ Frappe uses `DB_TYPE=mariadb`. AWS POC database is **MariaDB 11.8.8** (confirmed
 - **CRT curriculum:** copy **`CRT-Schedule.xlsx`** into `data/` **before** `build backend` (not in git — see `data/README.md`). The file is **baked into the backend image** and **auto-imported on first boot** (idempotent).
 - **Build VM:** **Minimum 4 GB RAM** (e.g. AWS `t3.medium`) for `docker compose build backend`. A **2 GB** instance fails Vite with **exit 134 (heap OOM)** even with swap. If stuck on 2 GB RAM, add a **second** swap file (`/swapfile2`, 8 GB) — do not recreate `/swapfile` if it already exists.
 - Prod `.env`: escape `$` in passwords (wrap in single quotes) or Compose warns `The "c" variable is not set`.
+- **AWS RDS:** set `DB_USE_SSL=1` when RDS has `require_secure_transport=ON` (error 3159 without SSL).
 
 Prod `.env` minimum:
 
@@ -54,6 +55,7 @@ DB_USER=saleslms_admin
 DB_PASSWORD='<rds-password>'
 DB_ROOT_USERNAME=saleslms_admin
 DB_ROOT_PASSWORD='<rds-password>'
+DB_USE_SSL=1
 
 REDIS_HOST=redis
 REDIS_PORT=6379
