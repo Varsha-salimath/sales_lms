@@ -281,23 +281,37 @@
 
 	window.__ = window.__ || ((text) => text);
 
-	// login.js (inlined earlier in the page) has defined `login` by now; patch it before its
-	// own ready handler runs login.route().
-	if (path === "login") patchLoginJs();
+	// Frappe may include this file before or after its inline login.js, so patch as soon as
+	// `login` exists and route again once login.js's own ready handler has run.
+	let patched = false;
+	function ensurePatched() {
+		if (!patched && typeof login !== "undefined") {
+			patchLoginJs();
+			patched = true;
+		}
+		return patched;
+	}
+	if (path === "login") ensurePatched();
 
 	onReady(() => {
 		if (path === "update-password") {
 			buildUpdatePasswordShell();
 			return;
 		}
+		ensurePatched();
 		bindLogin();
 		const boot = () => {
 			document.querySelectorAll(".il-auth-form.hide").forEach((form) => form.classList.remove("hide"));
 			if (typeof login !== "undefined" && login.route) login.route();
 			else showScreen(currentRoute());
 		};
-		if (typeof frappe !== "undefined" && frappe.ready) frappe.ready(boot);
-		else boot();
+		// Run after every other ready handler (including login.js's own login.route()).
+		const later = () => setTimeout(() => {
+			ensurePatched();
+			boot();
+		}, 0);
+		if (typeof frappe !== "undefined" && frappe.ready) frappe.ready(later);
+		else later();
 		window.addEventListener("hashchange", () => {
 			if (typeof login !== "undefined" && login.route) login.route();
 			else showScreen(currentRoute());

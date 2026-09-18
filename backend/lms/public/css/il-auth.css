@@ -174,12 +174,13 @@ body:is([data-path="login"], [data-path="update-password"]) :is(.page-content-wr
 
 /* ---------- Sections ---------- */
 
+/* !important beats the inline display Frappe's login.js sets with $.toggle(). */
 .il-auth-content > section {
-	display: none;
+	display: none !important;
 }
 
 .il-auth-content > section.is-active {
-	display: block;
+	display: block !important;
 	animation: ilAuthIn 0.25s ease-out both;
 }
 
