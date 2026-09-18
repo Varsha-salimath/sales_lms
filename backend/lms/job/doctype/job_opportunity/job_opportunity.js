@@ -5,7 +5,7 @@ frappe.ui.form.on("Job Opportunity", {
 	refresh: (frm) => {
 		if (frm.doc.name)
 			frm.add_web_link(
-				`/lms/job-openings/${frm.doc.name}`,
+				`/job-openings/${frm.doc.name}`,
 				"See on Website"
 			);
 	},

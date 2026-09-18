@@ -1,14 +1,34 @@
 <template>
 	<div>
-		<header
-			class="sticky top-0 z-10 flex items-center justify-between border-b bg-surface-white px-3 py-2.5 sm:px-5"
-		>
-			<Breadcrumbs class="h-7" :items="breadcrumbs" />
-		</header>
-		<div class="p-5">
-			<div class="text-base font-semibold text-ink-gray-9 mb-3">
-				{{ __('Overview') }}
+		<div class="px-5 pt-4 pb-5">
+			<div
+				class="flex flex-col gap-4 mb-4 lg:flex-row lg:items-start lg:justify-between"
+			>
+				<div class="min-w-0">
+					<h1 class="text-xl font-semibold text-ink-gray-9">
+						{{ __('Analytics Dashboard') }}
+					</h1>
+					<p class="text-sm text-ink-gray-6 mt-1 max-w-2xl">
+						{{
+							__(
+								'Monitor learner engagement, progress, certification and feedback from one place.'
+							)
+						}}
+					</p>
+				</div>
 			</div>
+
+			<AnalyticsSectionNav v-model="activeSection" class="mb-4" />
+
+			<div v-show="activeSection === 'overview'" class="space-y-6">
+				<div>
+					<h2 class="text-base font-semibold text-ink-gray-9 mb-1">
+						{{ __('Overview') }}
+					</h2>
+					<p class="text-xs text-ink-gray-6">
+						{{ __('Key metrics and trends across your learning programs.') }}
+					</p>
+				</div>
 
 			<div v-if="overview.loading" class="text-sm text-ink-gray-6">
 				{{ __('Loading...') }}
@@ -16,12 +36,12 @@
 
 			<div
 				v-else-if="overview.data"
-				class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"
+				class="flex flex-nowrap gap-4 overflow-x-auto pb-1"
 			>
 				<div
 					v-for="card in overviewCards"
 					:key="card.key"
-					class="border rounded-lg bg-surface-white p-4"
+					class="border rounded-lg bg-surface-white p-4 flex-1 min-w-[10.5rem] shrink-0"
 				>
 					<div class="text-sm text-ink-gray-6 mb-1">
 						{{ __(card.label) }}
@@ -269,14 +289,21 @@
 					</div>
 				</div>
 			</div>
+			</div>
 
-			<!-- Learner progress -->
-			<div class="border rounded-lg bg-surface-white p-4 mt-6 overflow-hidden min-w-0">
-				<div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-4 min-w-0">
-					<h2 class="text-base font-semibold text-ink-gray-9 shrink-0">
-						{{ __('Learner progress') }}
+			<div v-show="activeSection === 'progress'" class="space-y-4">
+				<div>
+					<h2 class="text-base font-semibold text-ink-gray-9">
+						{{ __('Learner Progress') }}
 					</h2>
-					<div class="flex flex-wrap items-center gap-2 sm:ml-auto">
+					<p class="text-xs text-ink-gray-6 mt-1">
+						{{ __('Track learner course and training progress.') }}
+					</p>
+				</div>
+
+			<div class="border rounded-lg bg-surface-white p-4 overflow-hidden min-w-0">
+				<div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-4 min-w-0">
+					<div class="flex flex-wrap items-center gap-2 sm:ml-auto w-full sm:w-auto">
 						<div class="flex rounded-md border overflow-hidden text-xs">
 							<button
 								v-for="filter in statusFilters"
@@ -470,14 +497,33 @@
 					</div>
 				</div>
 			</div>
+			</div>
 
-			<div v-if="false" class="border rounded-lg bg-surface-white p-4 mt-4 overflow-hidden min-w-0">
+			<div v-if="activeSection === 'certification'">
+				<OJTCertificationAnalytics embedded />
+			</div>
+
+			<div v-show="activeSection === 'feedback'" class="space-y-4">
+				<div>
+					<h2 class="text-base font-semibold text-ink-gray-9">
+						{{ __('Feedback') }}
+					</h2>
+					<p class="text-xs text-ink-gray-6 mt-1">
+						{{
+							__(
+								'Thumbs up / down reactions from learners after each lesson.'
+							)
+						}}
+					</p>
+				</div>
+
+			<div class="border rounded-lg bg-surface-white p-4 overflow-hidden min-w-0">
 				<div class="flex items-center gap-3 mb-4 min-w-0">
-					<h2
+					<h3
 						class="flex-1 min-w-0 text-base font-semibold text-ink-gray-9 leading-snug truncate"
 					>
 						{{ __('Lesson feedback') }}
-					</h2>
+					</h3>
 					<Tooltip
 						v-if="courseOptions.length"
 						:text="selectedCourseFeedbackLabel"
@@ -530,9 +576,7 @@
 							)
 						}}
 					</p>
-					<div
-						class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-6"
-					>
+					<div class="flex flex-col gap-6">
 						<div
 							v-for="lesson in lessonFeedbackRows"
 							:key="lesson.lesson"
@@ -579,6 +623,7 @@
 					</div>
 				</div>
 			</div>
+			</div>
 		</div>
 
 		<LearnerProgressDetailModal
@@ -594,7 +639,6 @@
 import {
 	Avatar,
 	AxisChart,
-	Breadcrumbs,
 	Button,
 	createResource,
 	ECharts,
@@ -602,29 +646,55 @@ import {
 	Tooltip,
 	usePageMeta,
 } from 'frappe-ui'
+import AnalyticsSectionNav from '@/components/Analytics/AnalyticsSectionNav.vue'
+import OJTCertificationAnalytics from '@/components/Analytics/OJTCertificationAnalytics.vue'
 import LearnerProgressDetailModal from '@/components/Modals/LearnerProgressDetailModal.vue'
 import ProgressBar from '@/components/ProgressBar.vue'
 import { computed, onMounted, ref, watch, watchEffect } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { sessionStore } from '../stores/session'
 import { usersStore } from '../stores/user'
 
 const router = useRouter()
+const route = useRoute()
 const { brand } = sessionStore()
 const { userResource } = usersStore()
+
+const ANALYTICS_SECTIONS = ['overview', 'progress', 'certification', 'feedback']
+const activeSection = ref('overview')
+
+function resolveSection(section) {
+	return ANALYTICS_SECTIONS.includes(section) ? section : 'overview'
+}
+
+onMounted(() => {
+	activeSection.value = resolveSection(route.query.section)
+	initChartFilters(chartFilters.data)
+})
+
+watch(
+	() => route.query.section,
+	(section) => {
+		const next = resolveSection(section)
+		if (activeSection.value !== next) {
+			activeSection.value = next
+		}
+	}
+)
+
+watch(activeSection, (section) => {
+	if (route.query.section === section) return
+	router.replace({
+		name: 'AnalyticsDashboard',
+		query: { ...route.query, section },
+	})
+})
 
 watchEffect(() => {
 	if (userResource.data?.is_student) {
 		router.replace({ name: 'Home' })
 	}
 })
-
-const breadcrumbs = computed(() => [
-	{
-		label: __('Analytics dashboard'),
-		route: { name: 'AnalyticsDashboard' },
-	},
-])
 
 const overview = createResource({
 	url: 'lms.lms.api.get_analytics_overview',
@@ -955,10 +1025,6 @@ watch(selectedBatchCerts, (batch, previous) => {
 	}
 })
 
-onMounted(() => {
-	initChartFilters(chartFilters.data)
-})
-
 const lessonCompletionChartData = computed(() => {
 	return (
 		lessonCompletion.data?.lessons?.map((row) => ({
@@ -1264,14 +1330,8 @@ const overviewCards = computed(() => {
 	const data = overview.data
 	return [
 		{
-			key: 'total_courses',
-			label: 'Total courses',
-			displayValue: data.total_courses?.value ?? 0,
-			subtext: data.total_courses?.subtext ?? '',
-		},
-		{
 			key: 'total_users',
-			label: 'Total users',
+			label: 'Total learners',
 			displayValue: data.total_users?.value ?? 0,
 			subtext: data.total_users?.subtext ?? '',
 		},
@@ -1283,13 +1343,13 @@ const overviewCards = computed(() => {
 		},
 		{
 			key: 'avg_completion',
-			label: 'Avg completion',
+			label: 'Avg progress',
 			displayValue: `${data.avg_completion?.value ?? 0}%`,
 			subtext: data.avg_completion?.subtext ?? '',
 		},
 		{
 			key: 'certificates_issued',
-			label: 'Certificates issued',
+			label: 'Certified learners',
 			displayValue: data.certificates_issued?.value ?? 0,
 			subtext: data.certificates_issued?.subtext ?? '',
 		},
@@ -1297,7 +1357,7 @@ const overviewCards = computed(() => {
 })
 
 usePageMeta(() => ({
-	title: __('Analytics dashboard'),
+	title: __('Analytics Dashboard'),
 	icon: brand.favicon,
 }))
 </script>

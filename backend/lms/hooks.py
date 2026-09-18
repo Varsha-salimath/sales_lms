@@ -3,12 +3,12 @@ import frappe
 from . import __version__ as app_version
 
 app_name = "frappe_lms"
-app_title = "Learning"
-app_publisher = "Frappe"
-app_description = "Open Source Learning Management System built with Frappe Framework"
+app_title = "Sales LMS"
+app_publisher = "Varsity Education"
+app_description = "Sales onboarding and classroom readiness training platform"
 app_icon_url = "/assets/lms/frontend/favicon.png"
-app_icon_title = "Learning"
-app_icon_route = "/lms"
+app_icon_title = "Sales LMS"
+app_icon_route = "/dashboard"
 app_color = "grey"
 app_email = "jannat@frappe.io"
 app_license = "AGPL"
@@ -16,10 +16,12 @@ required_apps = ["frappe/payments"]
 
 
 def get_lms_path():
-	path = "lms"
-	if frappe.conf and frappe.conf.get("lms_path"):
-		path = frappe.conf.get("lms_path")
-	return path.strip("/")
+	configured = None
+	if frappe.conf:
+		configured = frappe.conf.get("lms_path")
+	if configured in (None, False, ""):
+		return ""
+	return str(configured).strip("/")
 
 
 # Includes in <head>
@@ -176,6 +178,7 @@ fixtures = ["Custom Field", "Function", "Industry", "LMS Category"]
 override_whitelisted_methods = {
 	# "frappe.desk.search.get_names_for_mentions": "lms.lms.utils.get_names_for_mentions",
 	"frappe.utils.print_format.download_pdf": "lms.lms.doctype.lms_certificate.lms_certificate.download_pdf",
+	"logout": "lms.lms.user.logout",
 }
 #
 # each overriding function accepts a `data` argument;
@@ -189,10 +192,10 @@ override_whitelisted_methods = {
 #
 # auto_cancel_exempted_doctypes = ["Auto Repeat"]
 
-# Add all simple route rules here
+# SPA is served by SalesLmsSpaRenderer for allowlisted paths.
+# Do NOT use /<path:app_path> → _lms; that steals /login and /app.
+# /lms/* redirects are handled in lms.lms.routing.resolve_sales_lms_path (website_path_resolver).
 website_route_rules = [
-	{"from_route": f"/{get_lms_path()}/<path:app_path>", "to_route": "_lms"},
-	{"from_route": f"/{get_lms_path()}", "to_route": "_lms"},
 	{
 		"from_route": "/courses/<course_name>/<certificate_id>",
 		"to_route": "certificate",
@@ -200,38 +203,16 @@ website_route_rules = [
 ]
 
 website_redirects = [
-	{"source": "/update-profile", "target": "/edit-profile"},
-	{"source": "/", "target": f"/{get_lms_path()}/"},
-	{"source": "/dashboard", "target": f"/{get_lms_path()}/dashboard"},
-	# Frappe strips leading/trailing "/" then appends "$"; use capture groups like docs.
-	{
-		"source": r"/course/(.*)/player",
-		"target": rf"/{get_lms_path()}/course/\1/player",
-	},
-	{
-		"source": r"/course/(.*)",
-		"target": rf"/{get_lms_path()}/course/\1",
-	},
-	{"source": "/courses", "target": f"/{get_lms_path()}/courses"},
-	{
-		"source": r"^/courses/.*$",
-		"target": f"/{get_lms_path()}/courses",
-	},
-	{"source": "/batches", "target": f"/{get_lms_path()}/batches"},
-	{
-		"source": r"/batches/(.*)",
-		"target": f"/{get_lms_path()}/batches",
-		"match_with_query_string": True,
-	},
-	{"source": "/job-openings", "target": f"/{get_lms_path()}/job-openings"},
-	{
-		"source": r"/job-openings/(.*)",
-		"target": f"/{get_lms_path()}/job-openings",
-		"match_with_query_string": True,
-	},
-	{"source": "/statistics", "target": f"/{get_lms_path()}/analytics-dashboard"},
-	{"source": "_lms", "target": f"/{get_lms_path()}"},
+	{"source": "/update-profile", "target": "/edit-profile", "redirect_http_status": 302},
+	{"source": "/statistics", "target": "/analytics-dashboard", "redirect_http_status": 302},
+	{"source": "/app", "target": "/dashboard", "redirect_http_status": 302},
+	{"source": r"/app/(.*)", "target": r"/dashboard", "redirect_http_status": 302},
+	{"source": "/desk", "target": "/dashboard", "redirect_http_status": 302},
+	{"source": r"/desk/(.*)", "target": r"/dashboard", "redirect_http_status": 302},
 ]
+
+get_website_user_home_page = "lms.lms.routing.get_website_user_home_page"
+website_path_resolver = ["lms.lms.routing.resolve_sales_lms_path"]
 
 update_website_context = [
 	"lms.widgets.update_website_context",
@@ -286,6 +267,7 @@ lms_markdown_macro_renderers = {
 
 page_renderer = [
 	"lms.page_renderers.SCORMRenderer",
+	"lms.page_renderers.SalesLmsSpaRenderer",
 ]
 
 # set this to "/" to have profiles on the top-level
@@ -302,7 +284,7 @@ add_to_apps_screen = [
 		"name": "lms",
 		"logo": "/assets/lms/frontend/favicon.png",
 		"title": "Learning",
-		"route": f"/{get_lms_path()}",
+		"route": "/dashboard",
 		"has_permission": "lms.lms.api.check_app_permission",
 	}
 ]
@@ -312,6 +294,7 @@ auth_hooks = ["lms.auth.authenticate"]
 require_type_annotated_api_methods = True
 
 before_request = [
+	"lms.lms.routing.block_desk_portal_routes",
 	"lms.lms.google_oauth.patch_google_calendar_scopes",
 	"lms.lms.request_hooks.extend_lesson_upload_limit",
 	"lms.lms.request_hooks.rewrite_progress_like_filters",

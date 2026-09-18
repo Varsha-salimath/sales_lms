@@ -11,7 +11,7 @@
 # Health: curl http://127.0.0.1:${APP_PORT}/api/method/ping
 #
 # Build frontend AFTER backend (Dockerfile.frontend FROM backend image).
-# APP_PORT is 8080 for local AND prod. Do not invent a different publish port.
+# PRODUCTION: APP_PORT=8080 (LB → VM:8080). Local may use 8081 if 8080 is busy.
 
 name: sales_lms
 

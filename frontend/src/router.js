@@ -2,13 +2,26 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { usersStore } from './stores/user'
 import { sessionStore } from './stores/session'
 import { useSettings } from './stores/settings'
-import { getLmsBasePath } from './utils/basePath'
+import { getRouterHistoryBase } from './utils/basePath'
 
 const routes = [
 	{
+		path: '/lms',
+		redirect: '/dashboard',
+	},
+	{
+		path: '/lms/:pathMatch(.*)*',
+		name: 'LegacyLmsPrefix',
+		redirect: (to) => {
+			const rest = to.params.pathMatch
+			const suffix = Array.isArray(rest) ? rest.filter(Boolean).join('/') : rest || ''
+			return suffix ? `/${suffix}` : '/dashboard'
+		},
+	},
+	{
 		path: '/',
 		name: 'Home',
-		component: () => import('@/pages/Landing/SalesLanding.vue'),
+		redirect: { name: 'StudentDashboard' },
 	},
 	{
 		path: '/crt',
@@ -156,9 +169,39 @@ const routes = [
 		redirect: { name: 'AnalyticsDashboard' },
 	},
 	{
-		path: '/analytics-dashboard',
+		path: '/analytics',
 		name: 'AnalyticsDashboard',
 		component: () => import('@/pages/AnalyticsDashboard.vue'),
+	},
+	{
+		path: '/analytics-dashboard',
+		redirect: (to) => ({
+			name: 'AnalyticsDashboard',
+			query: to.query,
+		}),
+	},
+	{
+		path: '/ojt-certification-analytics',
+		redirect: (to) => ({
+			name: 'AnalyticsDashboard',
+			query: { ...to.query, section: 'certification' },
+		}),
+	},
+	{
+		path: '/newspaper',
+		name: 'Newspaper',
+		component: () => import('@/pages/Newspaper/Newspaper.vue'),
+	},
+	{
+		path: '/newspaper/new',
+		name: 'NewspaperCreate',
+		component: () => import('@/pages/Newspaper/NewspaperCreate.vue'),
+	},
+	{
+		path: '/newspaper/:name',
+		name: 'NewspaperDetail',
+		component: () => import('@/pages/Newspaper/NewspaperDetail.vue'),
+		props: true,
 	},
 	{
 		path: '/library',
@@ -354,7 +397,7 @@ const routes = [
 ]
 
 let router = createRouter({
-	history: createWebHistory(`/${getLmsBasePath()}`),
+	history: createWebHistory(getRouterHistoryBase()),
 	routes,
 })
 
@@ -371,29 +414,45 @@ router.beforeEach(async (to, from, next) => {
 		isLoggedIn = false
 	}
 
-	if (isLoggedIn && to.name === 'Home') {
+	if (!to.matched.length) {
+		if (!isLoggedIn) {
+			window.location.replace('/login')
+			return
+		}
+		return next({ name: 'StudentDashboard', replace: true })
+	}
+
+	if (isLoggedIn && (to.name === 'Home' || to.path === '/')) {
 		return next({ name: 'StudentDashboard' })
 	}
 
 	if (!isLoggedIn) {
 		await settings.promise
+		if (to.name === 'Home' || to.path === '/') {
+			window.location.replace('/login')
+			return
+		}
 		const publicRoutes = [
-			'Home',
 			'Courses',
 			'GeniusCourseDetail',
 			'CourseDetail',
 		]
 		if (!settings.data?.allow_guest_access && !publicRoutes.includes(to.name)) {
-			window.location.href = '/login'
+			const redirect = encodeURIComponent(to.fullPath || '/dashboard')
+			window.location.replace(`/login?redirect-to=${redirect}`)
 			return
 		}
 	}
 
 	// Staff-only analytics / admin surfaces (API already gated; harden UI route)
-	const staffOnlyRoutes = ['AnalyticsDashboard', 'AdminDashboard']
+	const staffOnlyRoutes = [
+		'AnalyticsDashboard',
+		'AdminDashboard',
+	]
 	if (staffOnlyRoutes.includes(to.name)) {
 		if (!isLoggedIn) {
-			window.location.href = '/login'
+			const redirect = encodeURIComponent(to.fullPath || '/dashboard')
+			window.location.replace(`/login?redirect-to=${redirect}`)
 			return
 		}
 		const u = userResource.data

@@ -1,12 +1,27 @@
 export function getLmsBasePath() {
-	return window.lms_path || 'lms'
+	const raw =
+		typeof window !== 'undefined'
+			? window.lms_path ?? window.boot?.lms_path
+			: ''
+	if (raw === undefined || raw === null || raw === false) {
+		return ''
+	}
+	return String(raw).replace(/^\/+|\/+$/g, '')
+}
+
+export function getRouterHistoryBase() {
+	const base = getLmsBasePath()
+	return base ? `/${base}` : '/'
 }
 
 export function getLmsRoute(path = '') {
 	const base = getLmsBasePath()
-	if (!path) {
-		return base
+	const normalized = String(path || '').replace(/^\/+/, '')
+	if (!base) {
+		return normalized ? `/${normalized}` : '/dashboard'
 	}
-	const normalized = path.startsWith('/') ? path.slice(1) : path
+	if (!normalized) {
+		return `/${base}/dashboard`
+	}
 	return `/${base}/${normalized}`
 }

@@ -1,334 +1,41 @@
-{% set user_category_enabled = frappe.db.get_single_value("LMS Settings", "user_category") %}
-<form class="signup-form genius-signup-form" role="form" novalidate>
+<form class="form-signin form-signup hide" role="form" novalidate>
 	<div class="page-card-body">
-		<div class="form-row form-row-split">
-			<div class="form-group">
-				<label class="form-label" for="signup_first_name">
-					{{ _("First Name") }} <span class="required-mark" aria-hidden="true">*</span>
-				</label>
+		<div class="il-field">
+			<div class="il-field-outlined">
 				<input
 					type="text"
-					id="signup_first_name"
-					name="first_name"
-					class="form-control"
-					placeholder="{{ _('Jane') }}"
-					autocomplete="given-name"
+					id="signup_fullname"
+					class="form-control il-text-input"
+					placeholder=" "
 					required
 					autofocus
-				>
-				<div class="field-error" id="error_first_name" hidden></div>
+					autocomplete="name"
+				/>
+				<label class="il-floating-label" for="signup_fullname">{{ _("Full Name") }}</label>
 			</div>
-			<div class="form-group">
-				<label class="form-label" for="signup_last_name">
-					{{ _("Last Name") }} <span class="required-mark" aria-hidden="true">*</span>
-				</label>
+			<p class="field-error"></p>
+		</div>
+		<div class="il-field">
+			<div class="il-field-outlined">
 				<input
-					type="text"
-					id="signup_last_name"
-					name="last_name"
-					class="form-control"
-					placeholder="{{ _('Doe') }}"
-					autocomplete="family-name"
+					type="email"
+					id="signup_email"
+					class="form-control il-text-input"
+					placeholder=" "
 					required
-				>
-				<div class="field-error" id="error_last_name" hidden></div>
+					autocomplete="username"
+				/>
+				<label class="il-floating-label" for="signup_email">{{ _("Email") }}</label>
 			</div>
-		</div>
-
-		<div class="form-group">
-			<label class="form-label" for="signup_email">
-				{{ _("Email Address") }} <span class="required-mark" aria-hidden="true">*</span>
-			</label>
-			<input
-				type="email"
-				id="signup_email"
-				name="email"
-				class="form-control"
-				placeholder="{{ _('jane@example.com') }}"
-				autocomplete="email"
-				required
-			>
-			<div class="field-error" id="error_email" hidden></div>
-		</div>
-
-		<div class="form-group">
-			<label class="form-label" for="signup_phone">
-				{{ _("Phone Number") }} <span class="required-mark" aria-hidden="true">*</span>
-			</label>
-			<input
-				type="tel"
-				id="signup_phone"
-				name="phone"
-				class="form-control"
-				placeholder="{{ _('9876543210') }}"
-				autocomplete="tel"
-				inputmode="numeric"
-				required
-			>
-			<div class="field-error" id="error_phone" hidden></div>
-		</div>
-
-		<div class="form-group">
-			<label class="form-label" for="signup_school">
-				{{ _("School Name") }} <span class="required-mark" aria-hidden="true">*</span>
-			</label>
-			<input
-				type="text"
-				id="signup_school"
-				name="school_name"
-				class="form-control"
-				placeholder="{{ _('Your school name') }}"
-				autocomplete="organization"
-				required
-			>
-			<div class="field-error" id="error_school" hidden></div>
-		</div>
-
-		{% if user_category_enabled %}
-		<div class="form-group">
-			<label class="form-label" for="user_category">{{ _("User Category") }}</label>
-			<div class="control-input-wrapper">
-				<div class="control-input flex align-center">
-					<select
-						id="user_category"
-						data-fieldname="user_category"
-						style="color: var(--text-light)"
-						class="input-with-feedback form-control ellipsis"
-						data-fieldtype="Select"
-					>
-						<option value="">{{ _("Category") }}</option>
-						<option value="Business Owner">{{ _("Business Owner") }}</option>
-						<option value="Manager (Sales/Marketing/Customer)">{{ _("Manager (Sales/Marketing/Customer)") }}</option>
-						<option value="Employee">{{ _("Employee") }}</option>
-						<option value="Student">{{ _("Student") }}</option>
-						<option value="Freelancer/Just looking">{{ _("Freelancer/Just looking") }}</option>
-						<option value="Others">{{ _("Others") }}</option>
-					</select>
-				</div>
-			</div>
-		</div>
-		{% endif %}
-
-		<div class="form-group terms-group">
-			<div class="checkbox">
-				<label class="terms-label">
-					<span class="input-area">
-						<input
-							type="checkbox"
-							autocomplete="off"
-							class="input-with-feedback"
-							data-fieldtype="Check"
-							data-fieldname="terms"
-							id="signup-terms"
-							required
-						>
-					</span>
-					<span class="label-area">
-						{{ _("I agree to the") }}
-						<a
-							href="https://genius.infinitylearn.com/"
-							target="_blank"
-							rel="noopener noreferrer"
-							class="terms-link"
-						>{{ _("Terms & Conditions") }}</a>
-						<span class="required-mark" aria-hidden="true">*</span>
-					</span>
-				</label>
-			</div>
-			<div class="field-error" id="error_terms" hidden></div>
+			<p class="field-error"></p>
 		</div>
 	</div>
-
 	<div class="page-card-actions">
-		<button class="btn btn-sm btn-primary btn-block btn-signup" type="submit">
-			{{ _("Sign up") }}
+		<button class="il-btn-primary btn-signup" type="submit" disabled>
+			{{ _("Create Account") }}
 		</button>
-		<p class="text-center sign-up-message">
-			<a href="#login" class="blue">{{ _("Have an account? Login") }}</a>
+		<p class="sign-up-message">
+			<a href="#login">{{ _("Have an account? Login") }}</a>
 		</p>
 	</div>
 </form>
-
-<style>
-	.genius-signup-form .form-label {
-		display: block;
-		margin-bottom: 0.35rem;
-		font-size: 0.875rem;
-		font-weight: 500;
-		color: var(--text-color, #1f2937);
-	}
-	.genius-signup-form .required-mark {
-		color: #dc2626;
-		font-weight: 600;
-	}
-	.genius-signup-form .form-row-split {
-		display: grid;
-		grid-template-columns: 1fr;
-		gap: 0;
-	}
-	@media (min-width: 640px) {
-		.genius-signup-form .form-row-split {
-			grid-template-columns: 1fr 1fr;
-			gap: 0.75rem;
-		}
-	}
-	.genius-signup-form .field-error {
-		margin-top: 0.35rem;
-		font-size: 0.75rem;
-		color: #dc2626;
-		line-height: 1.3;
-	}
-	.genius-signup-form .form-control.is-invalid {
-		border-color: #dc2626;
-	}
-	.genius-signup-form .terms-group {
-		margin-top: 0.5rem;
-	}
-	.genius-signup-form .terms-label {
-		display: flex;
-		align-items: flex-start;
-		gap: 0.5rem;
-		font-size: 0.875rem;
-		line-height: 1.4;
-		cursor: pointer;
-	}
-	.genius-signup-form .terms-label .input-area {
-		padding-top: 0.15rem;
-	}
-	.genius-signup-form .terms-link {
-		color: var(--primary, #2563eb);
-		text-decoration: underline;
-		font-weight: 500;
-	}
-</style>
-
-<script>
-	frappe.ready(function () {
-		$("#user_category").on("change", (e) => {
-			style_category(e);
-		});
-
-		$(".signup-form").on("submit", (e) => {
-			signup(e);
-		});
-
-		[
-			"signup_first_name",
-			"signup_last_name",
-			"signup_email",
-			"signup_phone",
-			"signup_school",
-			"signup-terms",
-		].forEach((id) => {
-			$("#" + id).on("input change", () => clear_field_error(id));
-		});
-	});
-
-	const style_category = (e) => {
-		let category_color = $(e.currentTarget).val() ? "var(--text-color)" : "var(--text-muted)";
-		$("#user_category").css("color", category_color);
-	};
-
-	const field_error_map = {
-		signup_first_name: "error_first_name",
-		signup_last_name: "error_last_name",
-		signup_email: "error_email",
-		signup_phone: "error_phone",
-		signup_school: "error_school",
-		"signup-terms": "error_terms",
-	};
-
-	const clear_field_error = (input_id) => {
-		const error_id = field_error_map[input_id];
-		if (!error_id) return;
-		$("#" + error_id).prop("hidden", true).text("");
-		$("#" + input_id).removeClass("is-invalid");
-	};
-
-	const show_field_error = (input_id, message) => {
-		const error_id = field_error_map[input_id];
-		if (!error_id) return;
-		$("#" + error_id).prop("hidden", false).text(message);
-		$("#" + input_id).addClass("is-invalid");
-	};
-
-	const clear_all_errors = () => {
-		Object.keys(field_error_map).forEach(clear_field_error);
-	};
-
-	const is_valid_phone = (phone) => {
-		const digits = String(phone || "").replace(/\D/g, "");
-		return /^\d{8,15}$/.test(digits);
-	};
-
-	const signup = (e) => {
-		e.preventDefault();
-		clear_all_errors();
-
-		const first_name = frappe.utils.xss_sanitise(($("#signup_first_name").val() || "").trim());
-		const last_name = frappe.utils.xss_sanitise(($("#signup_last_name").val() || "").trim());
-		const email = ($("#signup_email").val() || "").trim();
-		const phone = ($("#signup_phone").val() || "").trim();
-		const school_name = frappe.utils.xss_sanitise(($("#signup_school").val() || "").trim());
-		const verify_terms = $("#signup-terms").prop("checked") ? 1 : 0;
-
-		let has_error = false;
-
-		if (!first_name) {
-			show_field_error("signup_first_name", '{{ _("First Name is required") }}');
-			has_error = true;
-		}
-		if (!last_name) {
-			show_field_error("signup_last_name", '{{ _("Last Name is required") }}');
-			has_error = true;
-		}
-		if (!email) {
-			show_field_error("signup_email", '{{ _("Email Address is required") }}');
-			has_error = true;
-		} else if (!validate_email(email)) {
-			show_field_error("signup_email", '{{ _("Please enter a valid email address") }}');
-			has_error = true;
-		}
-		if (!phone) {
-			show_field_error("signup_phone", '{{ _("Phone Number is required") }}');
-			has_error = true;
-		} else if (!is_valid_phone(phone)) {
-			show_field_error(
-				"signup_phone",
-				'{{ _("Phone Number must contain 8–15 digits only") }}'
-			);
-			has_error = true;
-		}
-		if (!school_name) {
-			show_field_error("signup_school", '{{ _("School Name is required") }}');
-			has_error = true;
-		}
-		if (!verify_terms) {
-			show_field_error(
-				"signup-terms",
-				'{{ _("You must agree to the Terms & Conditions to continue") }}'
-			);
-			has_error = true;
-		}
-
-		if (has_error) {
-			login.set_status('{{ _("Please fix the highlighted fields") }}', "red");
-			return false;
-		}
-
-		frappe.call({
-			method: "lms.lms.user.sign_up",
-			args: {
-				email: email,
-				first_name: first_name,
-				last_name: last_name,
-				phone: phone,
-				school_name: school_name,
-				verify_terms: verify_terms,
-				user_category: $("#user_category").length ? $("#user_category").val() : "",
-			},
-			statusCode: login.login_handlers,
-		});
-		return false;
-	};
-</script>

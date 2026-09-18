@@ -1,5 +1,17 @@
 <template>
 	<NoPermission v-if="!$user.data" />
+	<div
+		v-else-if="profile.loading && !profile.data"
+		class="flex h-full items-center justify-center p-10 text-sm text-ink-gray-6"
+	>
+		{{ __('Loading profile...') }}
+	</div>
+	<div
+		v-else-if="!profile.data"
+		class="flex h-full items-center justify-center p-10 text-sm text-ink-gray-6"
+	>
+		{{ __('This profile could not be loaded.') }}
+	</div>
 	<div v-else-if="profile.data">
 		<header
 			class="sticky group top-0 z-10 flex flex-col md:flex-row md:items-center justify-between border-b bg-surface-white px-3 py-2.5 sm:px-5"

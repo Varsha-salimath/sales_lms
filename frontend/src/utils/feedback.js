@@ -101,7 +101,7 @@ export class FeedbackBlock {
 	_getRouteParams() {
 		const path = window.location.pathname
 		const match = path.match(
-			/\/lms\/courses\/([^/]+)\/learn\/(\d+)-(\d+)/
+			/\/(?:lms\/)?courses\/([^/]+)\/learn\/(\d+)-(\d+)/
 		)
 		if (!match) return null
 		return { course: match[1], chapter: match[2], lesson: match[3] }

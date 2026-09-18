@@ -60,7 +60,7 @@
 						:disabled="!canRun"
 						@click="runImport"
 					>
-						Import into Frappe
+						Import schedule
 					</button>
 					<button
 						class="rounded-full border px-4 py-2 text-sm font-semibold text-[color:var(--il-ink)]"

@@ -1,7 +1,7 @@
 <template>
 	<Dialog v-model="showDialog">
 		<template #body-title>
-							<h2 class="text-lg font-bold">{{ __('Install Infinity Learn CRT') }}</h2>
+							<h2 class="text-lg font-bold">{{ __('Install Sales LMS') }}</h2>
 		</template>
 		<template #body-content>
 			<p>
@@ -29,7 +29,7 @@
 					class="mb-1 flex flex-row items-center justify-between px-3 text-center"
 				>
 					<span class="text-base font-bold text-gray-900">
-						{{ __('Install Infinity Learn CRT') }}
+						{{ __('Install Sales LMS') }}
 					</span>
 					<span class="inline-flex items-baseline">
 						<FeatherIcon

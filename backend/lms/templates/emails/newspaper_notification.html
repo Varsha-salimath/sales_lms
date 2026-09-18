@@ -1,0 +1,34 @@
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f4f6fb;padding:24px 0;font-family:Arial,Helvetica,sans-serif;">
+	<tr>
+		<td align="center">
+			<table cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(15,23,42,0.08);">
+				<tr>
+					<td style="background:#0075ff;padding:20px 24px;color:#ffffff;font-size:18px;font-weight:bold;">
+						{{ brand_name or "Sales LMS" }}
+					</td>
+				</tr>
+				<tr>
+					<td style="padding:24px;">
+						<h1 style="margin:0 0 16px;font-size:22px;line-height:1.35;color:#0f172a;">{{ title }}</h1>
+						{% if image_url %}
+						<p style="margin:0 0 20px;">
+							<img src="{{ image_url }}" alt="{{ title }}" style="max-width:100%;height:auto;border-radius:8px;display:block;" />
+						</p>
+						{% endif %}
+						<div style="font-size:15px;line-height:1.6;color:#334155;">
+							{{ content }}
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td style="padding:16px 24px 24px;border-top:1px solid #e2e8f0;font-size:12px;line-height:1.5;color:#64748b;">
+						{{ _("You have received this update from Sales LMS.") }}
+						{% if target_label %}
+						<br />{{ _("Audience:") }} {{ target_label }}
+						{% endif %}
+					</td>
+				</tr>
+			</table>
+		</td>
+	</tr>
+</table>

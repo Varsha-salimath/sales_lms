@@ -37,7 +37,7 @@ const doctypeMap = {
 	},
 	'LMS Category': {
 		title: 'Categories',
-		listRoute: '/lms',
+		listRoute: '/dashboard',
 	},
 }
 

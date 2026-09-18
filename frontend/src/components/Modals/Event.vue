@@ -192,6 +192,7 @@ import {
 import { inject, reactive, watch, ref, computed } from 'vue'
 import { formatTime } from '@/utils'
 import { openCertificatePreview } from '@/utils/certificate'
+import { getLmsRoute } from '@/utils/basePath'
 import Rating from '@/components/Controls/Rating.vue'
 import Link from '@/components/Controls/Link.vue'
 
@@ -387,9 +388,9 @@ const openCertificate = (certificate) => {
 const openLink = (type, name) => {
 	let url = ''
 	if (type === 'course') {
-		url = `/lms/courses/${name}`
+		url = getLmsRoute(`courses/${name}`)
 	} else if (type === 'batch') {
-		url = `/lms/batches/${name}#students`
+		url = `${getLmsRoute(`batches/${name}`)}#students`
 	}
 	window.open(url, '_blank')
 }

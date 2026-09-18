@@ -1,0 +1,225 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "autoname": "hash",
+ "creation": "2026-09-18 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "row_key",
+  "learner",
+  "employee_name",
+  "email",
+  "location",
+  "training_manager",
+  "column_break_batch",
+  "batch_start",
+  "attendance_days",
+  "ai_mock_score",
+  "audit_score",
+  "product_avg",
+  "stage",
+  "section_ops",
+  "dc",
+  "cc",
+  "talk_time",
+  "booked",
+  "catered",
+  "section_tests",
+  "target_exam",
+  "cbse",
+  "test_prep",
+  "lsq",
+  "math_champ"
+ ],
+ "fields": [
+  {
+   "fieldname": "row_key",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Row Key",
+   "unique": 1
+  },
+  {
+   "fieldname": "learner",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Learner",
+   "options": "User",
+   "search_index": 1
+  },
+  {
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Employee Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Email ID",
+   "options": "Email",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "location",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Location",
+   "search_index": 1
+  },
+  {
+   "fieldname": "training_manager",
+   "fieldtype": "Data",
+   "label": "Training Manager"
+  },
+  {
+   "fieldname": "column_break_batch",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "batch_start",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Batch Start",
+   "search_index": 1
+  },
+  {
+   "fieldname": "attendance_days",
+   "fieldtype": "Int",
+   "label": "Attendance Days"
+  },
+  {
+   "fieldname": "ai_mock_score",
+   "fieldtype": "Float",
+   "label": "AI Mock Score"
+  },
+  {
+   "fieldname": "audit_score",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Audit Score"
+  },
+  {
+   "fieldname": "product_avg",
+   "fieldtype": "Float",
+   "label": "Product Test Average"
+  },
+  {
+   "fieldname": "stage",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Stage",
+   "options": "Not Started\nStarted\nMock Completed\nAudit Completed\nProduct Tests Completed",
+   "search_index": 1
+  },
+  {
+   "fieldname": "section_ops",
+   "fieldtype": "Section Break",
+   "label": "Intent & Skill Parameters"
+  },
+  {
+   "fieldname": "dc",
+   "fieldtype": "Int",
+   "label": "DC"
+  },
+  {
+   "fieldname": "cc",
+   "fieldtype": "Int",
+   "label": "CC"
+  },
+  {
+   "fieldname": "talk_time",
+   "fieldtype": "Data",
+   "label": "TT"
+  },
+  {
+   "fieldname": "booked",
+   "fieldtype": "Int",
+   "label": "Booked"
+  },
+  {
+   "fieldname": "catered",
+   "fieldtype": "Int",
+   "label": "Catered"
+  },
+  {
+   "fieldname": "section_tests",
+   "fieldtype": "Section Break",
+   "label": "Test Scores (out of 20)"
+  },
+  {
+   "fieldname": "target_exam",
+   "fieldtype": "Float",
+   "label": "Target Exam"
+  },
+  {
+   "fieldname": "cbse",
+   "fieldtype": "Float",
+   "label": "CBSE"
+  },
+  {
+   "fieldname": "test_prep",
+   "fieldtype": "Float",
+   "label": "Test Prep"
+  },
+  {
+   "fieldname": "lsq",
+   "fieldtype": "Float",
+   "label": "LSQ"
+  },
+  {
+   "fieldname": "math_champ",
+   "fieldtype": "Float",
+   "label": "Math Champ"
+  }
+ ],
+ "links": [],
+ "modified": "2026-09-18 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "LMS",
+ "name": "Sales OJT Certification Metric",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Moderator",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Course Creator",
+   "write": 1
+  }
+ ],
+ "search_fields": "employee_name,email,location",
+ "sort_field": "employee_name",
+ "sort_order": "ASC",
+ "title_field": "employee_name",
+ "track_changes": 0
+}

@@ -1,13 +1,13 @@
 <template>
 	<img
 		:src="logoSrc"
-		alt="Infinity Learn by Sri Chaitanya"
+		alt="Sales LMS"
 		class="h-8 w-auto object-contain object-left"
 		:class="imgClass"
 	/>
 </template>
 <script setup>
-import logoSrc from '@/assets/il-logo.png'
+import logoSrc from '@/assets/il-logo-white.svg'
 
 defineProps({
 	imgClass: {

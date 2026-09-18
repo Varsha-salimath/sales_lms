@@ -575,6 +575,15 @@ const getSidebarItems = (forMobile = false) => {
 					},
 				},
 				{
+					label: 'Newspaper',
+					icon: 'Newspaper',
+					to: 'Newspaper',
+					activeFor: ['Newspaper', 'NewspaperCreate', 'NewspaperDetail'],
+					condition: () => {
+						return !forMobile && userResource?.data && isAdmin()
+					},
+				},
+				{
 					label: 'Library',
 					icon: 'Video',
 					to: 'Library',
@@ -590,23 +599,9 @@ const getSidebarItems = (forMobile = false) => {
 			],
 		},
 		{
-			label: 'Learning',
+			label: 'Training',
 			hideLabel: true,
 			items: [
-				{
-					label: 'Evaluation',
-					icon: 'Award',
-					to: 'SalesEvaluation',
-					activeFor: ['SalesEvaluation'],
-					condition: () => userResource?.data && isAdmin(),
-				},
-				{
-					label: 'OJT',
-					icon: 'Phone',
-					to: 'SalesOJT',
-					activeFor: ['SalesOJT', 'SalesOJTSim'],
-					condition: () => userResource?.data && isAdmin(),
-				},
 				{
 					label: 'Courses',
 					icon: 'Library',
@@ -668,8 +663,10 @@ const getSidebarItems = (forMobile = false) => {
 			],
 		},
 		{
-			label: 'Assessments',
-			hideLabel: true,
+			label: 'Practice Hub',
+			hideLabel: false,
+			collapsible: true,
+			icon: 'Layers',
 			items: [
 				{
 					label: 'Quizzes',

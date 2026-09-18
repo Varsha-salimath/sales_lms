@@ -14,7 +14,7 @@
 				>
 					<img
 						:src="defaultLogo"
-						alt="Infinity Learn"
+						alt="Sales LMS"
 						class="flex-shrink-0 object-contain"
 						:class="isCollapsed ? 'h-9 w-9' : 'h-10 w-auto max-w-[8.5rem]'"
 					/>
@@ -27,7 +27,7 @@
 						"
 					>
 						<div class="text-sm font-semibold text-white leading-none truncate">
-							Infinity Learn
+							Sales LMS
 						</div>
 						<div
 							v-if="userResource.data"
@@ -68,9 +68,8 @@ import { markRaw, watch, ref, onMounted, computed } from 'vue'
 import { createDialog } from '@/utils/dialogs'
 import Apps from '@/components/Sidebar/Apps.vue'
 import Configuration from '@/components/Sidebar/Configuration.vue'
-import FrappeCloudIcon from '@/components/Icons/FrappeCloudIcon.vue'
 import SettingsModal from '@/components/Settings/Settings.vue'
-import defaultLogo from '@/assets/il-logo.png'
+import defaultLogo from '@/assets/il-logo-white.svg'
 import {
 	ChevronDown,
 	LogIn,
@@ -88,7 +87,6 @@ let { userResource } = usersStore()
 const settingsStore = useSettings()
 let { isLoggedIn } = sessionStore()
 const showSettingsModal = ref(false)
-const frappeCloudBaseEndpoint = 'https://frappecloud.com'
 const $dialog = createDialog
 
 const props = defineProps({
@@ -120,7 +118,15 @@ const userDropdownOptions = computed(() => {
 					icon: User,
 					label: 'My Profile',
 					onClick: () => {
-						router.push(`/user/${userResource.data?.username}`)
+						const username =
+							userResource.data?.username ||
+							userResource.data?.email ||
+							userResource.data?.name
+						if (!username) {
+							toast.error(__('Profile is not available yet'))
+							return
+						}
+						router.push(`/user/${encodeURIComponent(username)}`)
 					},
 					condition: () => {
 						return isLoggedIn
@@ -174,39 +180,11 @@ const userDropdownOptions = computed(() => {
 					},
 				},
 				{
-					icon: FrappeCloudIcon,
-					label: 'Login to Frappe Cloud',
-					onClick: () => {
-						$dialog({
-							title: __('Login to Frappe Cloud?'),
-							message: __(
-								'Are you sure you want to login to your Frappe Cloud dashboard?'
-							),
-							actions: [
-								{
-									label: __('Confirm'),
-									variant: 'solid',
-									onClick(close) {
-										loginToFrappeCloud()
-										close()
-									},
-								},
-							],
-						})
-					},
-					condition: () => {
-						return (
-							userResource.data?.is_system_manager &&
-							userResource.data?.is_fc_site
-						)
-					},
-				},
-				{
 					icon: LogOut,
 					label: 'Log out',
 					onClick: () => {
-						logout.submit().then(() => {
-							isLoggedIn = false
+						logout.submit().finally(() => {
+							window.location.href = '/login'
 						})
 					},
 					condition: () => {
@@ -228,16 +206,11 @@ const userDropdownOptions = computed(() => {
 	]
 })
 
-const loginToFrappeCloud = () => {
-	let redirect_to = '/dashboard/sites/' + userResource.data.sitename
-	window.open(`${frappeCloudBaseEndpoint}${redirect_to}`, '_blank')
-}
-
 const clearDemoDataConfirmation = () => {
 	$dialog({
 		title: __('Confirm clearing demo data?'),
 		message: __(
-			'Are you sure you want to clear the demo data? This would delete the sample Frappe Learning course and associated demo data. This action cannot be undone.'
+			'Are you sure you want to clear the demo data? This would delete the sample demo course and associated demo data. This action cannot be undone.'
 		),
 		actions: [
 			{
@@ -256,7 +229,7 @@ const clearDemoDataConfirmation = () => {
 const clearDemoData = () => {
 	call('lms.lms.api.clear_demo_data')
 		.then(() => {
-			window.location.href = '/lms'
+			window.location.href = '/dashboard'
 			toast.success(__('Demo data cleared successfully'))
 		})
 		.catch((error) => {

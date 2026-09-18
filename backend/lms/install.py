@@ -1,6 +1,7 @@
 import frappe
 
 from lms.lms.api import give_discussions_permission
+from lms.lms.branding import BRAND_NAME
 
 
 def after_install():
@@ -8,12 +9,62 @@ def after_install():
 	give_discussions_permission()
 	give_user_list_permission()
 	give_event_permission()
+	set_sales_lms_branding()
 
 
 def after_sync():
 	create_lms_roles()
 	set_default_certificate_print_format()
 	give_lms_roles_to_admin()
+	set_portal_as_default_app()
+	set_sales_lms_branding()
+	normalize_portal_routes()
+
+
+def set_sales_lms_branding():
+	"""Replace default Frappe Learning labels with Sales LMS across desk and portal."""
+	try:
+		frappe.db.set_single_value("Website Settings", "app_name", BRAND_NAME)
+		frappe.db.set_single_value("System Settings", "app_name", BRAND_NAME)
+
+		if frappe.db.exists("Desktop Icon", "Frappe Learning"):
+			frappe.db.set_value("Desktop Icon", "Frappe Learning", "label", BRAND_NAME)
+
+		if frappe.db.exists("Workspace", "Learning"):
+			frappe.db.set_value("Workspace", "Learning", "label", BRAND_NAME)
+
+		frappe.db.commit()
+	except Exception as e:
+		frappe.log_error(f"Failed to set Sales LMS branding: {e}")
+
+
+def set_portal_as_default_app():
+	frappe.db.set_single_value("System Settings", "default_app", "frappe_lms")
+
+
+def normalize_portal_routes():
+	"""Keep Website Settings / navbar on clean URLs and drop cached /lms redirects."""
+	try:
+		frappe.db.set_single_value("Website Settings", "home_page", "")
+		try:
+			frappe.db.set_single_value("Portal Settings", "default_portal_home", "/dashboard")
+		except Exception:
+			pass
+		for source, target in (
+			("/lms/courses", "/courses"),
+			("/lms/batches", "/batches"),
+			("/lms/statistics", "/analytics-dashboard"),
+			("/lms/job-openings", "/job-openings"),
+			("/lms/dashboard", "/dashboard"),
+			("/lms", "/dashboard"),
+		):
+			link = frappe.db.exists("Top Bar Item", {"url": source})
+			if link:
+				frappe.db.set_value("Top Bar Item", link, "url", target)
+		frappe.clear_cache()
+		frappe.db.commit()
+	except Exception as e:
+		frappe.log_error(f"Failed to normalize portal routes: {e}")
 
 
 def before_uninstall():

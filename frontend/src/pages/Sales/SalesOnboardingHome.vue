@@ -16,15 +16,15 @@
 			<h1 class="text-2xl font-semibold text-[color:var(--il-ink)]">{{ __('Sales CRT is not ready yet') }}</h1>
 			<p class="mt-2 text-sm text-[color:var(--il-muted)]">{{ home.data.message }}</p>
 		</div>
-		<div v-else-if="home.data" class="mx-auto max-w-5xl px-5 pt-8">
-			<section class="sales-hero rounded-[28px] px-6 py-8 text-white sm:px-10">
+		<div v-else-if="home.data" class="mx-auto max-w-5xl px-5 pt-4">
+			<section class="sales-hero rounded-[28px] px-5 py-5 text-white sm:px-6 sm:py-6">
 				<p class="text-xs font-semibold uppercase tracking-[0.22em] text-white/80">
-					Infinity Learn · Sales CRT
+					Sales LMS · Sales CRT
 				</p>
-				<h1 class="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
+				<h1 class="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
 					{{ __('Welcome') }}{{ firstName ? `, ${firstName}` : '' }}
 				</h1>
-				<p class="mt-3 max-w-2xl text-sm leading-6 text-white/85">
+				<p class="mt-2 max-w-2xl text-sm leading-6 text-white/85">
 					{{
 						__(
 							'Classroom Readiness Training, then a live sales simulation. Finish CRT 1–5, review your rating, and unlock OJT.'

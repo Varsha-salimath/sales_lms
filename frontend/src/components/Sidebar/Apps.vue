@@ -41,31 +41,24 @@
 <script setup>
 import { Popover, createResource } from 'frappe-ui'
 import { LayoutGrid, ChevronRight } from 'lucide-vue-next'
-import deskLogo from '@/assets/il-logo.png'
-
 const apps = createResource({
 	url: 'frappe.apps.get_apps',
 	cache: 'apps',
 	auto: true,
 	transform: (data) => {
-		let _apps = [
-			{
-				name: 'frappe',
-				logo: deskLogo,
-				title: __('Desk'),
-				route: '/desk/learning',
-			},
-		]
-		data.map((app) => {
-			if (app.name === 'lms') return
-			_apps.push({
+		const blocked = new Set(['/app', '/desk'])
+		return data
+			.filter((app) => {
+				if (app.name === 'lms') return false
+				const route = (app.route || '').split('?')[0]
+				return !blocked.has(route) && !route.startsWith('/app/') && !route.startsWith('/desk/')
+			})
+			.map((app) => ({
 				name: app.name,
 				logo: app.logo,
 				title: __(app.title),
 				route: app.route,
-			})
-		})
-		return _apps
+			}))
 	},
 })
 </script>

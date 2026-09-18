@@ -4,6 +4,7 @@ import { ref } from 'vue'
 export const useSidebar = defineStore('sidebar', () => {
 	const isSidebarCollapsed = ref(false)
 	const isWebpagesCollapsed = ref(true)
+	const isPracticeHubCollapsed = ref(true)
 
 	if (localStorage.getItem('isSidebarCollapsed')) {
 		isSidebarCollapsed.value = JSON.parse(
@@ -17,8 +18,15 @@ export const useSidebar = defineStore('sidebar', () => {
 		)
 	}
 
+	if (localStorage.getItem('isPracticeHubCollapsed')) {
+		isPracticeHubCollapsed.value = JSON.parse(
+			localStorage.getItem('isPracticeHubCollapsed')
+		)
+	}
+
 	return {
 		isSidebarCollapsed,
 		isWebpagesCollapsed,
+		isPracticeHubCollapsed,
 	}
 })

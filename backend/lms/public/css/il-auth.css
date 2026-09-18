@@ -1,0 +1,652 @@
+/* Infinity Learn auth — Figma 54_IL_Web split-screen login (UI only) */
+
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap");
+
+:root {
+	--il-auth-blue: #027bff;
+	--il-auth-blue-dark: #0062cc;
+	--il-auth-blue-hover: #0057b3;
+	--il-auth-ink: #101010;
+	--il-auth-subtitle: #00254c;
+	--il-auth-muted: #52565c;
+	--il-auth-border: #0062cc;
+	--il-auth-panel-width: 712px;
+	--il-auth-form-width: 470px;
+	--il-auth-radius-card: 40px;
+	--il-auth-radius-input: 16px;
+	--il-auth-radius-button: 100px;
+}
+
+html:has(body.il-auth-page),
+body.il-auth-page {
+	height: 100%;
+	overflow: hidden;
+	overscroll-behavior: none;
+}
+
+body.il-auth-page {
+	margin: 0;
+	background: var(--il-auth-blue);
+	font-family: Poppins, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	-webkit-font-smoothing: antialiased;
+}
+
+body.il-auth-page .web-footer,
+body.il-auth-page footer,
+body.il-auth-page .navbar,
+body.il-auth-page .page-breadcrumbs,
+body.il-auth-page .page-header-wrapper,
+body.il-auth-page .page-head,
+body.il-auth-page .footer-powered,
+body.il-auth-page .splash,
+body.il-auth-page img[src*="frappe-framework-logo"] {
+	display: none !important;
+}
+
+body.il-auth-page .page-content-wrapper,
+body.il-auth-page main.container,
+body.il-auth-page .page_content,
+body.il-auth-page .container,
+body.il-auth-page .main-section,
+body.il-auth-page .page-container,
+body.il-auth-page .web-page-content {
+	padding: 0 !important;
+	margin: 0 !important;
+	max-width: none !important;
+	width: 100% !important;
+	height: 100% !important;
+	min-height: 0 !important;
+	overflow: hidden !important;
+}
+
+/* ── Shell: full viewport, no scroll ── */
+.il-auth-shell {
+	display: flex;
+	height: 100vh;
+	height: 100dvh;
+	width: 100%;
+	overflow: hidden;
+	background: var(--il-auth-blue);
+}
+
+/* ── Left brand panel ── */
+.il-auth-brand {
+	position: relative;
+	flex: 1 1 auto;
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+	background-color: var(--il-auth-blue);
+	color: #fff;
+	overflow: hidden;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.il-auth-brand-pattern {
+	position: absolute;
+	inset: 0;
+	background-image: url("/assets/lms/images/il-auth-pattern.png");
+	background-repeat: repeat;
+	background-size: 320px auto;
+	opacity: 0.08;
+	pointer-events: none;
+}
+
+.il-auth-brand-content {
+	position: relative;
+	z-index: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	padding: 48px 32px;
+	max-width: 420px;
+}
+
+.il-auth-logo {
+	width: min(282px, 78vw);
+	height: auto;
+	object-fit: contain;
+}
+
+/* ── Right auth panel ── */
+.il-auth-panel-wrap {
+	flex: 0 0 min(var(--il-auth-panel-width), 49.44%);
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	height: 100%;
+	min-height: 0;
+	background: transparent;
+	padding: 0;
+}
+
+.il-auth-panel {
+	width: 100%;
+	height: 100%;
+	max-height: 100%;
+	background: #ffffff;
+	border-radius: var(--il-auth-radius-card) 0 0 var(--il-auth-radius-card);
+	padding: 40px;
+	box-shadow: -4px 0 24px rgba(0, 37, 76, 0.06);
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	box-sizing: border-box;
+	overflow: hidden;
+}
+
+.il-auth-panel-inner {
+	width: min(100%, var(--il-auth-form-width));
+}
+
+.il-auth-heading {
+	margin: 0 0 24px;
+	font-size: 36px;
+	font-weight: 500;
+	line-height: 54px;
+	color: var(--il-auth-ink);
+	text-align: center;
+}
+
+.il-auth-subheading {
+	margin: -12px 0 40px;
+	font-size: 16px;
+	font-weight: 500;
+	line-height: 24px;
+	letter-spacing: 0.15px;
+	color: var(--il-auth-subtitle);
+	text-align: center;
+}
+
+.il-auth-panel section {
+	display: none !important;
+}
+
+.il-auth-panel section.is-active {
+	display: block !important;
+}
+
+/* ── Outlined floating-label fields (Figma input style) ── */
+.il-field {
+	margin-bottom: 24px;
+}
+
+.il-field-outlined {
+	position: relative;
+	border: 2px solid var(--il-auth-border);
+	border-radius: var(--il-auth-radius-input);
+	background: #fff;
+	transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.il-field-outlined:focus-within {
+	border-color: var(--il-auth-blue-dark);
+	box-shadow: 0 0 0 3px rgba(0, 98, 204, 0.12);
+}
+
+.il-field.invalid .il-field-outlined {
+	border-color: #dc2626;
+	box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.il-floating-label {
+	position: absolute;
+	left: 20px;
+	top: -12px;
+	padding: 0 4px;
+	background: #ffffff;
+	font-size: 16px;
+	font-weight: 400;
+	line-height: 24px;
+	letter-spacing: 0.5px;
+	color: var(--il-auth-blue-dark);
+	pointer-events: none;
+	z-index: 2;
+}
+
+.il-text-input {
+	width: 100%;
+	border: 0;
+	border-radius: var(--il-auth-radius-input);
+	min-height: 56px;
+	padding: 16px 20px;
+	font-size: 16px;
+	line-height: 24px;
+	letter-spacing: 0.5px;
+	color: var(--il-auth-ink);
+	background: transparent;
+	box-sizing: border-box;
+	font-family: inherit;
+}
+
+.il-text-input:focus {
+	outline: none;
+}
+
+.il-text-input::placeholder {
+	color: transparent;
+}
+
+.il-field-outlined .il-text-input {
+	min-height: 52px;
+}
+
+.il-password-wrap {
+	position: relative;
+	display: flex;
+	align-items: center;
+}
+
+.il-field-password .il-password-wrap .il-text-input {
+	padding-right: 3rem;
+}
+
+.il-password-wrap .toggle-password {
+	position: absolute;
+	right: 16px;
+	top: 50%;
+	transform: translateY(-50%);
+	cursor: pointer;
+	border: 0;
+	background: transparent;
+	padding: 4px;
+	color: var(--il-auth-muted);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.il-password-wrap .toggle-password:hover {
+	color: var(--il-auth-blue-dark);
+}
+
+.il-password-wrap .toggle-password svg {
+	display: block;
+}
+
+.il-field-password .il-forgot-row {
+	text-align: right;
+	margin: 8px 0 0;
+	padding-bottom: 0;
+}
+
+.il-forgot-row a {
+	color: var(--il-auth-muted);
+	font-size: 14px;
+	font-weight: 400;
+	line-height: 20px;
+	text-decoration: none;
+}
+
+.il-forgot-row a:hover {
+	color: var(--il-auth-blue-dark);
+}
+
+.il-field .field-error,
+.il-field-error {
+	margin: 4px 4px 0;
+	font-size: 12px;
+	line-height: 16px;
+	color: #dc2626;
+	min-height: 1rem;
+}
+
+/* Legacy label (unused in new markup, kept for safety) */
+.il-field-label {
+	display: block;
+	margin-bottom: 8px;
+	font-size: 16px;
+	font-weight: 400;
+	line-height: 24px;
+	letter-spacing: 0.5px;
+	color: var(--il-auth-blue-dark);
+}
+
+/* Phone input styles (reserved for future / Figma parity) */
+.il-phone-input {
+	display: flex;
+	align-items: center;
+	border: 2px solid var(--il-auth-border);
+	border-radius: var(--il-auth-radius-input);
+	padding: 0 16px 0 24px;
+	min-height: 56px;
+	background: #fff;
+	position: relative;
+}
+
+.il-phone-prefix {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding-right: 16px;
+	margin-right: 16px;
+	border-right: 1px solid #d1d5db;
+	color: var(--il-auth-muted);
+	font-size: 16px;
+	line-height: 24px;
+	letter-spacing: 0.5px;
+	white-space: nowrap;
+}
+
+.il-check-row {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	margin-bottom: 8px;
+	font-size: 16px;
+	line-height: 24px;
+	letter-spacing: 0.5px;
+	color: var(--il-auth-ink);
+}
+
+.il-check-row input[type="checkbox"] {
+	appearance: none;
+	margin-top: 2px;
+	width: 24px;
+	height: 24px;
+	border: 0;
+	border-radius: 4px;
+	background: var(--il-auth-blue-dark)
+		url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z' fill='%23fff'/%3E%3C/svg%3E")
+		center/16px no-repeat;
+	flex-shrink: 0;
+	cursor: pointer;
+}
+
+.il-check-row input[type="checkbox"]:not(:checked) {
+	background: #fff;
+	border: 2px solid var(--il-auth-blue-dark);
+}
+
+.il-check-row a {
+	color: var(--il-auth-blue-dark);
+	text-decoration: none;
+	font-weight: 500;
+}
+
+.il-check-row a:hover {
+	text-decoration: underline;
+}
+
+/* ── Primary button (Figma pill) ── */
+.il-btn-primary {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	border: 0;
+	border-radius: var(--il-auth-radius-button);
+	min-height: 56px;
+	padding: 16px 24px;
+	font-size: 16px;
+	font-weight: 500;
+	line-height: 24px;
+	letter-spacing: 0.15px;
+	cursor: pointer;
+	transition: background 0.15s ease, color 0.15s ease;
+	font-family: inherit;
+	margin-top: 8px;
+}
+
+.il-btn-primary:disabled {
+	background: #e6e7e8;
+	color: #6c6e72;
+	cursor: not-allowed;
+}
+
+.il-btn-primary:not(:disabled),
+.il-auth-panel .btn-signup:not(:disabled),
+.il-auth-panel .btn-login:not(:disabled),
+.il-auth-panel .btn-forgot:not(:disabled),
+.il-auth-panel .btn-login-with-email-link:not(:disabled) {
+	background: var(--il-auth-blue-dark);
+	color: #ffffff !important;
+}
+
+.il-btn-primary:not(:disabled):hover,
+.il-auth-panel .btn-signup:not(:disabled):hover,
+.il-auth-panel .btn-login:not(:disabled):hover,
+.il-auth-panel .btn-forgot:not(:disabled):hover,
+.il-auth-panel .btn-login-with-email-link:not(:disabled):hover {
+	background: var(--il-auth-blue-hover);
+	color: #ffffff !important;
+}
+
+/* ── Secondary links ── */
+.il-auth-links {
+	margin-top: 24px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+}
+
+.il-auth-links a {
+	color: var(--il-auth-blue-dark);
+	font-size: 16px;
+	font-weight: 500;
+	line-height: 24px;
+	letter-spacing: 0.15px;
+	text-decoration: none;
+	padding: 8px 24px;
+	border-radius: var(--il-auth-radius-button);
+}
+
+.il-auth-links a:hover {
+	text-decoration: underline;
+}
+
+/* Frappe auth footer links (login ↔ signup ↔ forgot) */
+.il-auth-panel .sign-up-message {
+	margin-top: 24px;
+	text-align: center;
+	font-size: 16px;
+	line-height: 24px;
+	letter-spacing: 0.15px;
+	color: var(--il-auth-muted);
+}
+
+.il-auth-panel .page-card-actions .sign-up-message {
+	margin-top: 16px;
+	margin-bottom: 0;
+}
+
+.il-auth-panel .sign-up-message a {
+	color: var(--il-auth-blue-dark);
+	font-weight: 500;
+	text-decoration: none;
+}
+
+.il-auth-panel .sign-up-message a:hover {
+	text-decoration: underline;
+}
+
+.il-auth-secondary-link {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	margin-top: 12px;
+	padding: 8px 24px;
+	border-radius: var(--il-auth-radius-button);
+	font-size: 16px;
+	font-weight: 500;
+	line-height: 24px;
+	letter-spacing: 0.15px;
+	color: var(--il-auth-blue-dark);
+	text-decoration: none;
+	text-align: center;
+}
+
+.il-auth-secondary-link:hover {
+	text-decoration: underline;
+}
+
+/* ── Banners ── */
+.login-error-banner {
+	display: none;
+	align-items: center;
+	gap: 8px;
+	padding: 10px 12px;
+	margin-bottom: 16px;
+	border-radius: 12px;
+	background: #fef2f2;
+	color: #b91c1c;
+	font-size: 14px;
+}
+
+.login-success-banner {
+	display: none;
+	align-items: center;
+	gap: 8px;
+	padding: 10px 12px;
+	margin-bottom: 16px;
+	border-radius: 12px;
+	background: #ecfdf5;
+	color: #047857;
+	font-size: 14px;
+}
+
+/* ── Signup form inside IL shell ── */
+.il-auth-panel .genius-signup-form .page-card-body {
+	padding: 0;
+}
+
+.il-auth-panel .page-card-body {
+	padding: 0;
+}
+
+.il-auth-panel .page-card-body.invalid .il-field-outlined {
+	border-color: #dc2626;
+	box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.il-auth-panel .genius-signup-form .page-card-actions {
+	padding: 0;
+	margin-top: 0;
+}
+
+.il-auth-panel .genius-signup-form .form-group {
+	margin-bottom: 0;
+}
+
+.il-auth-panel .genius-signup-form .form-label {
+	display: none;
+}
+
+.il-auth-panel .genius-signup-form .form-control {
+	border: 0;
+	box-shadow: none;
+	padding: 16px 20px;
+	min-height: 52px;
+	font-size: 16px;
+	background: transparent;
+}
+
+.il-auth-panel .genius-signup-form select {
+	border: 2px solid var(--il-auth-border);
+	border-radius: var(--il-auth-radius-input);
+	min-height: 56px;
+	font-family: inherit;
+	padding: 0 16px;
+}
+
+.il-auth-panel .genius-signup-form .btn-signup {
+	border-radius: var(--il-auth-radius-button);
+	background: var(--il-auth-blue-dark);
+	border-color: var(--il-auth-blue-dark);
+	padding: 16px 24px;
+	font-weight: 500;
+	font-family: inherit;
+	width: 100%;
+	min-height: 56px;
+}
+
+.il-auth-panel .genius-signup-form .btn-signup:disabled {
+	background: #e6e7e8;
+	border-color: #e6e7e8;
+	color: #6c6e72;
+}
+
+
+/* ── Responsive ── */
+@media (min-width: 1440px) {
+	.il-auth-panel-wrap {
+		flex: 0 0 var(--il-auth-panel-width);
+	}
+
+	.il-auth-brand {
+		flex: 1 1 calc(100% - var(--il-auth-panel-width));
+	}
+}
+
+@media (max-width: 960px) {
+	.il-auth-shell {
+		flex-direction: column;
+		height: 100vh;
+		height: 100dvh;
+	}
+
+	.il-auth-brand {
+		flex: 0 0 auto;
+		height: auto;
+		min-height: 0;
+		padding: 32px 24px;
+		background-position: center;
+		background-size: cover;
+	}
+
+	.il-auth-brand-content {
+		padding: 0;
+	}
+
+	.il-auth-logo {
+		width: min(200px, 60vw);
+	}
+
+	.il-auth-panel-wrap {
+		flex: 1 1 auto;
+		width: 100%;
+		height: auto;
+		min-height: 0;
+		align-items: stretch;
+	}
+
+	.il-auth-panel {
+		border-radius: var(--il-auth-radius-card) var(--il-auth-radius-card) 0 0;
+		margin-top: -24px;
+		height: 100%;
+		padding: 32px 24px;
+		box-shadow: 0 -4px 24px rgba(0, 37, 76, 0.08);
+	}
+
+	.il-auth-heading {
+		font-size: 28px;
+		line-height: 42px;
+	}
+
+	.il-auth-subheading {
+		margin-bottom: 32px;
+	}
+}
+
+@media (max-width: 480px) {
+	.il-auth-panel {
+		padding: 28px 20px 32px;
+	}
+
+	.il-auth-heading {
+		font-size: 24px;
+		line-height: 36px;
+		margin-bottom: 16px;
+	}
+
+	.il-floating-label {
+		font-size: 14px;
+		left: 16px;
+	}
+}

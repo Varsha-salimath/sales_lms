@@ -8,19 +8,44 @@ from frappe.utils.data import escape_html
 from frappe.utils.jinja_globals import is_rtl
 from frappe.utils.telemetry import capture
 
+from lms.lms.routing import invalid_spa_redirect, is_valid_spa_path, raise_page_redirect
 from lms.lms.utils import get_lms_path, get_lms_route
 
 no_cache = 1
 
 
 def get_context():
+	request_path = ""
+	query = ""
+	if getattr(frappe.local, "request", None):
+		request_path = (frappe.local.request.path or "/").strip("/")
+		if frappe.local.request.query_string:
+			query = frappe.local.request.query_string.decode("utf-8", errors="ignore")
+			query = f"?{query}" if query else ""
+
+	app_path = request_path or (frappe.form_dict.get("app_path") or "").strip("/")
+
+	# Backup for / and /lms/* if before_request did not already 302.
+	if not app_path:
+		raise_page_redirect("/login" if frappe.session.user == "Guest" else "/dashboard")
+	if app_path == "lms" or app_path.startswith("lms/"):
+		rest = app_path[3:].lstrip("/")
+		if not rest:
+			raise_page_redirect("/login" if frappe.session.user == "Guest" else "/dashboard")
+		raise_page_redirect(f"/{rest}{query}")
+
+	if app_path and not is_valid_spa_path(app_path):
+		is_guest = frappe.session.user == "Guest"
+		target = invalid_spa_redirect(app_path, is_guest, query)
+		if target:
+			raise_page_redirect(target)
+		raise_page_redirect("/login" if is_guest else "/dashboard")
+
 	context = frappe._dict()
 	context.boot = get_boot()
 	frappe.db.commit()
-
-	app_path = frappe.form_dict.get("app_path")
 	favicon = frappe.db.get_single_value("Website Settings", "favicon") or "/assets/lms/frontend/favicon.png"
-	title = frappe.db.get_single_value("Website Settings", "app_name") or "Frappe Learning"
+	title = frappe.db.get_single_value("Website Settings", "app_name") or "Sales LMS"
 
 	context.meta = get_meta(app_path, title, favicon)
 	context.title = title
@@ -211,6 +236,13 @@ def get_meta_from_document(app_path):
 			"title": _("Analytics dashboard"),
 			"keywords": "Enrollment Count, Completion, Signups, Analytics",
 			"link": get_lms_route("analytics-dashboard"),
+		}
+
+	if app_path == "ojt-certification-analytics":
+		return {
+			"title": _("OJT Certification Analytics"),
+			"keywords": "OJT, Certification, Analytics, Attendance, Audit",
+			"link": get_lms_route("ojt-certification-analytics"),
 		}
 
 	if app_path == "library":

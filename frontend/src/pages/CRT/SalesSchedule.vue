@@ -3,7 +3,7 @@
 		<header class="sticky top-0 z-20 border-b border-violet-100 bg-white/90 backdrop-blur">
 			<div class="mx-auto flex max-w-6xl items-center justify-between px-5 py-3 sm:px-8">
 				<router-link :to="{ name: 'Home' }" class="flex items-center gap-3">
-					<img :src="logoSrc" alt="Infinity Learn" class="h-9 w-auto" />
+					<img :src="logoSrc" alt="Sales LMS" class="h-9 w-auto" />
 				</router-link>
 				<div class="flex items-center gap-2">
 					<router-link

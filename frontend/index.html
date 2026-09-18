@@ -225,6 +225,7 @@
 		</div>
 		<script>
 			document.getElementById('seo-content').style.display = 'none';
+			window.lms_path = {{ boot.lms_path | default('', true) | tojson }};
 		</script>
 		<script type="module" src="/src/main.js"></script>
 	</body>

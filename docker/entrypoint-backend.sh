@@ -155,7 +155,7 @@ import_bundled_crt() {
 	if bench --site "${SITE_NAME}" execute lms.lms.sales_crt.ensure_bundled_crt_bootstrap; then
 		echo "Bundled CRT import complete (or already present)."
 	else
-		echo "WARN: Bundled CRT import failed — check backend logs; import manually via /lms/crt/import"
+		echo "WARN: Bundled CRT import failed — check backend logs; import manually via /crt/import"
 	fi
 	bench --site "${SITE_NAME}" execute lms.lms.ojt_engine.seed_ojt_scenarios || true
 }

@@ -1,0 +1,76 @@
+{
+ "actions": [],
+ "creation": "2026-09-18 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "sheet_url",
+  "last_synced",
+  "last_sync_source",
+  "last_sync_status",
+  "row_count",
+  "last_sync_message"
+ ],
+ "fields": [
+  {
+   "default": "https://docs.google.com/spreadsheets/d/1rzjALRLADp4LAl0vEwYPMr1_afDUEv0Sr5gDhXjxtl4/edit?gid=0#gid=0",
+   "fieldname": "sheet_url",
+   "fieldtype": "Small Text",
+   "label": "Google Sheet URL"
+  },
+  {
+   "fieldname": "last_synced",
+   "fieldtype": "Datetime",
+   "label": "Last Synced",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_sync_source",
+   "fieldtype": "Data",
+   "label": "Last Sync Source",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_sync_status",
+   "fieldtype": "Select",
+   "label": "Last Sync Status",
+   "options": "\nSuccess\nFailed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "row_count",
+   "fieldtype": "Int",
+   "label": "Row Count",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_sync_message",
+   "fieldtype": "Small Text",
+   "label": "Last Sync Message",
+   "read_only": 1
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-09-18 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "LMS",
+ "name": "Sales OJT Certification Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Moderator",
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

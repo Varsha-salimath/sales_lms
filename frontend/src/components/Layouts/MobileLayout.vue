@@ -206,8 +206,8 @@ let isActive = (tab) => {
 const handleClick = (tab) => {
 	if (tab.label == 'Log in') window.location.href = '/login'
 	else if (tab.label == 'Log out')
-		logout.submit().then(() => {
-			isLoggedIn = false
+		logout.submit().finally(() => {
+			window.location.href = '/login'
 		})
 	else if (tab.label == 'Profile')
 		router.push({

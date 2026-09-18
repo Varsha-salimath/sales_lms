@@ -180,6 +180,7 @@ import { formatAmount } from '@/utils/'
 import { useRouter } from 'vue-router'
 import CertificationLinks from '@/components/CertificationLinks.vue'
 import { useTelemetry } from 'frappe-ui/frappe'
+import { getLmsRoute } from '@/utils/basePath'
 
 const router = useRouter()
 const user = inject('$user')
@@ -257,7 +258,7 @@ const certificate = createResource({
 		}
 	},
 	onSuccess(data) {
-		window.open(`/lms/certificate/${encodeURIComponent(data.name)}`, '_blank')
+		window.open(getLmsRoute(`certificate/${encodeURIComponent(data.name)}`), '_blank')
 	},
 })
 

@@ -3,7 +3,7 @@
 		<header class="relative z-20 flex items-center justify-between px-5 py-4 sm:px-10">
 			<img
 				:src="logoSrc"
-				alt="Infinity Learn by Sri Chaitanya"
+				alt="Sales LMS"
 				class="h-11 w-auto object-contain sm:h-12"
 			/>
 			<nav class="flex items-center gap-4 sm:gap-6">
@@ -182,7 +182,7 @@
 		</section>
 
 		<footer class="bg-white px-5 py-8 text-center text-xs sm:px-10" style="color: #5b6b82">
-			{{ __('© Infinity Learn by Sri Chaitanya · Sales CRT') }}
+			{{ __('© Sales LMS · Sales CRT') }}
 		</footer>
 	</div>
 </template>
@@ -190,7 +190,7 @@
 import { computed, inject } from 'vue'
 import { createListResource, usePageMeta } from 'frappe-ui'
 import CourseCard from '@/components/CourseCard.vue'
-import logoSrc from '@/assets/il-logo.png'
+import logoSrc from '@/assets/il-logo-white.svg'
 import { sessionStore } from '@/stores/session'
 
 const user = inject('$user')
@@ -252,7 +252,7 @@ const highlights = [
 ]
 
 usePageMeta(() => ({
-	title: 'Infinity Learn Sales CRT',
+	title: 'Sales LMS',
 	icon: brand.favicon,
 }))
 </script>

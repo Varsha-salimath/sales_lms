@@ -3922,13 +3922,13 @@ def get_progress_distribution(progressList: list):
 
 @frappe.whitelist(allow_guest=True)
 def get_pwa_manifest():
-	title = frappe.db.get_single_value("Website Settings", "app_name") or "Frappe Learning"
+	title = frappe.db.get_single_value("Website Settings", "app_name") or "Sales LMS"
 	banner_image = frappe.db.get_single_value("Website Settings", "banner_image")
 
 	manifest = {
 		"name": title,
 		"short_name": title,
-		"description": "Easy to use, 100% open source Learning Management System",
+		"description": "Sales onboarding and classroom readiness training platform",
 		"start_url": get_lms_route(),
 		"icons": [
 			{
@@ -3945,27 +3945,27 @@ def get_pwa_manifest():
 
 @frappe.whitelist()
 def get_profile_details(username: str):
-	details = frappe.db.get_value(
-		"User",
-		{"username": username},
-		[
-			"first_name",
-			"last_name",
-			"full_name",
-			"name",
-			"username",
-			"user_image",
-			"bio",
-			"headline",
-			"language",
-			"cover_image",
-			"open_to",
-			"linkedin",
-			"github",
-			"twitter",
-		],
-		as_dict=True,
-	)
+	fields = [
+		"first_name",
+		"last_name",
+		"full_name",
+		"name",
+		"username",
+		"user_image",
+		"bio",
+		"headline",
+		"language",
+		"cover_image",
+		"open_to",
+		"linkedin",
+		"github",
+		"twitter",
+	]
+	details = frappe.db.get_value("User", {"username": username}, fields, as_dict=True)
+	if not details:
+		details = frappe.db.get_value("User", username, fields, as_dict=True)
+	if not details:
+		frappe.throw(_("User not found"), frappe.DoesNotExistError)
 	roles = frappe.get_roles(details.name)
 	if not has_lms_role():
 		frappe.throw(

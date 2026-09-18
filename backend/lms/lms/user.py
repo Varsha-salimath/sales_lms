@@ -35,21 +35,15 @@ def _validate_signup_payload(
 	email: str,
 	first_name: str,
 	last_name: str,
-	phone: str,
-	school_name: str,
-	verify_terms,
+	phone: str = None,
+	school_name: str = None,
+	verify_terms=None,
 ):
 	missing = []
 	if not first_name:
-		missing.append(_("First Name"))
-	if not last_name:
-		missing.append(_("Last Name"))
+		missing.append(_("Full Name"))
 	if not email:
-		missing.append(_("Email Address"))
-	if not phone:
-		missing.append(_("Phone Number"))
-	if not school_name:
-		missing.append(_("School Name"))
+		missing.append(_("Email"))
 
 	if missing:
 		frappe.throw(
@@ -61,16 +55,10 @@ def _validate_signup_payload(
 		frappe.throw(_("Please enter a valid email address"), frappe.ValidationError)
 
 	phone_digits = _normalize_phone(phone)
-	if not PHONE_DIGITS_RE.match(phone_digits):
+	if phone and not PHONE_DIGITS_RE.match(phone_digits):
 		frappe.throw(_("Phone Number must contain 8–15 digits only"), frappe.ValidationError)
 
-	if not cint(verify_terms):
-		frappe.throw(
-			_("You must agree to the Terms & Conditions to continue"),
-			frappe.ValidationError,
-		)
-
-	return phone_digits
+	return phone_digits or ""
 
 
 @frappe.whitelist(allow_guest=True)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
@@ -142,7 +130,7 @@ def sign_up(
 		"first_name": first_name,
 		"last_name": last_name,
 		"mobile_no": phone_digits,
-		"verify_terms": 1,
+		"verify_terms": 1 if cint(verify_terms) else 0,
 		"user_category": user_category,
 		"country": "",
 		"enabled": 1,
@@ -187,6 +175,12 @@ def set_country_from_ip(login_manager: object = None, user: str = None):
 
 
 def on_login(login_manager):
-	default_app = frappe.db.get_single_value("System Settings", "default_app")
-	if default_app == "lms":
-		frappe.local.response["home_page"] = get_lms_route()
+	frappe.local.response["home_page"] = get_lms_route()
+
+
+@frappe.whitelist()
+def logout():
+	"""Force portal logout to /login — never Frappe Desk."""
+	frappe.local.login_manager.logout()
+	frappe.local.response["message"] = "Logged out"
+	frappe.local.response["home_page"] = "/login"

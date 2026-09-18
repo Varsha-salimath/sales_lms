@@ -62,3 +62,30 @@ class SCORMRenderer(BaseRenderer):
 
 				if correct_file_path and self._is_safe_path(correct_file_path):
 					return self._serve_file(correct_file_path)
+
+
+from lms.lms.routing import SPA_TOP_LEVEL, is_valid_spa_path
+
+
+class SalesLmsSpaRenderer(BaseRenderer):
+	"""Serve the Vue SPA at clean paths without stealing /login, /app, or Frappe www pages."""
+
+	def can_render(self):
+		path = (self.path or "").lstrip("/")
+		if not path or not is_valid_spa_path(path):
+			return False
+		parts = path.split("/")
+		first = parts[0]
+		if first not in SPA_TOP_LEVEL:
+			return False
+		# Keep Frappe www/certificate.py for /courses/<course>/<certificate_id>
+		if first == "courses" and len(parts) == 3 and parts[2] not in ("certification", "learn"):
+			if frappe.db.exists("LMS Certificate", parts[2]):
+				return False
+		return True
+
+	def render(self):
+		from frappe.website.page_renderers.template_page import TemplatePage
+
+		frappe.form_dict.app_path = (self.path or "").lstrip("/")
+		return TemplatePage("_lms", self.http_status_code).render()

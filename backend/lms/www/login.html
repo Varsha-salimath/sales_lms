@@ -1,0 +1,226 @@
+{% extends "templates/web.html" %}
+
+{% block navbar %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+
+{% block head_include %}
+<link rel="icon" href="{{ favicon or '/assets/lms/frontend/favicon.png' }}" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="/assets/lms/css/il-auth.css?v=11" />
+{% endblock %}
+
+{% block page_content %}
+<div class="il-auth-shell">
+	<aside class="il-auth-brand" aria-label="{{ _('Infinity Learn — Power up your learning journey') }}">
+		<div class="il-auth-brand-pattern" aria-hidden="true"></div>
+		<div class="il-auth-brand-content">
+			<img
+				class="il-auth-logo"
+				src="/assets/lms/images/il-logo-white.svg"
+				alt="{{ _('Infinity Learn — Power up your learning journey') }}"
+				width="282"
+				height="234"
+			/>
+		</div>
+	</aside>
+
+	<div class="il-auth-panel-wrap">
+		<div class="il-auth-panel">
+			<div class="il-auth-panel-inner">
+				<noscript>
+					<p class="il-auth-subheading">{{ _("You need to enable JavaScript to sign in.") }}</p>
+				</noscript>
+
+				<section class="for-login is-active">
+					<h1 class="il-auth-heading">{{ _("Sign In") }}</h1>
+					<p class="il-auth-subheading">
+						{{ _("Welcome! Please sign in to continue.") }}
+					</p>
+
+					<form class="form-signin form-login" role="form" novalidate>
+						<div class="login-error-banner">
+							<span></span>
+						</div>
+
+						<div class="il-field">
+							<div class="il-field-outlined">
+								<input
+									type="text"
+									id="login_email"
+									class="il-text-input"
+									placeholder=" "
+									autocomplete="username"
+									required
+								/>
+								<label class="il-floating-label" for="login_email">{{ login_label or _("Email") }}</label>
+							</div>
+							<p class="field-error"></p>
+						</div>
+
+						<div class="il-field il-field-password">
+							<div class="il-field-outlined">
+								<div class="il-password-wrap">
+									<input
+										type="password"
+										id="login_password"
+										class="il-text-input"
+										placeholder=" "
+										autocomplete="current-password"
+										required
+									/>
+									<button
+										type="button"
+										class="toggle-password"
+										toggle="#login_password"
+										aria-label="{{ _('Show password') }}"
+									>
+										<svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+											<use href="#es-line-preview"></use>
+										</svg>
+									</button>
+								</div>
+								<label class="il-floating-label" for="login_password">{{ _("Password") }}</label>
+							</div>
+							<p class="field-error"></p>
+							{% if not disable_user_pass_login %}
+							<p class="il-forgot-row">
+								<a href="#forgot">{{ _("Forgot Password?") }}</a>
+							</p>
+							{% endif %}
+						</div>
+
+						<button
+							class="il-btn-primary btn-primary btn-login"
+							type="submit"
+							data-label="{{ _('Sign In') }}"
+						>
+							{{ _("Sign In") }}
+						</button>
+
+						{% if login_with_email_link %}
+						<div class="il-auth-links">
+							<a href="#login-with-email-link">{{ _("Login with Email Link") }}</a>
+						</div>
+						{% endif %}
+					</form>
+
+					{% if not disable_signup and not disable_user_pass_login %}
+					<div class="sign-up-message">
+						{{ _("Don't have an account?") }}
+						<a href="#signup">{{ _("Sign up") }}</a>
+					</div>
+					{% endif %}
+				</section>
+
+				<section class="for-signup {{ 'signup-disabled' if disable_signup else '' }}">
+					<h1 class="il-auth-heading">{{ _("Sign Up") }}</h1>
+					<p class="il-auth-subheading">{{ _("Let's setup your account.") }}</p>
+
+					{%- if not disable_signup -%}
+					{{ signup_form_template }}
+					{%- else -%}
+					<p class="il-auth-subheading">{{ _("Signups have been disabled for this website.") }}</p>
+					<div class="sign-up-message">
+						<a href="/">{{ _("Home") }}</a>
+					</div>
+					{%- endif -%}
+				</section>
+
+				<section class="for-forgot">
+					<h1 class="il-auth-heading">{{ _("Forgot Password?") }}</h1>
+					<p class="il-auth-subheading">
+						{{ _("Please enter your email, we'll send you a password reset link.") }}
+					</p>
+
+					<form class="form-signin form-forgot hide" role="form" novalidate>
+						<div class="page-card-body">
+							<div class="il-field">
+								<div class="il-field-outlined">
+									<input
+										type="email"
+										id="forgot_email"
+										class="il-text-input"
+										placeholder=" "
+										autocomplete="username"
+										required
+									/>
+									<label class="il-floating-label" for="forgot_email">{{ _("Email") }}</label>
+								</div>
+								<p class="field-error"></p>
+							</div>
+						</div>
+
+						<button
+							class="il-btn-primary btn-primary btn-forgot"
+							type="submit"
+							data-label="{{ _('Reset Password') }}"
+						>
+							{{ _("Reset Password") }}
+						</button>
+					</form>
+
+					<div class="sign-up-message">
+						<a href="#login">{{ _("Back to Login") }}</a>
+					</div>
+				</section>
+
+				<section class="for-login-with-email-link">
+					<h1 class="il-auth-heading">{{ _("Sign In") }}</h1>
+					<p class="il-auth-subheading">{{ _("Welcome! Please sign in to continue.") }}</p>
+
+					<form class="form-signin form-login-with-email-link hide" role="form" novalidate>
+						<div class="login-success-banner">
+							<span>{{ _("Please check your email.") }}</span>
+						</div>
+
+						<div class="il-field">
+							<div class="il-field-outlined">
+								<input
+									type="email"
+									id="login_with_email_link_email"
+									class="il-text-input"
+									placeholder=" "
+									autocomplete="username"
+									required
+								/>
+								<label class="il-floating-label" for="login_with_email_link_email">{{ _("Email") }}</label>
+							</div>
+							<p class="field-error"></p>
+						</div>
+
+						<button
+							class="il-btn-primary btn-primary btn-login-with-email-link"
+							type="submit"
+							data-label="{{ _('Send login link') }}"
+						>
+							{{ _("Send login link") }}
+						</button>
+						<a href="#login" class="il-auth-secondary-link">{{ _("Login with password") }}</a>
+					</form>
+
+					{% if not disable_signup and not disable_user_pass_login %}
+					<div class="sign-up-message">
+						{{ _("Don't have an account?") }}
+						<a href="#signup">{{ _("Sign up") }}</a>
+					</div>
+					{% endif %}
+				</section>
+
+				{% if social_login %}
+				<section class="for-email-login" hidden>
+				</section>
+				{% endif %}
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>{% include "templates/includes/login/login.js" %}</script>
+<script src="/assets/lms/js/il-auth.js?v=11"></script>
+{% endblock %}
+
+{% block sidebar %}{% endblock %}

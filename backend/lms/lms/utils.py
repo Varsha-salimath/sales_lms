@@ -37,15 +37,23 @@ LMS_ROLES = ["Moderator", "Course Creator", "Batch Evaluator", "LMS Student"]
 
 
 def get_lms_path():
-	path = frappe.conf.get("lms_path") or "lms"
-	return path.strip("/")
+	"""User-facing SPA is mounted at site root. Empty string = no /lms prefix."""
+	configured = None
+	if frappe.conf:
+		configured = frappe.conf.get("lms_path")
+	if configured in (None, False, ""):
+		return ""
+	return str(configured).strip("/")
 
 
 def get_lms_route(path=""):
-	base = f"/{get_lms_path()}"
-	if not path:
-		return base
-	return f"{base}/{path.lstrip('/')}"
+	lms_path = get_lms_path()
+	fragment = (path or "").lstrip("/")
+	if not fragment:
+		fragment = "dashboard"
+	if lms_path:
+		return f"/{lms_path}/{fragment}"
+	return f"/{fragment}"
 
 
 def extend_bootinfo(bootinfo: dict):

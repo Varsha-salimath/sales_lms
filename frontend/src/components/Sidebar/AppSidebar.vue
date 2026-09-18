@@ -12,12 +12,52 @@
 			<div class="flex flex-col" v-if="sidebarSettings.data">
 				<div v-for="link in sidebarLinks" class="mx-2 my-2.5">
 					<div
-						v-if="!link.hideLabel"
-						class="genius-sidebar-section-label mb-2 mt-3 flex cursor-pointer gap-1.5 border-b px-1 text-base font-medium transition-all duration-300 ease-in-out"
+						v-if="link.dividerBefore && !sidebarStore.isSidebarCollapsed"
+						class="mb-2 mt-1 border-t"
+						style="border-color: rgba(255, 255, 255, 0.15)"
+					/>
+					<div
+						v-if="showGroupLabel(link) && !link.collapsible"
+						class="genius-sidebar-section-label mb-2 mt-3 flex gap-1.5 border-b px-1 text-base font-medium transition-all duration-300 ease-in-out"
 					>
 						<span>{{ __(link.label) }}</span>
 					</div>
-					<nav class="space-y-1">
+					<div
+						v-if="link.collapsible && !sidebarStore.isSidebarCollapsed"
+						class="genius-sidebar-section-label mb-2 mt-3 flex cursor-pointer items-center gap-1.5 border-b px-1 text-base font-medium transition-all duration-300 ease-in-out"
+						@click="togglePracticeHub"
+					>
+						<ChevronRight
+							class="h-4 w-4 stroke-1.5 text-white transition-all duration-300 ease-in-out"
+							:class="{
+								'rotate-90': !sidebarStore.isPracticeHubCollapsed,
+								'rtl:rotate-180': sidebarStore.isPracticeHubCollapsed,
+							}"
+						/>
+						<span>{{ __(link.label) }}</span>
+					</div>
+					<Tooltip
+						v-if="link.collapsible && sidebarStore.isSidebarCollapsed"
+						:text="__('Practice Hub')"
+					>
+						<button
+							type="button"
+							class="mx-auto mb-2 mt-2 flex h-8 w-8 items-center justify-center rounded-lg text-white transition-colors hover:bg-white/12"
+							@click="togglePracticeHub"
+						>
+							<Layers class="h-4 w-4 stroke-1.5" />
+						</button>
+					</Tooltip>
+					<nav
+						class="space-y-1 transition-all duration-300 ease-in-out"
+						:class="
+							link.collapsible &&
+							(sidebarStore.isPracticeHubCollapsed ||
+								sidebarStore.isSidebarCollapsed)
+								? 'hidden'
+								: 'block'
+						"
+					>
 						<div v-for="item in link.items">
 							<SidebarLink
 								:link="item"
@@ -207,15 +247,6 @@
 							</div>
 						</template>
 					</Tooltip>
-					<Tooltip
-						v-if="showAppointmentIcon"
-						:text="__('Book a free onboarding session with the Frappe team')"
-					>
-						<Phone
-							class="size-4 stroke-1.5 text-white cursor-pointer"
-							@click="redirectToAppointmentScreen()"
-						/>
-					</Tooltip>
 					<Tooltip v-if="showOnboarding" :text="__('Help')">
 						<CircleHelp
 							class="size-4 stroke-1.5 text-white cursor-pointer"
@@ -227,7 +258,7 @@
 							"
 						/>
 					</Tooltip>
-					<Tooltip :text="__('Infinity Learn Sales CRT')">
+					<Tooltip :text="__('Sales LMS')">
 						<Zap
 							class="size-4 stroke-1.5 text-white cursor-pointer"
 							@click="redirectToWebsite()"
@@ -257,8 +288,8 @@
 			v-if="showOnboarding && showHelpModal"
 			v-model="showHelpModal"
 			v-model:articles="articles"
-			appName="learning"
-			title="Infinity Learn Sales CRT"
+			appName="sales-lms"
+			title="Sales LMS"
 			:logo="LMSLogo"
 			:afterSkip="(step) => capture('onboarding_step_skipped_' + step)"
 			:afterSkipAll="() => capture('onboarding_steps_skipped')"
@@ -710,6 +741,11 @@ watch(userResource, async () => {
 watch(settingsStore.settings, () => {
 	updateSidebarLinks()
 })
+
+const showGroupLabel = (link) => {
+	if (link.hideLabel || sidebarStore.isSidebarCollapsed) return false
+	return true
+}
 
 const updateSidebarLinks = () => {
 	sidebarLinks.value = getSidebarLinks()

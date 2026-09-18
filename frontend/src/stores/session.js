@@ -21,12 +21,19 @@ export const sessionStore = defineStore('lms-session', () => {
 	let user = ref(sessionUser())
 	const isLoggedIn = computed(() => !!user.value)
 
+	const goToLogin = () => {
+		userResource.reset()
+		user.value = null
+		window.location.href = '/login'
+	}
+
 	const logout = createResource({
 		url: 'logout',
 		onSuccess() {
-			userResource.reset()
-			user.value = null
-			window.location.reload()
+			goToLogin()
+		},
+		onError() {
+			goToLogin()
 		},
 	})
 
