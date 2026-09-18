@@ -35,7 +35,7 @@
 			<p class="mt-3 max-w-2xl text-sm leading-6 text-[color:var(--il-muted)]">
 				{{
 					schedule.data?.short_introduction ||
-					__('Day-by-day CRT schedule imported from Excel into Frappe.')
+					__('Day-by-day CRT schedule, imported from the training plan.')
 				}}
 			</p>
 

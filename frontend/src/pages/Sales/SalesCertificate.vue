@@ -21,7 +21,7 @@
 				<p class="mt-3 text-sm leading-6 text-[color:var(--il-muted)]">
 					{{
 						__(
-							'Eligibility is calculated in Frappe from CRT completion, training evaluation, and one finished OJT simulation. Course feedback is not required.'
+							'Eligibility is based on CRT completion, your training evaluation, and one finished OJT simulation. Course feedback is not required.'
 						)
 					}}
 				</p>

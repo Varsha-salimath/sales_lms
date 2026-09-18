@@ -229,6 +229,14 @@
 		const params = new URLSearchParams(window.location.search);
 		const hasKey = Boolean(params.get("key"));
 
+		// login.html loads Poppins in its <head>; this Frappe page does not.
+		if (!document.querySelector('link[href*="family=Poppins"]')) {
+			const font = document.createElement("link");
+			font.rel = "stylesheet";
+			font.href = "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap";
+			document.head.appendChild(font);
+		}
+
 		const shell = document.createElement("div");
 		shell.className = "il-auth-shell";
 		shell.innerHTML = `
@@ -274,10 +282,19 @@
 		const button = section.querySelector("#update");
 		if (button) button.textContent = hasKey ? __("Set password") : __("Update password");
 
-		const links = document.createElement("div");
-		links.className = "il-auth-links";
-		links.innerHTML = `<a class="il-auth-link" href="/login#login">${__("Back to login")}</a>`;
-		section.appendChild(links);
+		// Frappe renders its own "Back to sign in" link; restyle it instead of adding a second one.
+		section.querySelectorAll("a[href*='login']").forEach((link) => {
+			link.className = "il-auth-link";
+			link.textContent = __("Back to login");
+			link.setAttribute("href", "/login#login");
+			link.parentElement?.classList.add("il-auth-links");
+		});
+		if (!section.querySelector(".il-auth-link")) {
+			const links = document.createElement("div");
+			links.className = "il-auth-links";
+			links.innerHTML = `<a class="il-auth-link" href="/login#login">${__("Back to login")}</a>`;
+			section.appendChild(links);
+		}
 	}
 
 	window.__ = window.__ || ((text) => text);

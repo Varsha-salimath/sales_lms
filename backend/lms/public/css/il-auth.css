@@ -530,6 +530,17 @@ body[data-path="update-password"] #update:disabled {
 
 /* ---------- /update-password (Frappe page restyled in place) ---------- */
 
+/* Frappe's website CSS sets its own font on form controls; keep everything in Poppins. */
+body:is([data-path="login"], [data-path="update-password"]) .il-auth-shell,
+body:is([data-path="login"], [data-path="update-password"]) .il-auth-shell :is(h1, h2, h3, h4, p, a, label, input, button, span, div) {
+	font-family: Poppins, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+body[data-path="update-password"] .il-auth-content .page-card-head {
+	display: block !important;
+	text-align: center !important;
+}
+
 /* /update-password has a single screen; always show it. */
 body[data-path="update-password"] .il-auth-content > section {
 	display: block !important;

@@ -4,7 +4,7 @@
 			<div class="mb-4 flex flex-wrap items-start justify-between gap-3">
 				<div class="min-w-0">
 					<h1 class="text-2xl font-semibold text-ink-gray-9">
-						{{ __('NEWSPAPER') }}
+						{{ __('Newspaper') }}
 					</h1>
 					<p class="mt-1 text-sm text-ink-gray-6">
 						{{ __('Share important updates with your LMS learners.') }}

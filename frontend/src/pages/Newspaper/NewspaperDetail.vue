@@ -19,7 +19,7 @@
 					<h1 class="text-2xl font-semibold text-ink-gray-9">
 						{{ detail.data.title }}
 					</h1>
-					<p class="mt-1 text-sm text-ink-gray-5">{{ __('NEWSPAPER') }}</p>
+					<p class="mt-1 text-sm text-ink-gray-5">{{ __('Newspaper') }}</p>
 				</div>
 
 				<img

@@ -13,7 +13,7 @@
 						class="text-2xl font-semibold tracking-tight sm:text-3xl"
 						style="color: #fff !important"
 					>
-						{{ __('Sales CRT Control Center') }}
+						{{ __('LMS Control Center') }}
 					</h1>
 					<p class="mt-1.5 max-w-xl text-sm text-white/85">
 						{{
