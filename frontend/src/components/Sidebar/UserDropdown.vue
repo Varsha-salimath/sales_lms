@@ -72,6 +72,7 @@ import SettingsModal from '@/components/Settings/Settings.vue'
 import defaultLogo from '@/assets/il-logo-white.svg'
 import {
 	ChevronDown,
+	LayoutGrid,
 	LogIn,
 	LogOut,
 	Moon,
@@ -140,15 +141,16 @@ const userDropdownOptions = computed(() => {
 					},
 				},
 				{
-					component: markRaw(Apps),
-					condition: () => {
-						let cookies = new URLSearchParams(
-							document.cookie.split('; ').join('&')
-						)
-						let system_user = cookies.get('system_user')
-						if (system_user === 'yes') return true
-						else return false
+					icon: LayoutGrid,
+					label: 'Desk',
+					onClick: () => {
+						window.location.href = '/desk'
 					},
+					condition: () => canOpenDesk(),
+				},
+				{
+					component: markRaw(Apps),
+					condition: () => canOpenDesk(),
 				},
 				{
 					icon: Settings,
@@ -205,6 +207,18 @@ const userDropdownOptions = computed(() => {
 		},
 	]
 })
+
+const canOpenDesk = () => {
+	const cookies = new URLSearchParams(document.cookie.split('; ').join('&'))
+	if (cookies.get('system_user') === 'yes') return true
+	const user = userResource.data
+	return !!(
+		user?.is_system_manager ||
+		user?.is_moderator ||
+		user?.is_instructor ||
+		user?.is_evaluator
+	)
+}
 
 const clearDemoDataConfirmation = () => {
 	$dialog({
