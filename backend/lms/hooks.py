@@ -104,6 +104,7 @@ before_uninstall = "lms.install.before_uninstall"
 after_migrate = [
 	"lms.install.after_sync",
 	"lms.lms.org.seed_departments",
+	"lms.lms.content_scope.tag_existing_content",
 	"lms.sqlite.build_index_in_background",
 ]
 
@@ -118,12 +119,16 @@ after_migrate = [
 # Permissions evaluated in scripted ways
 
 permission_query_conditions = {
+	"LMS Course": "lms.lms.content_scope.course_query_conditions",
+	"LMS Batch": "lms.lms.content_scope.batch_query_conditions",
+	"LMS Program": "lms.lms.content_scope.program_query_conditions",
 	"LMS Certificate": "lms.lms.doctype.lms_certificate.lms_certificate.get_permission_query_conditions",
 	"Sales Training Evaluation": "lms.lms.sales_journey.get_permission_query_conditions",
 	"Sales OJT Attempt": "lms.lms.sales_journey.get_ojt_permission_query_conditions",
 }
 
 has_permission = {
+	"LMS Course": "lms.lms.content_scope.has_course_permission",
 	"LMS Live Class": "lms.lms.doctype.lms_live_class.lms_live_class.has_permission",
 	"LMS Batch": "lms.lms.doctype.lms_batch.lms_batch.has_permission",
 	"LMS Program": "lms.lms.doctype.lms_program.lms_program.has_permission",
@@ -163,6 +168,9 @@ doc_events = {
 	"Google Calendar": {
 		"on_update": "lms.lms.library.handle_google_account_change_hook",
 	},
+	"LMS Course": {"validate": "lms.lms.content_scope.set_team"},
+	"LMS Batch": {"validate": "lms.lms.content_scope.set_team"},
+	"LMS Program": {"validate": "lms.lms.content_scope.set_team"},
 }
 
 # Scheduled Tasks

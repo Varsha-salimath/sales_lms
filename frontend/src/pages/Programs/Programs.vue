@@ -87,6 +87,7 @@ const programs = createListResource({
 		'course_count',
 		'published',
 		'enforce_course_order',
+		'team',
 	],
 	auto: false,
 	orderBy: 'creation desc',

@@ -78,7 +78,10 @@ def _crt_states(member: str) -> list[dict]:
 	staff = _is_staff(member)
 	outline = get_course_outline(COURSE_SLUG, progress=True) or []
 	crts = []
-	prev_complete = True
+	# Day 1 opens only after the Hello ILians joining form is in.
+	from lms.lms.hello_ilians import is_required as hello_ilians_required
+
+	prev_complete = staff or not hello_ilians_required(member)
 	for idx in range(1, 6):
 		chapter = next((c for c in outline if cint(c.get("idx")) == idx), None)
 		lessons = (chapter or {}).get("lessons") or []
@@ -356,7 +359,15 @@ def get_onboarding_home():
 		},
 		"ojt": ojt,
 		"certificate": cert,
+		"hello_ilians": _hello_ilians_state(member, staff),
 	}
+
+
+def _hello_ilians_state(member, staff):
+	from lms.lms.hello_ilians import is_submitted
+
+	submitted = is_submitted(member)
+	return {"required": not staff, "submitted": submitted}
 
 
 @frappe.whitelist()

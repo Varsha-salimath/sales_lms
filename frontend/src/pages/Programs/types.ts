@@ -1,6 +1,7 @@
 interface Program {
     name: string;
     title: string;
+    team?: string | null;
     published: boolean;
     enforce_course_order: boolean;
     program_courses: ProgramCourse[];

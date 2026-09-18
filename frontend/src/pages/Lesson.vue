@@ -567,6 +567,10 @@ const setupLesson = (data) => {
 		})
 		return
 	}
+	if (data.onboarding_required) {
+		router.replace({ name: 'HelloILians' })
+		return
+	}
 	if (data.lesson_locked) {
 		return
 	}

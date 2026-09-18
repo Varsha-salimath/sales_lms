@@ -25,6 +25,7 @@
 								:onCreate="createCategory"
 								@update:modelValue="makeFormDirty()"
 							/>
+							<TeamSelect v-model="courseResource.doc.team" @change="makeFormDirty()" />
 						</div>
 						<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 							<MultiSelect
@@ -358,6 +359,7 @@ import { getMetaInfo, updateMetaInfo, createLMSCategory } from '@/utils'
 import { X } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import Link from '@/components/Controls/Link.vue'
+import TeamSelect from '@/components/Controls/TeamSelect.vue'
 import CourseOutline from '@/components/CourseOutline.vue'
 import MultiSelect from '@/components/Controls/MultiSelect.vue'
 import ColorSwatches from '@/components/Controls/ColorSwatches.vue'

@@ -1,0 +1,239 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "field:member",
+ "creation": "2026-09-19 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "member",
+  "employee_name",
+  "first_name",
+  "last_name",
+  "employee_code",
+  "column_break_1",
+  "joining_date",
+  "ac_name",
+  "ac_email",
+  "team_lead",
+  "section_contact",
+  "phone",
+  "alternate_phone",
+  "distance_from_office",
+  "column_break_2",
+  "home_state",
+  "city",
+  "primary_language",
+  "other_languages",
+  "section_experience",
+  "experience",
+  "previous_company",
+  "column_break_3",
+  "edtech_experience",
+  "last_edtech_company",
+  "submitted_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "member",
+   "fieldtype": "Link",
+   "label": "Member",
+   "options": "User",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "label": "Employee name",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "first_name",
+   "fieldtype": "Data",
+   "label": "First name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "last_name",
+   "fieldtype": "Data",
+   "label": "Last name"
+  },
+  {
+   "fieldname": "employee_code",
+   "fieldtype": "Data",
+   "label": "Employee code"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "joining_date",
+   "fieldtype": "Date",
+   "label": "Joining date",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "ac_name",
+   "fieldtype": "Data",
+   "label": "AC name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "ac_email",
+   "fieldtype": "Data",
+   "label": "AC official email",
+   "options": "Email",
+   "reqd": 1
+  },
+  {
+   "fieldname": "team_lead",
+   "fieldtype": "Select",
+   "label": "TL",
+   "options": "\nanteryami.panda@infinitylearn.com\numang.kumar@infinitylearn.com\nshashi.suman@infinitylearn.com\nritik.anand@infinitylearn.com\nratnesh.mishra@infinitylearn.com\nyakub.pasha@infinitylearn.com\nsoheb.murshed@infinitylearn.com\nprem.gupta@infinitylearn.com",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "section_contact",
+   "fieldtype": "Section Break",
+   "label": "Contact & location"
+  },
+  {
+   "fieldname": "phone",
+   "fieldtype": "Data",
+   "label": "Contact number",
+   "options": "Phone",
+   "reqd": 1
+  },
+  {
+   "fieldname": "alternate_phone",
+   "fieldtype": "Data",
+   "label": "Alternate contact number",
+   "options": "Phone",
+   "reqd": 1
+  },
+  {
+   "fieldname": "distance_from_office",
+   "fieldtype": "Select",
+   "label": "Distance from office",
+   "options": "\n<5km\n5-10km\n10-15km\n15-20km\n>20km",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "home_state",
+   "fieldtype": "Data",
+   "label": "Home state",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "city",
+   "fieldtype": "Data",
+   "label": "City"
+  },
+  {
+   "fieldname": "primary_language",
+   "fieldtype": "Data",
+   "label": "Primary language",
+   "reqd": 1
+  },
+  {
+   "fieldname": "other_languages",
+   "fieldtype": "Small Text",
+   "label": "Other languages spoken fluently",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_experience",
+   "fieldtype": "Section Break",
+   "label": "Experience"
+  },
+  {
+   "fieldname": "experience",
+   "fieldtype": "Select",
+   "label": "Experience (months)",
+   "options": "\nFresher\n<6\n6-12\n12-24\n24-36\n36+",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "previous_company",
+   "fieldtype": "Data",
+   "label": "Previous company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "edtech_experience",
+   "fieldtype": "Select",
+   "label": "EdTech experience",
+   "options": "\nYes\nNo",
+   "reqd": 1
+  },
+  {
+   "fieldname": "last_edtech_company",
+   "fieldtype": "Data",
+   "label": "Last EdTech company"
+  },
+  {
+   "fieldname": "submitted_on",
+   "fieldtype": "Datetime",
+   "label": "Submitted on",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-09-19 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "LMS",
+ "name": "LMS Onboarding Form",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Moderator",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "employee_name",
+ "track_changes": 1
+}

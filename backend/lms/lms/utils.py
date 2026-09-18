@@ -29,6 +29,7 @@ from frappe.utils.html_utils import sanitize_html
 from pypika import Case
 from pypika import functions as fn
 
+from lms.lms.content_scope import allowed_names, can_access, scope_filters
 from lms.lms.doctype.lms_enrollment.lms_enrollment import update_program_progress
 from lms.lms.md import find_macros
 
@@ -812,6 +813,7 @@ def get_courses(filters: dict = None, start: int = 0) -> list:
 		filters = {}
 
 	filters, or_filters, show_featured = update_course_filters(filters)
+	scope_filters("LMS Course", filters)
 	fields = get_course_fields()
 
 	courses = frappe.get_all(
@@ -967,6 +969,8 @@ def get_course_details(course: str):
 	membership = get_membership(course)
 	if not is_course_published and not can_modify_course(course) and not membership:
 		return {}
+	if not can_access("LMS Course", course):
+		return {}
 
 	fields = get_course_fields()
 	course_details = frappe.db.get_value(
@@ -1096,6 +1100,12 @@ def get_lesson(course: str, chapter: int, lesson: int) -> dict:
 		as_dict=1,
 	)
 
+	from lms.lms.hello_ilians import is_required as hello_ilians_required
+	from lms.lms.sales_journey import COURSE_SLUG as SALES_CRT
+
+	if course == SALES_CRT and hello_ilians_required():
+		return {"onboarding_required": 1, "title": lesson_details.title, "course_title": course_info.title}
+
 	if not lesson_details.include_in_preview and not membership and not can_modify_course(course):
 		return {
 			"no_preview": 1,
@@ -1202,6 +1212,8 @@ def get_batch_details(batch: str):
 	is_student_enrolled = frappe.session.user in batch_students
 
 	if not (is_batch_published or is_batch_admin or is_student_enrolled):
+		return {}
+	if not can_access("LMS Batch", batch):
 		return {}
 
 	batch_details = frappe.db.get_value(
@@ -2275,6 +2287,9 @@ def get_programs():
 		if program.name in [p.name for p in enrolled_programs]:
 			programs_to_remove.append(program)
 	published_programs = [program for program in published_programs if program not in programs_to_remove]
+	allowed = allowed_names("LMS Program")
+	if allowed is not None:
+		published_programs = [p for p in published_programs if p.name in allowed]
 
 	return {
 		"enrolled": enrolled_programs,
@@ -2292,6 +2307,8 @@ def get_program_details(program_name: str) -> dict:
 		"LMS Program Member", {"parent": program_name, "member": frappe.session.user}
 	)
 	if not is_published and not is_member:
+		frappe.throw(_("You are not authorized to view the details of this program."))
+	if not can_access("LMS Program", program_name):
 		frappe.throw(_("You are not authorized to view the details of this program."))
 
 	program = frappe.db.get_value(
@@ -2390,6 +2407,7 @@ def get_batches(filters: dict = None, start: int = 0, order_by: str = "start_dat
 		filters.update({"name": ["in", enrolled_batches]})
 		del filters["enrolled"]
 
+	scope_filters("LMS Batch", filters)
 	batches = frappe.get_all(
 		"LMS Batch",
 		filters=filters,

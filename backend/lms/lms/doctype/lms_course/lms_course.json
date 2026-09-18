@@ -13,6 +13,7 @@
   "column_break_3",
   "instructors",
   "category",
+  "team",
   "status",
   "column_break_htgn",
   "image",
@@ -241,6 +242,15 @@
    "options": "LMS Category"
   },
   {
+   "fieldname": "team",
+   "fieldtype": "Link",
+   "label": "Team",
+   "options": "LMS Department",
+   "in_standard_filter": 1,
+   "search_index": 1,
+   "description": "The team this belongs to. Only that team (and Super Admins) can see it."
+  },
+  {
    "fieldname": "tab_4_tab",
    "fieldtype": "Tab Break",
    "label": "Statistics"
@@ -327,7 +337,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-02-19 11:41:57.038869",
+ "modified": "2026-09-19 12:00:00.000000",
  "modified_by": "sayali@frappe.io",
  "module": "LMS",
  "name": "LMS Course",

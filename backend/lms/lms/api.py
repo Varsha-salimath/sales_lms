@@ -4292,12 +4292,17 @@ def get_my_latest_batches():
 
 
 def get_upcoming_batches():
+	from lms.lms.content_scope import scope_filters
+
 	return frappe.get_all(
 		"LMS Batch",
-		{
-			"published": 1,
-			"start_date": [">=", getdate()],
-		},
+		scope_filters(
+			"LMS Batch",
+			{
+				"published": 1,
+				"start_date": [">=", getdate()],
+			},
+		),
 		order_by="start_date asc",
 		limit=4,
 		pluck="name",

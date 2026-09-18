@@ -20,13 +20,16 @@
 		<template #body-content>
 			<div class="text-base">
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-5 pb-5">
-					<FormControl
-						v-model="program.name"
-						:label="__('Title')"
-						type="text"
-						:required="true"
-						@change="dirty = true"
-					/>
+					<div class="flex flex-col gap-4">
+						<FormControl
+							v-model="program.name"
+							:label="__('Title')"
+							type="text"
+							:required="true"
+							@change="dirty = true"
+						/>
+						<TeamSelect v-model="program.team" @change="dirty = true" />
+					</div>
 					<div class="flex flex-col space-y-3">
 						<FormControl
 							v-model="program.published"
@@ -256,6 +259,7 @@ import { Plus, Trash2, TrendingUp } from 'lucide-vue-next'
 import { Programs, Program } from '@/types/programs'
 import { sanitizeHTML, openSettings } from '@/utils'
 import Link from '@/components/Controls/Link.vue'
+import TeamSelect from '@/components/Controls/TeamSelect.vue'
 import Draggable from 'vuedraggable'
 import ProgramProgressSummary from '@/pages/Programs/ProgramProgressSummary.vue'
 
@@ -311,6 +315,7 @@ const setProgramData = () => {
 		program.value = {
 			name: '',
 			title: '',
+			team: null,
 			published: false,
 			enforce_course_order: false,
 			program_courses: [],

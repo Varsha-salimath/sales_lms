@@ -204,6 +204,11 @@ const routes = [
 		component: () => import('@/pages/Team/TeamAccess.vue'),
 	},
 	{
+		path: '/hello-ilians',
+		name: 'HelloILians',
+		component: () => import('@/pages/Sales/HelloILians.vue'),
+	},
+	{
 		path: '/newspaper',
 		name: 'Newspaper',
 		component: () => import('@/pages/Newspaper/Newspaper.vue'),

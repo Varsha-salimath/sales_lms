@@ -479,6 +479,10 @@ def send_mail(batch, student):
 
 def has_permission(doc, ptype="read", user=None):
 	user = user or frappe.session.user
+	from lms.lms.content_scope import can_access
+
+	if user != "Guest" and ptype != "create" and not doc.is_new() and not can_access("LMS Batch", doc.name, user):
+		return False  # another team's batch
 	if user == "Guest" and not guest_access_allowed():
 		return False
 

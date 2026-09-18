@@ -82,6 +82,7 @@
 								:inlineCreate="true"
 								:onCreate="createCategory"
 							/>
+							<TeamSelect v-model="batchDetail.doc.team" class="mt-4" />
 						</div>
 					</div>
 				</div>
@@ -334,6 +335,7 @@ import { useTelemetry } from 'frappe-ui/frappe'
 import Uploader from '@/components/Controls/Uploader.vue'
 import MultiSelect from '@/components/Controls/MultiSelect.vue'
 import Link from '@/components/Controls/Link.vue'
+import TeamSelect from '@/components/Controls/TeamSelect.vue'
 import BatchCourses from '@/pages/Batches/components/BatchCourses.vue'
 import Assessments from '@/pages/Batches/components/Assessments.vue'
 import NewMemberModal from '@/components/Modals/NewMemberModal.vue'

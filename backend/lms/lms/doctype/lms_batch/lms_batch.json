@@ -22,6 +22,7 @@
   "seat_count",
   "column_break_uamg",
   "category",
+  "team",
   "section_break_cssv",
   "evaluation",
   "evaluation_end_date",
@@ -178,6 +179,15 @@
    "in_standard_filter": 1,
    "label": "Category",
    "options": "LMS Category"
+  },
+  {
+   "fieldname": "team",
+   "fieldtype": "Link",
+   "label": "Team",
+   "options": "LMS Department",
+   "in_standard_filter": 1,
+   "search_index": 1,
+   "description": "The team this belongs to. Only that team (and Super Admins) can see it."
   },
   {
    "description": "These customisations will work on the main batch page.",
@@ -445,7 +455,7 @@
    "link_fieldname": "payment_for_document"
   }
  ],
- "modified": "2026-02-13 14:23:51.913875",
+ "modified": "2026-09-19 12:00:00.000000",
  "modified_by": "sayali@frappe.io",
  "module": "LMS",
  "name": "LMS Batch",

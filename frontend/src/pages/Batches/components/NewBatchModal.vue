@@ -51,6 +51,7 @@
 						:label="__('Category')"
 						:onCreate="createCategory"
 					/>
+					<TeamSelect v-model="batch.team" />
 					<FormControl
 						v-model="batch.seat_count"
 						:label="__('Seat Count')"
@@ -123,6 +124,7 @@ import { useRouter } from 'vue-router'
 import { sanitizeHTML, createLMSCategory } from '@/utils'
 import MultiSelect from '@/components/Controls/MultiSelect.vue'
 import Link from '@/components/Controls/Link.vue'
+import TeamSelect from '@/components/Controls/TeamSelect.vue'
 import NewMemberModal from '@/components/Modals/NewMemberModal.vue'
 
 const show = defineModel<boolean>({ required: true, default: false })
@@ -147,6 +149,7 @@ type Batch = {
 	batch_details: string
 	instructors: string[]
 	category: string | null
+	team: string | null
 	seat_count: number
 	medium: string | null
 }
@@ -162,6 +165,7 @@ const batch = ref<Batch>({
 	batch_details: '',
 	instructors: [],
 	category: null,
+	team: null,
 	seat_count: 0,
 	medium: null,
 })

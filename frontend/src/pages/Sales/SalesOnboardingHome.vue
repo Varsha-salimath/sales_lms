@@ -106,7 +106,7 @@
 import { computed, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { createResource } from 'frappe-ui'
-import { Check, ChevronRight, GraduationCap, Lock, PhoneCall, PlayCircle, Star } from 'lucide-vue-next'
+import { Check, ChevronRight, ClipboardList, GraduationCap, Lock, PhoneCall, PlayCircle, Star } from 'lucide-vue-next'
 
 const user = inject('$user')
 const router = useRouter()
@@ -133,6 +133,9 @@ const greeting = computed(() => {
 })
 
 const crts = computed(() => home.data?.crts || [])
+// Hello ILians joining form: step zero for learners, before Day 1.
+const helloPending = computed(() => Boolean(home.data?.hello_ilians?.required && !home.data?.hello_ilians?.submitted))
+const openHello = () => router.push({ name: 'HelloILians' })
 const staff = computed(() => Boolean(home.data?.is_staff))
 const crtsDone = computed(() => crts.value.length > 0 && crts.value.every((c) => c.state === 'completed'))
 // The one step to work on now: the first CRT that is not finished.
@@ -159,10 +162,26 @@ const crtTitle = (c) => {
 }
 
 const steps = computed(() => {
+	const hello = home.data?.hello_ilians
+	const helloStep = hello?.required
+		? [
+				{
+					key: 'hello-ilians',
+					icon: ClipboardList,
+					title: __('Hello ILians'),
+					detail: hello.submitted ? __('Joining form submitted') : __('Tell us about yourself · 2 minutes'),
+					kind: hello.submitted ? 'done' : 'current',
+					status: hello.submitted ? __('Done') : __('Start here'),
+					clickable: true,
+					open: openHello,
+				},
+		  ]
+		: []
 	const list = crts.value.map((c, i) => {
 		let kind = 'locked'
 		let status = __('Locked')
 		if (c.state === 'completed') [kind, status] = ['done', __('Done')]
+		else if (helloPending.value) [kind, status] = ['locked', i === 0 ? __('After the form') : __('Locked')]
 		else if (i === currentIndex.value) [kind, status] = ['current', __('Today')]
 		else if (staff.value) [kind, status] = ['next', i === currentIndex.value + 1 ? __('Up next') : '']
 		return {
@@ -199,7 +218,7 @@ const steps = computed(() => {
 		clickable: ojtKind !== 'locked',
 		open: () => router.push({ name: 'SalesOJT' }),
 	})
-	return list
+	return [...helloStep, ...list]
 })
 
 const doneCount = computed(() => steps.value.filter((s) => s.kind === 'done').length)
@@ -207,6 +226,7 @@ const doneCount = computed(() => steps.value.filter((s) => s.kind === 'done').le
 const currentCrt = computed(() => crts.value[currentIndex.value])
 
 const bannerTitle = computed(() => {
+	if (helloPending.value) return __('First, say Hello ILians 👋')
 	if (ojtOpen.value) return __("You're ready for OJT")
 	if (crtsDone.value) return __('Classroom training complete')
 	if (currentCrt.value) return `${__('Up next')}: ${crtTitle(currentCrt.value)}`
@@ -214,6 +234,7 @@ const bannerTitle = computed(() => {
 })
 
 const bannerDetail = computed(() => {
+	if (helloPending.value) return __('Fill your 2-minute joining form. Day 1 opens as soon as you submit.')
 	const c = currentCrt.value
 	if (c?.current_lesson?.title) return `${c.current_lesson.title} · ${sessions(c)}`
 	if (crtsDone.value && !evalDone.value) return __('Your final review is next.')
@@ -221,6 +242,7 @@ const bannerDetail = computed(() => {
 })
 
 const primaryAction = computed(() => {
+	if (helloPending.value) return { label: __('Fill the form'), icon: ClipboardList, run: openHello }
 	if (currentCrt.value && currentCrt.value.state !== 'empty')
 		return { label: currentCrt.value.lessons_done ? __('Continue learning') : __('Start learning'), icon: PlayCircle, run: continueLearning }
 	if (ojtOpen.value) return { label: __('Enter OJT'), icon: PhoneCall, run: () => router.push({ name: 'SalesOJT' }) }
