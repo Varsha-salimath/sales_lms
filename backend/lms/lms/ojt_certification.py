@@ -753,21 +753,21 @@ def _learner_filters(
 		clauses.append("ifnull(attendance_days, 0) > 0")
 	elif stage == "mock_completed":
 		clauses.append("ai_mock_score is not null")
-	funnel_key = (funnel_stage or "").strip()
-	if funnel_key == "started":
-		clauses.append("ifnull(attendance_days, 0) > 0")
-	elif funnel_key == "mock_completed":
-		clauses.append("ai_mock_score is not null")
-	elif funnel_key == "audit_completed":
+	elif stage == "audit_completed":
 		clauses.append("audit_score is not null")
-	elif funnel_key == "product_tests_completed":
+	elif stage == "product_tests_completed":
 		clauses.append(
 			"target_exam is not null and cbse is not null and test_prep is not null and lsq is not null and math_champ is not null"
 		)
-	elif funnel_key == "not_started":
+	elif stage == "not_started":
 		clauses.append("ifnull(attendance_days, 0) = 0")
-	stage_value = (stage or "").strip()
-	if stage_value and stage_value not in ("", "__all__"):
+	where = f"where {' and '.join(clauses)}" if clauses else ""
+	return where, values
+
+
+def _funnel_from_counts(total, started, mock_completed, audit_completed, product_completed):
+	return [
+		{"key": "total", "label": _("Total Learners"), "value": total},
 		{"key": "started", "label": _("Started Training"), "value": started},
 		{"key": "mock_completed", "label": _("AI Mock Completed"), "value": mock_completed},
 		{"key": "audit_completed", "label": _("Audit Completed"), "value": audit_completed},
