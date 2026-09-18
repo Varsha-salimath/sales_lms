@@ -5,222 +5,204 @@
 {% block breadcrumbs %}{% endblock %}
 
 {% block head_include %}
-<link rel="icon" href="{{ favicon or '/assets/lms/frontend/favicon.png' }}" />
+<link rel="icon" href="{{ favicon or '/assets/lms/images/il-favicon.png' }}" />
+<link rel="apple-touch-icon" href="/assets/lms/images/il-favicon-192.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="/assets/lms/css/il-auth.css?v=11" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" />
 {% endblock %}
 
+{#- LMS sign-in — mirrors student.infinitylearn.com/login.
+    Every id/class Frappe's login.js relies on is kept, so auth behaviour is unchanged. -#}
 {% block page_content %}
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+	<symbol id="il-i-back" viewBox="0 0 24 24"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z" fill="currentColor"/></symbol>
+	<symbol id="il-i-chevron" viewBox="0 0 7 12"><path d="M.29 9.46 4.17 5.58.29 1.7A1 1 0 0 1 1.7.29l4.59 4.59a1 1 0 0 1 0 1.41L1.7 10.88A1 1 0 0 1 .29 9.46Z" fill="currentColor"/></symbol>
+	<symbol id="il-i-mail" viewBox="0 0 24 24"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm0 4-8 5-8-5V6l8 5 8-5v2Z" fill="currentColor"/></symbol>
+	<symbol id="il-i-link" viewBox="0 0 24 24"><path d="M3.9 12a3.1 3.1 0 0 1 3.1-3.1h4V7H7a5 5 0 0 0 0 10h4v-1.9H7A3.1 3.1 0 0 1 3.9 12ZM8 13h8v-2H8v2Zm9-6h-4v1.9h4a3.1 3.1 0 0 1 0 6.2h-4V17h4a5 5 0 0 0 0-10Z" fill="currentColor"/></symbol>
+	<symbol id="il-i-eye" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5ZM12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10Zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" fill="currentColor"/></symbol>
+	<symbol id="il-i-eye-off" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5c0 .65-.13 1.26-.36 1.83l2.92 2.92A11.8 11.8 0 0 0 23 12c-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7ZM2 4.27l2.28 2.28.46.46A11.8 11.8 0 0 0 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27ZM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65a3 3 0 0 0 3 3c.22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53a5 5 0 0 1-5-5c0-.79.2-1.53.53-2.2Zm4.31-.78 3.15 3.15.02-.16a3 3 0 0 0-3-3l-.17.01Z" fill="currentColor"/></symbol>
+	<symbol id="il-i-check" viewBox="0 0 24 24"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17Z" fill="currentColor"/></symbol>
+</svg>
+
 <div class="il-auth-shell">
-	<aside class="il-auth-brand" aria-label="{{ _('Infinity Learn — Power up your learning journey') }}">
-		<div class="il-auth-brand-pattern" aria-hidden="true"></div>
+	<aside class="il-auth-brand" aria-label="{{ _('Infinity Learn') }}">
+		<div class="il-auth-brand-bg" aria-hidden="true"></div>
 		<div class="il-auth-brand-content">
 			<img
 				class="il-auth-logo"
 				src="/assets/lms/images/il-logo-white.svg"
-				alt="{{ _('Infinity Learn — Power up your learning journey') }}"
-				width="282"
+				alt="{{ _('Infinity Learn by Sri Chaitanya') }}"
+				width="296"
 				height="234"
 			/>
+			<div class="il-auth-product">
+				<span class="il-auth-product-badge">{{ _("Infinity Learn LMS") }}</span>
+				<p class="il-auth-product-text">{{ _("Infinity Learn's learning platform for our teams — Sales, CS, Academic Operations and Delivery.") }}</p>
+			</div>
 		</div>
 	</aside>
 
-	<div class="il-auth-panel-wrap">
-		<div class="il-auth-panel">
-			<div class="il-auth-panel-inner">
-				<noscript>
-					<p class="il-auth-subheading">{{ _("You need to enable JavaScript to sign in.") }}</p>
-				</noscript>
+	<main class="il-auth-panel" data-screen="welcome">
+		<button type="button" class="il-auth-back" aria-label="{{ _('Back') }}" hidden>
+			<svg width="24" height="24"><use href="#il-i-back"></use></svg>
+		</button>
 
-				<section class="for-login is-active">
-					<h1 class="il-auth-heading">{{ _("Sign In") }}</h1>
-					<p class="il-auth-subheading">
-						{{ _("Welcome! Please sign in to continue.") }}
-					</p>
+		<div class="il-auth-content">
+			<noscript>
+				<p class="il-auth-subtitle">{{ _("You need to enable JavaScript to sign in.") }}</p>
+			</noscript>
 
-					<form class="form-signin form-login" role="form" novalidate>
-						<div class="login-error-banner">
-							<span></span>
+			{#- 1. Method picker -#}
+			<section class="for-welcome is-active">
+				<header class="il-auth-header">
+					<h1 class="il-auth-title">{{ _("Welcome to LMS") }}</h1>
+					<p class="il-auth-subtitle">{{ _("Choose a method to Log in") }}</p>
+				</header>
+				<div class="il-auth-methods">
+					<a class="il-auth-method" href="#login">
+						<span class="il-auth-method-icon"><svg width="15" height="15"><use href="#il-i-mail"></use></svg></span>
+						<span class="il-auth-method-text">
+							<span class="il-auth-method-title">{{ _("Email & Password") }}</span>
+							<span class="il-auth-method-sub">{{ _("For Infinity Learn team members") }}</span>
+						</span>
+						<svg class="il-auth-method-arrow" width="12" height="12"><use href="#il-i-chevron"></use></svg>
+					</a>
+					{% if login_with_email_link %}
+					<a class="il-auth-method" href="#login-with-email-link">
+						<span class="il-auth-method-icon"><svg width="15" height="15"><use href="#il-i-link"></use></svg></span>
+						<span class="il-auth-method-text">
+							<span class="il-auth-method-title">{{ _("Email Login Link") }}</span>
+							<span class="il-auth-method-sub">{{ _("Get a one-time sign-in link on your email") }}</span>
+						</span>
+						<svg class="il-auth-method-arrow" width="12" height="12"><use href="#il-i-chevron"></use></svg>
+					</a>
+					{% endif %}
+				</div>
+			</section>
+
+			{#- 2. Email + password -#}
+			<section class="for-login">
+				<header class="il-auth-header">
+					<h1 class="il-auth-title">{{ _("Email Login") }}</h1>
+					<p class="il-auth-subtitle">{{ _("Please enter your email and password") }}</p>
+				</header>
+
+				<form class="form-signin form-login il-auth-form" role="form" novalidate>
+					<div class="login-error-banner il-auth-banner il-auth-banner-error"><span></span></div>
+
+					<div class="il-field">
+						<div class="il-input-box">
+							<input type="text" id="login_email" class="il-input" placeholder=" " autocomplete="username" required />
+							<label class="il-label" for="login_email">{{ login_label or _("Email") }}</label>
 						</div>
+						<p class="field-error"></p>
+					</div>
 
-						<div class="il-field">
-							<div class="il-field-outlined">
-								<input
-									type="text"
-									id="login_email"
-									class="il-text-input"
-									placeholder=" "
-									autocomplete="username"
-									required
-								/>
-								<label class="il-floating-label" for="login_email">{{ login_label or _("Email") }}</label>
-							</div>
-							<p class="field-error"></p>
+					<div class="il-field">
+						<div class="il-input-box">
+							<input type="password" id="login_password" class="il-input" placeholder=" " autocomplete="current-password" required />
+							<label class="il-label" for="login_password">{{ _("Password") }}</label>
+							<button type="button" class="il-input-icon toggle-password" toggle="#login_password" aria-label="{{ _('Show password') }}">
+								<svg width="20" height="20"><use href="#il-i-eye-off"></use></svg>
+							</button>
 						</div>
+						<p class="field-error"></p>
+					</div>
 
-						<div class="il-field il-field-password">
-							<div class="il-field-outlined">
-								<div class="il-password-wrap">
-									<input
-										type="password"
-										id="login_password"
-										class="il-text-input"
-										placeholder=" "
-										autocomplete="current-password"
-										required
-									/>
-									<button
-										type="button"
-										class="toggle-password"
-										toggle="#login_password"
-										aria-label="{{ _('Show password') }}"
-									>
-										<svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-											<use href="#es-line-preview"></use>
-										</svg>
-									</button>
-								</div>
-								<label class="il-floating-label" for="login_password">{{ _("Password") }}</label>
-							</div>
-							<p class="field-error"></p>
-							{% if not disable_user_pass_login %}
-							<p class="il-forgot-row">
-								<a href="#forgot">{{ _("Forgot Password?") }}</a>
-							</p>
-							{% endif %}
-						</div>
+					{% if not disable_user_pass_login %}
+					<a class="il-auth-forgot" href="#forgot">{{ _("Forgot password?") }}</a>
+					{% endif %}
 
-						<button
-							class="il-btn-primary btn-primary btn-login"
-							type="submit"
-							data-label="{{ _('Sign In') }}"
-						>
-							{{ _("Sign In") }}
-						</button>
+					<label class="il-consent">
+						<input type="checkbox" class="il-consent-input" checked />
+						<span class="il-consent-box"><svg width="14" height="14"><use href="#il-i-check"></use></svg></span>
+						<span>{{ _("By logging in you agree to our") }} <a href="{{ il_terms_url }}" target="_blank" rel="noopener">{{ _("T&C") }}</a> {{ _("and") }} <a href="{{ il_privacy_url }}" target="_blank" rel="noopener">{{ _("Privacy Policy") }}</a></span>
+					</label>
 
-						{% if login_with_email_link %}
-						<div class="il-auth-links">
-							<a href="#login-with-email-link">{{ _("Login with Email Link") }}</a>
-						</div>
-						{% endif %}
-					</form>
+					<button class="il-auth-submit btn-primary btn-login" type="submit" data-label="{{ _('Login') }}" disabled>{{ _("Login") }}</button>
 
-					{% if not disable_signup and not disable_user_pass_login %}
-					<div class="sign-up-message">
-						{{ _("Don't have an account?") }}
-						<a href="#signup">{{ _("Sign up") }}</a>
+					{% if login_with_email_link %}
+					<div class="il-auth-links">
+						<a class="il-auth-link" href="#login-with-email-link">{{ _("Login with email link") }}</a>
 					</div>
 					{% endif %}
-				</section>
+				</form>
+			</section>
 
-				<section class="for-signup {{ 'signup-disabled' if disable_signup else '' }}">
-					<h1 class="il-auth-heading">{{ _("Sign Up") }}</h1>
-					<p class="il-auth-subheading">{{ _("Let's setup your account.") }}</p>
+			{#- 3. Email login link -#}
+			<section class="for-login-with-email-link">
+				<header class="il-auth-header">
+					<h1 class="il-auth-title">{{ _("Login Link") }}</h1>
+					<p class="il-auth-subtitle">{{ _("We'll email you a one-time link to sign in") }}</p>
+				</header>
 
-					{%- if not disable_signup -%}
-					{{ signup_form_template }}
-					{%- else -%}
-					<p class="il-auth-subheading">{{ _("Signups have been disabled for this website.") }}</p>
-					<div class="sign-up-message">
-						<a href="/">{{ _("Home") }}</a>
+				<form class="form-signin form-login-with-email-link il-auth-form hide" role="form" novalidate>
+					<div class="login-success-banner il-auth-banner il-auth-banner-success">
+						<span>{{ _("If this email belongs to an LMS account, a sign-in link is on its way. Please check your inbox.") }}</span>
 					</div>
-					{%- endif -%}
-				</section>
 
-				<section class="for-forgot">
-					<h1 class="il-auth-heading">{{ _("Forgot Password?") }}</h1>
-					<p class="il-auth-subheading">
-						{{ _("Please enter your email, we'll send you a password reset link.") }}
-					</p>
-
-					<form class="form-signin form-forgot hide" role="form" novalidate>
-						<div class="page-card-body">
-							<div class="il-field">
-								<div class="il-field-outlined">
-									<input
-										type="email"
-										id="forgot_email"
-										class="il-text-input"
-										placeholder=" "
-										autocomplete="username"
-										required
-									/>
-									<label class="il-floating-label" for="forgot_email">{{ _("Email") }}</label>
-								</div>
-								<p class="field-error"></p>
-							</div>
+					<div class="il-field">
+						<div class="il-input-box">
+							<input type="email" id="login_with_email_link_email" class="il-input" placeholder=" " autocomplete="username" required />
+							<label class="il-label" for="login_with_email_link_email">{{ _("Email") }}</label>
 						</div>
-
-						<button
-							class="il-btn-primary btn-primary btn-forgot"
-							type="submit"
-							data-label="{{ _('Reset Password') }}"
-						>
-							{{ _("Reset Password") }}
-						</button>
-					</form>
-
-					<div class="sign-up-message">
-						<a href="#login">{{ _("Back to Login") }}</a>
+						<p class="field-error"></p>
 					</div>
-				</section>
 
-				<section class="for-login-with-email-link">
-					<h1 class="il-auth-heading">{{ _("Sign In") }}</h1>
-					<p class="il-auth-subheading">{{ _("Welcome! Please sign in to continue.") }}</p>
+					<button class="il-auth-submit btn-primary btn-login-with-email-link" type="submit" data-label="{{ _('Send login link') }}" disabled>{{ _("Send login link") }}</button>
 
-					<form class="form-signin form-login-with-email-link hide" role="form" novalidate>
-						<div class="login-success-banner">
-							<span>{{ _("Please check your email.") }}</span>
-						</div>
+					<div class="il-auth-links">
+						<a class="il-auth-link" href="#login">{{ _("Login with password") }}</a>
+					</div>
+				</form>
+			</section>
 
+			{#- 4. Forgot password -#}
+			<section class="for-forgot">
+				<header class="il-auth-header">
+					<h1 class="il-auth-title">{{ _("Forgot Password") }}</h1>
+					<p class="il-auth-subtitle">{{ _("Enter your email and we'll send you a reset link") }}</p>
+				</header>
+
+				<form class="form-signin form-forgot il-auth-form hide" role="form" novalidate>
+					<div class="page-card-body">
 						<div class="il-field">
-							<div class="il-field-outlined">
-								<input
-									type="email"
-									id="login_with_email_link_email"
-									class="il-text-input"
-									placeholder=" "
-									autocomplete="username"
-									required
-								/>
-								<label class="il-floating-label" for="login_with_email_link_email">{{ _("Email") }}</label>
+							<div class="il-input-box">
+								<input type="email" id="forgot_email" class="il-input" placeholder=" " autocomplete="username" required />
+								<label class="il-label" for="forgot_email">{{ _("Email") }}</label>
 							</div>
 							<p class="field-error"></p>
 						</div>
-
-						<button
-							class="il-btn-primary btn-primary btn-login-with-email-link"
-							type="submit"
-							data-label="{{ _('Send login link') }}"
-						>
-							{{ _("Send login link") }}
-						</button>
-						<a href="#login" class="il-auth-secondary-link">{{ _("Login with password") }}</a>
-					</form>
-
-					{% if not disable_signup and not disable_user_pass_login %}
-					<div class="sign-up-message">
-						{{ _("Don't have an account?") }}
-						<a href="#signup">{{ _("Sign up") }}</a>
 					</div>
-					{% endif %}
-				</section>
 
-				{% if social_login %}
-				<section class="for-email-login" hidden>
-				</section>
-				{% endif %}
-			</div>
+					<button class="il-auth-submit btn-primary btn-forgot" type="submit" data-label="{{ _('Send reset link') }}" disabled>{{ _("Send reset link") }}</button>
+
+					<div class="il-auth-links">
+						<a class="il-auth-link" href="#login">{{ _("Back to login") }}</a>
+					</div>
+				</form>
+			</section>
+
+			{#- Kept for login.js compatibility; signups are disabled in production. -#}
+			<section class="for-signup {{ 'signup-disabled' if disable_signup else '' }}">
+				<header class="il-auth-header">
+					<h1 class="il-auth-title">{{ _("Sign Up") }}</h1>
+				</header>
+				{%- if not disable_signup -%}
+				{{ signup_form_template }}
+				{%- else -%}
+				<p class="il-auth-subtitle">{{ _("Accounts are created by your LMS admin.") }}</p>
+				<div class="il-auth-links"><a class="il-auth-link" href="#welcome">{{ _("Back to login") }}</a></div>
+				{%- endif -%}
+			</section>
 		</div>
-	</div>
+	</main>
 </div>
 {% endblock %}
 
 {% block script %}
 <script>{% include "templates/includes/login/login.js" %}</script>
-<script src="/assets/lms/js/il-auth.js?v=11"></script>
 {% endblock %}
 
 {% block sidebar %}{% endblock %}

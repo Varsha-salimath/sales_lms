@@ -1,4 +1,4 @@
-"""Sales LMS branded login — extends Frappe login context, no Frappe branding."""
+"""LMS branded login — extends Frappe login context, no Frappe branding."""
 
 import frappe
 from frappe.www.login import get_context as frappe_get_context
@@ -7,7 +7,7 @@ from lms.lms.branding import BRAND_NAME
 
 no_cache = True
 
-IL_FAVICON = "/assets/lms/frontend/favicon.png"
+IL_FAVICON = "/assets/lms/images/il-favicon.png"
 IL_LOGO = "/assets/lms/images/il-logo-white.svg"
 TERMS_URL = "https://www.infinitylearn.com/terms-and-conditions"
 PRIVACY_URL = "https://www.infinitylearn.com/privacy-policy"

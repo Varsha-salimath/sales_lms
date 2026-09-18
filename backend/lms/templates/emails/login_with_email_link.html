@@ -1,0 +1,11 @@
+<h1 class="email-header-title" style="font-family:Poppins, Arial, Helvetica, sans-serif; font-size:22px; font-weight:600; color:#080E14; margin:0 0 8px 0;">{{ _("Your sign-in link") }}</h1>
+<p style="margin:0 0 16px 0;">{{ _("Use the button below to sign in to LMS. For your security, this link works once and expires in {0} minutes.").format(minutes) }}</p>
+<p style="margin:0 0 20px 0;">
+	<a href="{{ link or '#' }}" class="btn btn-primary" style="display:inline-block; text-decoration:none; font-family:Poppins, Arial, Helvetica, sans-serif; font-size:15px; font-weight:500; padding:14px 32px; border-radius:100px; background-color:#027BFF; color:#FFFFFF;">{{ _("Sign in to LMS") }}</a>
+</p>
+<p class="text-muted text-small" style="color:#6C6E72; font-size:13px; margin:0 0 8px 0;">
+	{{ _("Or copy and paste this link:") }} <a href="{{ link or '#' }}" style="color:#0062CC; word-break:break-all;">{{ link or '#' }}</a>
+</p>
+<p class="text-muted text-small" style="color:#6C6E72; font-size:13px; margin:0;">
+	{{ _("Didn't request this? No action is needed — you can safely ignore this email.") }}
+</p>

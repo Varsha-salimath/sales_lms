@@ -2350,8 +2350,12 @@ def get_branding():
 		else:
 			settings.update({field: value})
 
+	# Branding assets ship with the app (not File records), so fall back to them.
+	from lms.lms.branding import BRAND_NAME
+
+	settings["app_name"] = BRAND_NAME
 	if not settings.get("favicon"):
-		settings["favicon"] = {"file_url": "/assets/lms/frontend/favicon.png"}
+		settings["favicon"] = {"file_url": "/assets/lms/images/il-favicon.png"}
 
 	return settings
 
@@ -3922,7 +3926,7 @@ def get_progress_distribution(progressList: list):
 
 @frappe.whitelist(allow_guest=True)
 def get_pwa_manifest():
-	title = frappe.db.get_single_value("Website Settings", "app_name") or "Sales LMS"
+	title = frappe.db.get_single_value("Website Settings", "app_name") or "LMS"
 	banner_image = frappe.db.get_single_value("Website Settings", "banner_image")
 
 	manifest = {

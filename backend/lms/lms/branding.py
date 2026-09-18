@@ -1,4 +1,4 @@
-"""Sales LMS product branding constants."""
+"""LMS product branding constants."""
 
-BRAND_NAME = "Sales LMS"
-BRAND_DESCRIPTION = "Sales onboarding and classroom readiness training platform"
+BRAND_NAME = "LMS"
+BRAND_DESCRIPTION = "Infinity Learn learning platform for Sales, CS, Academic Operations and Delivery teams"

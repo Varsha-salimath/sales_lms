@@ -21,11 +21,22 @@ def after_sync():
 	normalize_portal_routes()
 
 
+IL_FAVICON = "/assets/lms/images/il-favicon.png"
+IL_LOGO = "/assets/lms/images/il-logo.svg"
+
+
 def set_sales_lms_branding():
-	"""Replace default Frappe Learning labels with Sales LMS across desk and portal."""
+	"""Replace Frappe branding with LMS / Infinity Learn across desk, portal and email."""
 	try:
 		frappe.db.set_single_value("Website Settings", "app_name", BRAND_NAME)
+		frappe.db.set_single_value("Website Settings", "favicon", IL_FAVICON)
+		frappe.db.set_single_value("Website Settings", "app_logo", IL_FAVICON)
+		frappe.db.set_single_value("Website Settings", "splash_image", IL_FAVICON)
 		frappe.db.set_single_value("System Settings", "app_name", BRAND_NAME)
+		frappe.db.set_single_value("System Settings", "otp_issuer_name", BRAND_NAME)
+		# Drops the "Sent via Frappe" line from every outgoing email.
+		frappe.db.set_single_value("System Settings", "disable_standard_email_footer", 1)
+		frappe.db.set_single_value("Navbar Settings", "app_logo", IL_FAVICON)
 
 		if frappe.db.exists("Desktop Icon", "Frappe Learning"):
 			frappe.db.set_value("Desktop Icon", "Frappe Learning", "label", BRAND_NAME)
@@ -35,7 +46,7 @@ def set_sales_lms_branding():
 
 		frappe.db.commit()
 	except Exception as e:
-		frappe.log_error(f"Failed to set Sales LMS branding: {e}")
+		frappe.log_error(f"Failed to set LMS branding: {e}")
 
 
 def set_portal_as_default_app():

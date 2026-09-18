@@ -1,5 +1,5 @@
 <template>
-	<div class="p-2 min-w-0" style="background: #0075ff">
+	<div class="px-2 pb-2 pt-4 min-w-0">
 		<Dropdown :options="userDropdownOptions">
 			<template v-slot="{ open, close }">
 				<button
@@ -14,7 +14,7 @@
 				>
 					<img
 						:src="defaultLogo"
-						alt="Sales LMS"
+						alt="LMS"
 						class="flex-shrink-0 object-contain"
 						:class="isCollapsed ? 'h-9 w-9' : 'h-10 w-auto max-w-[8.5rem]'"
 					/>
@@ -27,7 +27,7 @@
 						"
 					>
 						<div class="text-sm font-semibold text-white leading-none truncate">
-							Sales LMS
+							LMS
 						</div>
 						<div
 							v-if="userResource.data"

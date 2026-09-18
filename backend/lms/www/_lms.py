@@ -8,6 +8,7 @@ from frappe.utils.data import escape_html
 from frappe.utils.jinja_globals import is_rtl
 from frappe.utils.telemetry import capture
 
+from lms.lms.branding import BRAND_NAME
 from lms.lms.routing import invalid_spa_redirect, is_valid_spa_path, raise_page_redirect
 from lms.lms.utils import get_lms_path, get_lms_route
 
@@ -44,8 +45,8 @@ def get_context():
 	context = frappe._dict()
 	context.boot = get_boot()
 	frappe.db.commit()
-	favicon = frappe.db.get_single_value("Website Settings", "favicon") or "/assets/lms/frontend/favicon.png"
-	title = frappe.db.get_single_value("Website Settings", "app_name") or "Sales LMS"
+	favicon = frappe.db.get_single_value("Website Settings", "favicon") or "/assets/lms/images/il-favicon.png"
+	title = BRAND_NAME
 
 	context.meta = get_meta(app_path, title, favicon)
 	context.title = title

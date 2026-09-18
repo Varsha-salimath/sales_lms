@@ -7,7 +7,7 @@
 						{{ __('NEWSPAPER') }}
 					</h1>
 					<p class="mt-1 text-sm text-ink-gray-6">
-						{{ __('Share important updates with your Sales LMS learners.') }}
+						{{ __('Share important updates with your LMS learners.') }}
 					</p>
 				</div>
 				<Button variant="solid" @click="router.push({ name: 'NewspaperCreate' })">

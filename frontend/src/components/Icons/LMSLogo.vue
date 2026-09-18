@@ -1,7 +1,7 @@
 <template>
 	<img
 		:src="logoSrc"
-		alt="Sales LMS"
+		alt="LMS"
 		class="h-8 w-auto object-contain object-left"
 		:class="imgClass"
 	/>

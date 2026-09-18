@@ -1,7 +1,7 @@
 # Copyright (c) 2026, Varsity Education and contributors
 # For license information, please see license.txt
 
-"""Sales LMS Newspaper — admin broadcast to learners via Frappe email queue."""
+"""LMS Newspaper — admin broadcast to learners via Frappe email queue."""
 
 from __future__ import annotations
 

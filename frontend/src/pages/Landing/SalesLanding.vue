@@ -3,7 +3,7 @@
 		<header class="relative z-20 flex items-center justify-between px-5 py-4 sm:px-10">
 			<img
 				:src="logoSrc"
-				alt="Sales LMS"
+				alt="LMS"
 				class="h-11 w-auto object-contain sm:h-12"
 			/>
 			<nav class="flex items-center gap-4 sm:gap-6">
@@ -182,7 +182,7 @@
 		</section>
 
 		<footer class="bg-white px-5 py-8 text-center text-xs sm:px-10" style="color: #5b6b82">
-			{{ __('© Sales LMS · Sales CRT') }}
+			{{ __('© LMS · Sales CRT') }}
 		</footer>
 	</div>
 </template>
@@ -252,7 +252,7 @@ const highlights = [
 ]
 
 usePageMeta(() => ({
-	title: 'Sales LMS',
+	title: 'LMS',
 	icon: brand.favicon,
 }))
 </script>

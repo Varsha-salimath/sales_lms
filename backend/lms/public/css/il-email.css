@@ -1,0 +1,84 @@
+/*
+ * LMS (Infinity Learn) transactional email styles.
+ * Frappe inlines this file into outgoing emails (hooks.py `email_css`), but most webmail
+ * clients strip <style>, so templates in lms/templates/emails/ also carry these inline.
+ */
+
+body,
+.body-table {
+	margin: 0;
+	padding: 0;
+	background-color: #F2F2F2;
+	font-family: Poppins, Arial, Helvetica, sans-serif;
+	color: #3A3E44;
+}
+
+.email-container {
+	max-width: 600px;
+	width: 100%;
+	background-color: #FFFFFF;
+	border-radius: 24px;
+	overflow: hidden;
+}
+
+.email-masthead {
+	background-color: #FFFFFF;
+	padding: 20px 32px 16px 32px;
+	border-bottom: 3px solid #027BFF;
+}
+
+.email-header-title {
+	font-family: Poppins, Arial, Helvetica, sans-serif;
+	font-size: 22px;
+	font-weight: 600;
+	color: #080E14;
+	margin: 0 0 8px 0;
+}
+
+.email-body {
+	font-family: Poppins, Arial, Helvetica, sans-serif;
+	font-size: 15px;
+	line-height: 1.6;
+	color: #3A3E44;
+}
+
+.email-footer-cell {
+	background-color: #E6F2FF;
+}
+
+.email-footer {
+	font-size: 12px;
+	line-height: 1.6;
+	color: #6C6E72;
+}
+
+.btn {
+	display: inline-block;
+	text-decoration: none;
+	font-family: Poppins, Arial, Helvetica, sans-serif;
+	font-size: 15px;
+	font-weight: 500;
+	padding: 14px 32px;
+	border-radius: 100px;
+}
+
+.btn-primary {
+	background-color: #027BFF;
+	color: #FFFFFF !important;
+}
+
+.text-muted {
+	color: #6C6E72;
+}
+
+.text-small {
+	font-size: 13px;
+}
+
+.callout-warning {
+	background-color: #E6F2FF;
+	border-left: 3px solid #027BFF;
+	padding: 12px 16px;
+	border-radius: 8px;
+	font-size: 13px;
+}

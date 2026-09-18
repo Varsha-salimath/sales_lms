@@ -1,53 +1,89 @@
-/* Infinity Learn Sales LMS — matches infinitylearn.com (solid blue, no glass) */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+/* Infinity Learn LMS — tokens from student.infinitylearn.com (see infinity-learn-design-system) */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
 
 :root {
-	--il-blue: #0075ff;
-	--il-blue-dark: #005fe0;
-	--il-blue-deep: #0047b3;
-	--il-yellow: #ffd000;
-	--il-ink: #12263f;
-	--il-muted: #5b6b82;
-	--il-paper: #f4f8ff;
-	--il-card: #ffffff;
-	--il-border: #d7e4f7;
-	--il-radius: 20px;
-	--il-radius-sm: 12px;
-	--il-shadow: 0 8px 24px rgba(0, 117, 255, 0.08);
-	--il-navy: #12263f;
-	--il-violet: #0075ff;
-	--il-magenta: #0075ff;
-	--il-gradient: #0075ff;
+	/* IL primary ramp */
+	--il-primary-10: #00254c;
+	--il-primary-20: #013166;
+	--il-primary-30: #004a99;
+	--il-primary-40: #0062cc;
+	--il-primary-50: #027bff;
+	--il-primary-90: #cce5ff;
+	--il-primary-95: #e6f2ff;
+	--il-secondary-50: #fcde5a;
+	--il-secondary-95: #fffcef;
+	--il-tertiary-50: #ff7900;
+	--il-tertiary-95: #ffe4cc;
+	--il-success-50: #04742d;
+	--il-success-60: #35c759;
+	--il-success-95: #d6f4de;
+	--il-warning-50: #b36e00;
+	--il-warning-95: #ffeecc;
+	--il-error-50: #f03e3e;
+	--il-error-95: #fef0f0;
+	--il-neutral-40: #52565c;
+	--il-neutral-60: #85878a;
+	--il-neutral-80: #cecfd0;
+	--il-neutral-90: #e6e7e8;
+	--il-neutral-95: #f2f2f2;
+	--il-shadow-soft: 0 1px 12px rgba(0, 0, 0, 0.12);
+	/* Page chrome behind the floating white panel */
+	--il-chrome: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.4) 100%), #027bff;
+	--il-promo: linear-gradient(135deg, #013166 0%, #00254c 100%);
 
-	--genius-primary: #0075ff;
-	--genius-secondary: #005fe0;
-	--genius-cyan: #ffd000;
-	--genius-success: #16a34a;
-	--genius-bg: #f4f8ff;
+	/* Semantic aliases used across the app */
+	--il-blue: #027bff;
+	--il-blue-dark: #0062cc;
+	--il-blue-deep: #004a99;
+	--il-yellow: #fcde5a;
+	--il-ink: #080e14;
+	--il-muted: #52565c;
+	--il-paper: #ffffff;
+	--il-card: #ffffff;
+	--il-border: #e6e7e8;
+	--il-radius: 24px;
+	--il-radius-sm: 12px;
+	--il-shadow: var(--il-shadow-soft);
+	--il-navy: #00254c;
+	--il-violet: #027bff;
+	--il-magenta: #027bff;
+	--il-gradient: #027bff;
+
+	--genius-primary: #027bff;
+	--genius-secondary: #0062cc;
+	--genius-cyan: #fcde5a;
+	--genius-success: #04742d;
+	--genius-bg: #ffffff;
 	--genius-card: #ffffff;
-	--genius-navy: #12263f;
-	--genius-ink: #12263f;
-	--genius-muted: #5b6b82;
-	--genius-border: #d7e4f7;
-	--genius-blue: #0075ff;
-	--genius-blue-dark: #005fe0;
-	--genius-blue-light: #e8f2ff;
-	--genius-red: #e11d48;
-	--genius-surface: #f4f8ff;
+	--genius-navy: #00254c;
+	--genius-ink: #080e14;
+	--genius-muted: #52565c;
+	--genius-border: #e6e7e8;
+	--genius-blue: #027bff;
+	--genius-blue-dark: #0062cc;
+	--genius-blue-light: #e6f2ff;
+	--genius-red: #f03e3e;
+	--genius-surface: #ffffff;
 	--genius-surface-elevated: #ffffff;
-	--genius-radius: 20px;
+	--genius-radius: 24px;
 	--genius-radius-sm: 12px;
-	--genius-shadow: 0 8px 24px rgba(0, 117, 255, 0.08);
-	--genius-shadow-hover: 0 12px 28px rgba(0, 117, 255, 0.14);
-	--genius-gradient: #0075ff;
-	--genius-gradient-soft: #e8f2ff;
+	--genius-shadow: var(--il-shadow-soft);
+	--genius-shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.16);
+	--genius-gradient: #027bff;
+	--genius-gradient-soft: #e6f2ff;
 	--genius-hero-glow: none;
 }
 
+/* White by default (mobile has no floating panel); the desktop shell paints its own blue chrome. */
 html,
-body,
+body {
+	background: #ffffff !important;
+	font-family: Poppins, 'Segoe UI', sans-serif;
+	color: var(--il-ink);
+}
+
 #app {
-	background: var(--il-paper) !important;
+	background: transparent !important;
 	font-family: Poppins, 'Segoe UI', sans-serif;
 }
 
@@ -82,7 +118,7 @@ body,
 .sales-card-hover:hover {
 	transform: translateY(-2px);
 	box-shadow: var(--genius-shadow-hover);
-	border-color: #9cc4ff;
+	border-color: #99caff;
 }
 
 .genius-fade-up,
@@ -104,25 +140,25 @@ body,
 	font-weight: 650;
 	letter-spacing: 0.04em;
 	text-transform: uppercase;
-	background: #e8f2ff;
+	background: #e6f2ff;
 	color: var(--il-blue);
 }
 
 .sales-chip-assessment {
-	background: #fff6cc;
-	color: #9a7b00;
+	background: #fffcef;
+	color: #b36e00;
 }
 
 .sales-chip-activity,
 .sales-chip-calling {
-	background: #e8f2ff;
+	background: #e6f2ff;
 	color: var(--il-blue-dark);
 }
 
 .sales-chip-break,
 .sales-chip-lunch {
 	background: #eef2f7;
-	color: #5b6b82;
+	color: #52565c;
 }
 
 .il-btn-white {
@@ -224,8 +260,8 @@ button.bg-surface-gray-7:hover,
 
 .sales-step.in_progress,
 .sales-step.available {
-	border-color: #9cc4ff;
-	background: #e8f2ff;
+	border-color: #99caff;
+	background: #e6f2ff;
 }
 
 .sales-step.locked,
@@ -238,7 +274,7 @@ button.bg-surface-gray-7:hover,
 	min-height: 640px;
 	flex-direction: column;
 	border-radius: 28px;
-	background: linear-gradient(180deg, #005fe0 0%, #003a8c 100%);
+	background: linear-gradient(180deg, #0062cc 0%, #00254c 100%);
 	padding: 1.4rem 1.1rem 1.1rem;
 }
 
@@ -247,7 +283,7 @@ button.bg-surface-gray-7:hover,
 	height: 92px;
 	margin: 0.4rem auto 0;
 	border-radius: 999px;
-	background: radial-gradient(circle at 35% 30%, #fff 0%, #ffd000 38%, #0075ff 100%);
+	background: radial-gradient(circle at 35% 30%, #fff 0%, #fcde5a 38%, #027bff 100%);
 	box-shadow: 0 0 0 8px rgba(255, 255, 255, 0.12);
 }
 
@@ -283,8 +319,8 @@ button.bg-surface-gray-7:hover,
 
 .sales-sim-bubble.learner {
 	margin-left: auto;
-	background: #ffd000;
-	color: #12263f;
+	background: #fcde5a;
+	color: #080e14;
 }
 
 .sales-sim-composer {
@@ -304,8 +340,8 @@ button.bg-surface-gray-7:hover,
 .sales-sim-send {
 	border: 0;
 	border-radius: 999px;
-	background: #ffd000;
-	color: #12263f;
+	background: #fcde5a;
+	color: #080e14;
 	padding: 0.7rem 1rem;
 	font-size: 0.8rem;
 	font-weight: 700;
@@ -330,5 +366,158 @@ button.bg-surface-gray-7:hover,
 	}
 	50% {
 		transform: scale(1.12);
+	}
+}
+
+/* ------------------------------------------------------------------ */
+/* Infinity Learn app shell (DesktopLayout)                            */
+/* ------------------------------------------------------------------ */
+
+.il-app-chrome {
+	background: var(--il-chrome);
+	padding: 12px 12px 12px 0;
+}
+
+.il-app-panel {
+	margin-left: 4px;
+	border-radius: 24px;
+	background: #ffffff;
+	box-shadow: var(--il-shadow-soft);
+	scrollbar-gutter: stable;
+}
+
+/* Page headers (breadcrumb bars) become IL page titles: no rule, roomy, bold last crumb. */
+.il-app-panel header.sticky,
+.il-app-panel > div > header.sticky {
+	border-bottom: 0 !important;
+	background: rgba(255, 255, 255, 0.96) !important;
+	backdrop-filter: blur(6px);
+	padding: 1.25rem 1.75rem 0.75rem !important;
+	min-height: 4.25rem;
+}
+
+.il-app-panel header.sticky a,
+.il-app-panel header.sticky button:not(.il-keep) {
+	font-family: Poppins, sans-serif;
+}
+
+.il-app-panel header.sticky nav a,
+.il-app-panel header.sticky [class*='breadcrumb'] a {
+	font-size: 1rem;
+	color: var(--il-neutral-60);
+}
+
+.il-app-panel header.sticky nav a:last-child,
+.il-app-panel header.sticky [class*='breadcrumb'] a:last-child,
+.il-app-panel header.sticky .text-ink-gray-9 {
+	font-size: 1.5rem;
+	font-weight: 600;
+	color: var(--il-ink) !important;
+}
+
+/* frappe-ui controls in IL shapes */
+.il-app-panel button.rounded,
+.il-app-panel button.rounded-md {
+	border-radius: 999px;
+}
+
+.il-app-panel input.form-input,
+.il-app-panel textarea.form-textarea,
+.il-app-panel select.form-select {
+	border-radius: 12px;
+}
+
+.il-app-panel .bg-surface-cards,
+.il-app-panel .border.rounded-md.p-4,
+.il-app-panel .shadow-sm.rounded-md {
+	border-radius: 24px !important;
+}
+
+/* Shared IL building blocks for pages */
+.il-page {
+	padding: 0.5rem 1.75rem 3rem;
+}
+
+.il-page-title {
+	margin: 0;
+	color: var(--il-ink);
+	font-size: 1.75rem;
+	font-weight: 600;
+	line-height: 2.25rem;
+}
+
+.il-section-title {
+	margin: 0 0 1rem;
+	color: var(--il-ink);
+	font-size: 1.5rem;
+	font-weight: 500;
+	line-height: 2rem;
+}
+
+.il-card {
+	border-radius: 24px;
+	background: #ffffff;
+	box-shadow: var(--il-shadow-soft);
+}
+
+.il-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	border-radius: 999px;
+	background: #ffffff;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16);
+	padding: 0.625rem 1.125rem;
+	color: var(--il-primary-40);
+	font-size: 1rem;
+	font-weight: 500;
+}
+
+.il-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	height: 2.75rem;
+	border-radius: 999px;
+	padding: 0 1.5rem;
+	font-size: 0.875rem;
+	font-weight: 600;
+	transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.il-btn:active {
+	transform: scale(0.98);
+}
+
+.il-btn-primary {
+	background: var(--il-primary-50);
+	color: #ffffff;
+}
+
+.il-btn-primary:hover {
+	background: var(--il-primary-40);
+}
+
+.il-btn-light {
+	background: #ffffff;
+	color: var(--il-primary-20);
+}
+
+.il-btn-light:hover {
+	background: var(--il-primary-95);
+}
+
+@media (max-width: 767px) {
+	.il-page {
+		padding: 0.5rem 1rem 6rem;
+	}
+
+	.il-page-title {
+		font-size: 1.5rem;
+	}
+
+	.il-section-title {
+		font-size: 1.25rem;
 	}
 }

@@ -6,7 +6,7 @@
  "hidden": 0,
  "icon_type": "App",
  "idx": 0,
- "label": "Sales LMS",
+ "label": "LMS",
  "link": "/dashboard",
  "link_type": "External",
  "logo_url": "/assets/lms/frontend/favicon.png",

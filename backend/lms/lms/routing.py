@@ -221,6 +221,34 @@ def block_desk_portal_routes():
 	return redirect(target, code=302)
 
 
+# Before login the only screens are sign-in and set-password; everything else bounces to /login.
+GUEST_PAGES = frozenset({"/login", "/update-password", "/logout"})
+GUEST_PREFIXES = ("/api/", "/assets/", "/files/", "/socket.io")
+GUEST_STATIC = frozenset({"/robots.txt", "/website_script.js", "/favicon.ico", "/sitemap.xml"})
+
+
+def guest_login_only():
+	"""Guests see the login screen and nothing else (no catalog, search, error or print pages)."""
+	request = getattr(frappe.local, "request", None)
+	if not request or request.method not in ("GET", "HEAD"):
+		return
+	if frappe.session.user != "Guest":
+		return
+
+	path = (request.path or "/").rstrip("/") or "/"
+	if path in GUEST_PAGES or path in GUEST_STATIC or path.startswith(GUEST_PREFIXES):
+		return
+
+	target = "/login"
+	bare = path.strip("/")
+	if bare and is_valid_spa_path(bare) and bare != "dashboard":
+		target = login_url_with_redirect(path)
+
+	from werkzeug.utils import redirect
+
+	return redirect(target, code=302)
+
+
 def _reserved_www_path(path: str | None) -> str | None:
 	"""Return path unchanged when it is a Frappe www route (login, signup, etc.)."""
 	bare = (path or "").strip("/ ")

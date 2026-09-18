@@ -144,7 +144,7 @@
 					</h2>
 					<div class="overflow-hidden rounded-xl border bg-white shadow-sm">
 						<div class="bg-[#0075ff] px-4 py-3 text-sm font-semibold text-white">
-							{{ __('Sales LMS') }}
+							{{ __('LMS') }}
 						</div>
 						<div class="p-5">
 							<h3 class="text-xl font-semibold text-ink-gray-9">

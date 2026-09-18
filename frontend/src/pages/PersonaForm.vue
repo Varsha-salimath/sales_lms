@@ -6,7 +6,7 @@
 				<span
 					class="select-none text-xl font-semibold tracking-tight text-gray-900"
 				>
-					Sales LMS
+					LMS
 				</span>
 			</div>
 			<div

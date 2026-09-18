@@ -38,7 +38,7 @@ def ensure_outgoing_email_from_env() -> dict:
 	port = int(os.environ.get("SMTP_PORT") or 587)
 	use_tls = str(os.environ.get("SMTP_TLS") or "1").lower() in {"1", "true", "yes"}
 	use_ssl = str(os.environ.get("SMTP_SSL") or "0").lower() in {"1", "true", "yes"}
-	sender_name = (os.environ.get("DEFAULT_SENDER_NAME") or "Sales LMS").strip()
+	sender_name = (os.environ.get("DEFAULT_SENDER_NAME") or "LMS").strip()
 
 	existing = frappe.db.get_value(
 		"Email Account",

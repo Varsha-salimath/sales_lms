@@ -1,4 +1,4 @@
-"""Always send users to the Sales LMS login page after logout."""
+"""Always send users to the LMS login page after logout."""
 
 import frappe
 

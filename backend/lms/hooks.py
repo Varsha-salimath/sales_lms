@@ -3,12 +3,18 @@ import frappe
 from . import __version__ as app_version
 
 app_name = "frappe_lms"
-app_title = "Sales LMS"
+app_title = "LMS"
 app_publisher = "Varsity Education"
 app_description = "Sales onboarding and classroom readiness training platform"
-app_icon_url = "/assets/lms/frontend/favicon.png"
-app_icon_title = "Sales LMS"
+app_icon_url = "/assets/lms/images/il-favicon.png"
+app_icon_title = "LMS"
 app_icon_route = "/dashboard"
+# Desk navbar logo, splash screen and favicon — Infinity Learn instead of Frappe.
+app_logo_url = "/assets/lms/images/il-favicon.png"
+website_context = {
+	"favicon": "/assets/lms/images/il-favicon.png",
+	"splash_image": "/assets/lms/images/il-favicon.png",
+}
 app_color = "grey"
 app_email = "jannat@frappe.io"
 app_license = "AGPL"
@@ -31,10 +37,29 @@ def get_lms_path():
 # app_include_css = "/assets/lms/css/lms.css"
 # app_include_js = "/assets/lms/js/lms.js"
 
+def _versioned_asset(path):
+	"""Append a content hash so browsers pick up a fresh copy after each deploy.
+
+	nginx serves /assets with a long max-age and these URLs carry no build hash.
+	"""
+	import hashlib
+	import os
+
+	file_path = os.path.join(os.path.dirname(__file__), "public", path.removeprefix("/assets/lms/"))
+	try:
+		with open(file_path, "rb") as f:
+			return f"{path}?v={hashlib.md5(f.read(), usedforsecurity=False).hexdigest()[:10]}"
+	except OSError:
+		return path
+
+
 # include js, css files in header of web template
-web_include_css = "lms.bundle.css"
-# web_include_css = "/assets/lms/css/lms.css"
-web_include_js = []
+# Auth CSS/JS are scoped to /login and /update-password (see il-auth.js).
+web_include_css = [_versioned_asset("/assets/lms/css/il-auth.css")]
+web_include_js = [_versioned_asset("/assets/lms/js/il-auth.js")]
+
+# Infinity Learn styles inlined into outgoing emails
+email_css = ["/assets/lms/css/il-email.css"]
 
 # include custom scss in every website theme (without file extension ".scss")
 # website_theme_scss = "lms/public/scss/website"
@@ -74,10 +99,11 @@ web_include_js = []
 
 # before_install = "lms.install.before_install"
 after_install = "lms.install.after_install"
-after_sync = "lms.install.after_sync"
 before_uninstall = "lms.install.before_uninstall"
 setup_wizard_complete = "lms.demo.demo_data.create_demo_data"
+# after_sync is not a Frappe hook, so these never ran; after_migrate runs on every deploy.
 after_migrate = [
+	"lms.install.after_sync",
 	"lms.sqlite.build_index_in_background",
 ]
 
@@ -278,7 +304,7 @@ get_site_info = "lms.activation.get_site_info"
 add_to_apps_screen = [
 	{
 		"name": "lms",
-		"logo": "/assets/lms/frontend/favicon.png",
+		"logo": "/assets/lms/images/il-favicon.png",
 		"title": "Learning",
 		"route": "/dashboard",
 		"has_permission": "lms.lms.api.check_app_permission",
@@ -290,6 +316,7 @@ auth_hooks = ["lms.auth.authenticate"]
 require_type_annotated_api_methods = True
 
 before_request = [
+	"lms.lms.routing.guest_login_only",
 	"lms.lms.routing.block_desk_portal_routes",
 	"lms.lms.google_oauth.patch_google_calendar_scopes",
 	"lms.lms.request_hooks.extend_lesson_upload_limit",
