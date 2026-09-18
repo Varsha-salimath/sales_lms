@@ -1,50 +1,55 @@
 <template>
 	<div class="il-page min-h-full pb-12">
-		<header class="flex flex-wrap items-end justify-between gap-3 pt-5 pb-4">
-			<div>
-				<h1 class="il-page-title">{{ __('Learner reports') }}</h1>
-				<p class="mt-1 text-sm text-[color:var(--il-muted)]">
-					{{ __('Sales CRT · combined report for training managers and above') }}
-				</p>
-			</div>
-			<div class="flex items-center gap-3">
-				<span v-if="report.data?.last_updated" class="text-xs text-[color:var(--il-muted)]">
-					{{ __('Last updated') }}: {{ fmtDate(report.data.last_updated) }}
-				</span>
-				<button class="il-btn il-btn-primary" :disabled="!rows.length" @click="exportCsv">
-					<Download class="h-4 w-4" />
-					{{ __('Export') }}
-				</button>
-			</div>
-		</header>
+		<nav class="flex items-center gap-1.5 pt-5 text-sm">
+			<span class="text-[color:var(--il-primary-40)]">{{ __('Reports') }}</span>
+			<span class="text-[color:var(--il-neutral-60)]">/</span>
+			<span class="font-medium text-[color:var(--il-primary-20)]">{{ __('Sales CRT') }}</span>
+		</nav>
 
-		<!-- Filters -->
-		<section class="rp-filters">
-			<label class="rp-select">
-				<span>{{ __('Batch') }}</span>
-				<select v-model="filters.batch_start">
-					<option value="__all__">{{ __('All batches') }}</option>
-					<option v-for="b in options.batch_start" :key="b" :value="b">{{ fmtDate(b) }}</option>
-				</select>
-			</label>
-			<label class="rp-select">
-				<span>{{ __('Location') }}</span>
-				<select v-model="filters.location">
-					<option value="__all__">{{ __('All locations') }}</option>
-					<option v-for="l in options.location" :key="l" :value="l">{{ l }}</option>
-				</select>
-			</label>
-			<label class="rp-select">
-				<span>{{ __('Training manager') }}</span>
-				<select v-model="filters.training_manager">
-					<option value="__all__">{{ __('All managers') }}</option>
-					<option v-for="m in options.training_manager" :key="m" :value="m">{{ managerName(m) }}</option>
-				</select>
-			</label>
-			<label class="rp-search">
-				<Search class="h-4 w-4 text-[color:var(--il-neutral-60)]" />
-				<input v-model="search" :placeholder="__('Search learner or email')" />
-			</label>
+		<!-- Header card (PTM board: name strip + meta row) -->
+		<section class="cr-head mt-3">
+			<div class="cr-head-strip">
+				<div>
+					<h1 class="text-xl font-semibold text-[color:var(--il-ink)]">{{ __('Sales CRT · Combined report') }}</h1>
+					<p class="mt-0.5 text-xs text-[color:var(--il-muted)]">{{ __('For training managers and above') }}</p>
+				</div>
+				<div class="flex items-center gap-3">
+					<span v-if="report.data?.last_updated" class="hidden text-xs text-[color:var(--il-muted)] sm:inline">
+						{{ __('Last updated') }}: {{ fmtDate(report.data.last_updated) }}
+					</span>
+					<button class="il-btn il-btn-primary" :disabled="!rows.length" @click="exportCsv">
+						<Download class="h-4 w-4" />
+						{{ __('Export') }}
+					</button>
+				</div>
+			</div>
+			<div class="cr-filters">
+				<label class="cr-select">
+					<span>{{ __('Batch') }}</span>
+					<select v-model="filters.batch_start">
+						<option value="__all__">{{ __('All batches') }}</option>
+						<option v-for="b in options.batch_start" :key="b" :value="b">{{ fmtDate(b) }}</option>
+					</select>
+				</label>
+				<label class="cr-select">
+					<span>{{ __('Location') }}</span>
+					<select v-model="filters.location">
+						<option value="__all__">{{ __('All locations') }}</option>
+						<option v-for="l in options.location" :key="l" :value="l">{{ l }}</option>
+					</select>
+				</label>
+				<label class="cr-select">
+					<span>{{ __('Training manager') }}</span>
+					<select v-model="filters.training_manager">
+						<option value="__all__">{{ __('All managers') }}</option>
+						<option v-for="m in options.training_manager" :key="m" :value="m">{{ managerName(m) }}</option>
+					</select>
+				</label>
+				<label class="cr-search">
+					<Search class="h-4 w-4 text-[color:var(--il-neutral-60)]" />
+					<input v-model="search" :placeholder="__('Search learner or email')" />
+				</label>
+			</div>
 		</section>
 
 		<div v-if="report.loading && !report.data" class="mt-6 space-y-4">
@@ -58,82 +63,238 @@
 
 		<template v-else-if="report.data">
 			<!-- Highlights -->
-			<section class="il-card mt-4 p-5">
-				<h2 class="rp-card-title">{{ __('Highlights') }}</h2>
-				<div class="mt-3 grid gap-5 lg:grid-cols-[auto_1fr] lg:items-center">
-					<div class="flex items-center gap-4">
-						<div class="rp-donut" :style="donutStyle(stats.readiness?.avg)">
-							<span>{{ fmtPct(stats.readiness?.avg) }}</span>
-						</div>
-						<div>
-							<div class="text-base font-medium text-[color:var(--il-ink)]">{{ __('Average readiness') }}</div>
-							<div class="text-xs text-[color:var(--il-muted)]">
-								{{ rows.length }} {{ __('learners') }}
+			<h2 class="cr-h2">{{ __('Highlights') }}</h2>
+			<section class="cr-card cr-highlights">
+				<div class="flex items-center gap-4">
+					<div class="cr-donut" :style="{ '--p': stats.readiness?.avg || 0, '--c': bandStyle(bandOfPct(stats.readiness?.avg)).dot }">
+						<span>{{ fmtPct(stats.readiness?.avg) }}</span>
+					</div>
+					<div>
+						<div class="text-lg leading-6 text-[color:var(--il-ink)]">{{ __('Average') }}<br />{{ __('readiness') }}</div>
+						<div class="mt-1 text-xs text-[color:var(--il-muted)]">{{ rows.length }} {{ __('learners') }}</div>
+					</div>
+				</div>
+				<InsightsCard :title="__('Insights')" :items="batchInsights" :chip="readyChip.label" :chip-tone="readyChip.tone" />
+			</section>
+
+			<!-- Tabs -->
+			<div class="cr-tabs">
+				<button v-for="t in tabs" :key="t.key" :class="{ 'is-active': tab === t.key }" @click="tab = t.key">
+					{{ t.label }}
+				</button>
+			</div>
+
+			<!-- Overview -->
+			<div v-if="tab === 'overview'" class="space-y-6">
+				<ReportSection :title="__('Readiness proficiency')">
+					<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+						<button
+							v-for="(b, i) in report.data.bands"
+							:key="b.key"
+							type="button"
+							class="cr-band"
+							:style="{ background: i === 0 ? bandStyle(b.key).bg : bandStyle(b.key).soft, borderColor: bandStyle(b.key).rowBorder }"
+							@click="openBand(b.key)"
+						>
+							<div>
+								<div class="text-sm text-[color:var(--il-ink)]">{{ b.label }}</div>
+								<div class="mt-0.5 text-sm">
+									<strong :style="{ color: bandStyle(b.key).text }">{{ b.count }}</strong>
+									<span class="ms-1 text-[color:var(--il-muted)]">{{ __('learners') }}</span>
+								</div>
+							</div>
+							<div class="text-sm font-semibold" :style="{ color: bandStyle(b.key).text }">{{ share(b.count) }}%</div>
+						</button>
+					</div>
+					<div class="cr-legend">
+						<span v-for="l in legend" :key="l.key" class="inline-flex items-center gap-1.5">
+							<span class="h-2.5 w-2.5 rounded-full" :style="{ background: bandStyle(l.key).dot }" />
+							{{ l.text }}
+						</span>
+					</div>
+				</ReportSection>
+
+				<ReportSection :title="__('Input summary')" :action="__('View learners')" @action="tab = 'learners'">
+					<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+						<div v-for="c in inputCards" :key="c.key" class="cr-input" :style="{ background: bandStyle(c.band).soft, borderColor: bandStyle(c.band).rowBorder }">
+							<div class="px-3.5 pt-3">
+								<div class="text-[15px] text-[color:var(--il-ink)]">{{ c.label }}</div>
+								<div class="mt-1 flex items-baseline gap-2">
+									<span class="text-xl font-semibold" :style="{ color: bandStyle(c.band).text }">{{ fmtPct(c.pct) }}</span>
+									<span class="border-s border-[color:var(--il-neutral-80)] ps-2 text-xs text-[color:var(--il-muted)]">
+										{{ fmt(c.avg) }} {{ __('of') }} {{ c.max }} {{ __('avg') }}
+									</span>
+								</div>
+							</div>
+							<div class="cr-input-foot">
+								{{ c.count }}/{{ rows.length }} {{ __('scored') }} · {{ __('range') }} {{ fmt(c.min) }}–{{ fmt(c.max_seen) }}
 							</div>
 						</div>
 					</div>
-					<div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-						<div v-for="k in highlightKeys" :key="k.key" class="rp-stat">
-							<div class="rp-stat-value">
-								{{ fmt(stats[k.key]?.avg) }}<small>/{{ k.max }}</small>
+				</ReportSection>
+
+				<ReportSection :title="__('Learners by score')" :subtitle="__('Product tests against call skill (AI mock and audit). Click a dot to open that report card.')">
+					<QuadrantChart
+						:points="quadrantPoints"
+						:threshold="75"
+						:x-label="__('Product tests %')"
+						:y-label="__('Call skill %')"
+						:legend-title="__('Readiness based on score (75% cut-off)')"
+						:labels="quadrantLabels"
+						@select="(p) => openCard({ name: p.id })"
+					/>
+				</ReportSection>
+			</div>
+
+			<!-- Test performance -->
+			<div v-if="tab === 'tests'" class="space-y-6">
+				<ReportSection :title="__('Test performance')" :subtitle="__('Five CRT product tests, each out of 20.')">
+					<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+						<div v-for="s in testStats" :key="s.label" class="cr-stat">
+							<div class="text-xl font-semibold text-[color:var(--il-ink)]">
+								{{ s.value }}<small v-if="s.of" class="font-normal text-[color:var(--il-muted)]"> / {{ s.of }}</small>
 							</div>
-							<div class="rp-stat-label">{{ k.label }}</div>
+							<div class="mt-0.5 text-sm text-[color:var(--il-muted)]">{{ s.label }}</div>
 						</div>
 					</div>
-					<div class="rp-insights lg:col-span-2">
-						<div class="flex items-center gap-2">
-							<Sparkles class="h-4 w-4 text-[#6D4AFF]" />
-							<span class="text-sm font-medium text-[#5B3FD6]">{{ __('Insights') }}</span>
+					<ScoreTrend
+						class="mt-5"
+						:title="__('Score trend')"
+						:items="testTrend"
+						:modes="[
+							{ key: 'avg', label: __('Batch average') },
+							{ key: 'top', label: __('vs Topper') },
+							{ key: 'low', label: __('vs Lowest') },
+						]"
+						:value-label="__('Batch average')"
+						:best-label="__('Strongest test')"
+					/>
+				</ReportSection>
+
+				<ReportSection :title="__('Test-wise performance')" :subtitle="__('Bands are % of the 20-mark maximum. Open a test to see every learner.')">
+					<div class="space-y-4">
+						<BandAccordion
+							v-for="(t, i) in testBreakdown"
+							:key="t.key"
+							:title="t.label"
+							:band="t.band"
+							:main-label="__('Average')"
+							:main-value="t.avg == null ? '—' : `${fmt(t.avg)} / 20`"
+							:main-sub="t.avg == null ? __('Not taken yet') : `${fmtPct(t.pct)} · ${t.scored} ${__('scored')}`"
+							:distribution="t.distribution"
+							:default-open="i === weakestIndex"
+						>
+							<InsightsCard :title="__('Insights')" :items="t.insights" class="mb-4" />
+							<div class="cr-mini-wrap">
+								<table class="cr-mini">
+									<thead>
+										<tr>
+											<th>{{ __('Learner') }}</th>
+											<th class="text-center">{{ __('Score') }}</th>
+											<th class="text-center">{{ __('vs avg') }}</th>
+											<th class="text-center">{{ __('Attendance') }}</th>
+											<th>{{ __('Training manager') }}</th>
+										</tr>
+									</thead>
+									<tbody>
+										<tr v-for="r in t.learners" :key="r.name" @click="openCard(r)">
+											<td>
+												<span class="cr-name" :style="{ background: bandStyle(r.scores[t.key]?.band).bg }">
+													<span>{{ r.employee_name }}</span>
+													<span>{{ fmtPct(r.scores[t.key]?.pct) }}</span>
+												</span>
+											</td>
+											<td class="text-center tabular-nums">{{ fmt(r[t.key]) }}/20</td>
+											<td class="text-center tabular-nums" :class="r[t.key] >= t.avg ? 'text-[#04742D]' : 'text-[#D12B2B]'">
+												<span class="cr-dot" :style="{ background: r[t.key] >= t.avg ? '#35C759' : '#F03E3E' }" />
+												{{ signed(r[t.key] - t.avg) }}
+											</td>
+											<td class="text-center tabular-nums">{{ fmt(r.attendance_days) }}/15</td>
+											<td class="whitespace-nowrap">{{ managerName(r.training_manager) }}</td>
+										</tr>
+										<tr v-if="!t.learners.length">
+											<td colspan="5" class="py-6 text-center text-sm text-[color:var(--il-muted)]">{{ __('No one has taken this test yet.') }}</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</BandAccordion>
+					</div>
+				</ReportSection>
+			</div>
+
+			<!-- Calling -->
+			<div v-if="tab === 'calling'" class="space-y-6">
+				<ReportSection :title="__('Calling performance')" :subtitle="callingSubtitle">
+					<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+						<div v-for="s in callingStats" :key="s.label" class="cr-stat">
+							<div class="text-xl font-semibold text-[color:var(--il-ink)]">{{ s.value }}</div>
+							<div class="mt-0.5 text-sm text-[color:var(--il-muted)]">{{ s.label }}</div>
 						</div>
-						<ul class="mt-2 space-y-1.5">
-							<li v-for="(line, i) in report.data.insights" :key="i" class="text-[13px] leading-5 text-[color:var(--il-ink)]">
-								{{ line }}
-							</li>
-							<li v-if="!report.data.insights?.length" class="text-[13px] text-[color:var(--il-muted)]">
-								{{ __('Insights appear once learners have scores.') }}
-							</li>
-						</ul>
+					</div>
+					<div class="mt-5 space-y-2">
+						<div v-for="(s, i) in funnel" :key="s.label" class="flex items-center gap-3">
+							<div class="w-36 shrink-0 text-sm text-[color:var(--il-ink)]">{{ s.label }}</div>
+							<div class="relative h-9 flex-1 overflow-hidden rounded-xl bg-[#eef5ff]">
+								<div class="h-full rounded-xl" :style="{ width: `${s.width}%`, background: ['#027BFF', '#3395FF', '#67B0FF', '#99CAFF'][i] }" />
+								<span class="absolute inset-y-0 flex items-center text-sm font-semibold" :class="s.width > 18 ? 'left-3 text-white' : 'text-[color:var(--il-ink)]'" :style="s.width > 18 ? {} : { left: `calc(${s.width}% + 0.5rem)` }">
+									{{ s.value.toLocaleString('en-IN') }}
+								</span>
+							</div>
+							<div class="w-28 shrink-0 text-right text-xs text-[color:var(--il-muted)]">{{ s.rate == null ? '' : `${fmtPct(s.rate)} ${__('of previous')}` }}</div>
+						</div>
+					</div>
+				</ReportSection>
+
+				<ReportSection :title="__('By training manager')" :subtitle="__('Click a manager to filter the whole report to their learners.')" flush>
+					<div class="cr-mini-wrap">
+						<table class="cr-mini cr-mini-lg">
+							<thead>
+								<tr>
+									<th>{{ __('Training manager') }}</th>
+									<th class="text-center">{{ __('Learners') }}</th>
+									<th class="text-center">{{ __('Avg readiness') }}</th>
+									<th class="text-center">{{ __('Good or better') }}</th>
+									<th class="text-center">{{ __('Connect rate') }}</th>
+									<th class="text-center">{{ __('Booking rate') }}</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr v-for="m in byManager" :key="m.email" @click="filters.training_manager = m.email">
+									<td>
+										<div class="flex items-center gap-2.5">
+											<span class="rp-avatar">{{ initials(managerName(m.email)) }}</span>
+											<span class="font-medium">{{ managerName(m.email) }}</span>
+										</div>
+									</td>
+									<td class="text-center tabular-nums">{{ m.count }}</td>
+									<td class="text-center">
+										<span class="rp-cell rp-cell-strong" :style="cellStyle(bandOfPct(m.readiness))">{{ fmtPct(m.readiness) }}</span>
+									</td>
+									<td class="text-center tabular-nums">{{ m.ready }} / {{ m.count }}</td>
+									<td class="text-center tabular-nums">{{ fmtPct(m.connect) }}</td>
+									<td class="text-center tabular-nums">{{ fmtPct(m.booking) }}</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</ReportSection>
+			</div>
+
+			<!-- Learners (OJT sheet) -->
+			<section v-if="tab === 'learners'" class="cr-card overflow-hidden">
+				<div class="flex flex-wrap items-center justify-between gap-2 bg-[#f4f9ff] px-5 py-3.5">
+					<h2 class="text-lg font-normal text-[color:var(--il-ink)]">
+						{{ __('Learners') }} <span class="text-[color:var(--il-muted)]">({{ visibleRows.length }})</span>
+					</h2>
+					<div class="flex items-center gap-3">
+						<button v-if="bandFilter" class="cr-filter-chip" :style="cellStyle(bandFilter)" @click="bandFilter = null">
+							{{ bandStyle(bandFilter).label }} <X class="h-3.5 w-3.5" />
+						</button>
+						<span class="text-xs text-[color:var(--il-muted)]">{{ __('Click a learner to open their report card') }}</span>
 					</div>
 				</div>
-			</section>
-
-			<!-- Readiness bands -->
-			<section class="il-card mt-6 p-5">
-				<div class="flex flex-wrap items-center justify-between gap-2">
-					<h2 class="rp-card-title">{{ __('Readiness distribution') }}</h2>
-					<button v-if="bandFilter" class="text-sm font-medium text-[color:var(--il-primary-40)]" @click="bandFilter = null">
-						{{ __('Clear filter') }}
-					</button>
-				</div>
-				<div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-					<button
-						v-for="b in report.data.bands"
-						:key="b.key"
-						type="button"
-						class="rp-band"
-						:class="{ 'is-active': bandFilter === b.key, 'is-dim': bandFilter && bandFilter !== b.key }"
-						:style="{ background: bandStyle(b.key).soft, borderColor: bandStyle(b.key).bg }"
-						@click="bandFilter = bandFilter === b.key ? null : b.key"
-					>
-						<div>
-							<div class="text-sm font-medium" :style="{ color: bandStyle(b.key).text }">{{ b.label }}</div>
-							<div class="mt-1 text-xs text-[color:var(--il-muted)]">{{ b.count }} {{ __('learners') }}</div>
-						</div>
-						<div class="text-lg font-semibold" :style="{ color: bandStyle(b.key).text }">
-							{{ rows.length ? Math.round((b.count / rows.length) * 100) : 0 }}%
-						</div>
-					</button>
-				</div>
-				<p class="mt-3 text-xs text-[color:var(--il-muted)]">{{ BAND_RULES }} {{ __('(of each metric\'s maximum)') }}</p>
-			</section>
-
-			<!-- Learner table -->
-			<section class="il-card mt-6 overflow-hidden">
-				<div class="flex flex-wrap items-center justify-between gap-2 px-5 pt-5">
-					<h2 class="rp-card-title">{{ __('Learners') }} <span class="text-[color:var(--il-muted)]">({{ visibleRows.length }})</span></h2>
-					<span class="text-xs text-[color:var(--il-muted)]">{{ __('Click a learner to open their report card') }}</span>
-				</div>
-				<div class="rp-table-wrap mt-4">
+				<div class="rp-table-wrap">
 					<table class="rp-table">
 						<thead>
 							<tr class="rp-group-row">
@@ -176,7 +337,7 @@
 								<td class="text-center tabular-nums">{{ fmt(row.booked) }}</td>
 								<td class="text-center tabular-nums">{{ fmt(row.catered) }}</td>
 								<td class="text-center tabular-nums">{{ fmtPct(row.booking_rate) }}</td>
-								<td v-for="k in ['target_exam', 'cbse', 'test_prep', 'lsq', 'math_champ']" :key="k" class="text-center">
+								<td v-for="k in TEST_KEYS" :key="k" class="text-center">
 									<span class="rp-cell" :style="cellStyle(row.scores[k]?.band)">{{ fmt(row[k]) }}</span>
 								</td>
 								<td class="text-center">
@@ -198,13 +359,15 @@
 								<td class="text-center">{{ fmtDuration(stats.talk_seconds?.avg) }}</td>
 								<td v-for="k in ['booked', 'catered']" :key="k" class="text-center tabular-nums">{{ fmt(stats[k]?.avg) }}</td>
 								<td class="text-center">{{ fmtPct(stats.booking_rate?.avg) }}</td>
-								<td v-for="k in ['target_exam', 'cbse', 'test_prep', 'lsq', 'math_champ']" :key="k" class="text-center tabular-nums">{{ fmt(stats[k]?.avg) }}</td>
+								<td v-for="k in TEST_KEYS" :key="k" class="text-center tabular-nums">{{ fmt(stats[k]?.avg) }}</td>
 								<td class="text-center font-medium">{{ fmtPct(stats.readiness?.avg) }}</td>
 							</tr>
 						</tfoot>
 					</table>
 				</div>
 			</section>
+
+			<p class="mt-4 text-xs text-[color:var(--il-muted)]">{{ BAND_RULES }} {{ __("(of each metric's maximum)") }}</p>
 		</template>
 	</div>
 </template>
@@ -213,9 +376,17 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { createResource } from 'frappe-ui'
-import { ArrowDown, ArrowUp, ArrowUpDown, Download, Search, Sparkles } from 'lucide-vue-next'
+import { ArrowDown, ArrowUp, ArrowUpDown, Download, Search, X } from 'lucide-vue-next'
+import ReportSection from './ReportSection.vue'
+import InsightsCard from './InsightsCard.vue'
+import QuadrantChart from './QuadrantChart.vue'
+import ScoreTrend from './ScoreTrend.vue'
+import BandAccordion from './BandAccordion.vue'
 import {
+	BAND_ORDER,
 	BAND_RULES,
+	avg,
+	bandOfPct,
 	bandStyle,
 	fmt,
 	fmtDate,
@@ -223,13 +394,24 @@ import {
 	fmtPct,
 	initials,
 	managerName,
+	median,
 } from './reportUtils'
+
+const TEST_KEYS = ['target_exam', 'cbse', 'test_prep', 'lsq', 'math_champ']
 
 const router = useRouter()
 const filters = reactive({ batch_start: '__all__', location: '__all__', training_manager: '__all__' })
 const search = ref('')
 const bandFilter = ref(null)
 const sort = reactive({ key: 'readiness', dir: 'desc' })
+const tab = ref('overview')
+
+const tabs = [
+	{ key: 'overview', label: __('Overview') },
+	{ key: 'tests', label: __('Test performance') },
+	{ key: 'calling', label: __('Calling') },
+	{ key: 'learners', label: __('Learners') },
+]
 
 const report = createResource({
 	url: 'lms.lms.learner_report.get_combined_report',
@@ -240,14 +422,205 @@ watch(filters, () => report.reload())
 
 const options = computed(() => report.data?.options || { batch_start: [], location: [], training_manager: [] })
 const stats = computed(() => report.data?.stats || {})
-const rows = computed(() => report.data?.rows || [])
+const rows = computed(() => {
+	const term = search.value.trim().toLowerCase()
+	const all = report.data?.rows || []
+	return term ? all.filter((r) => `${r.employee_name} ${r.email}`.toLowerCase().includes(term)) : all
+})
+const metricLabel = (key) => report.data?.metrics?.find((m) => m.key === key)?.label || key
 
-const highlightKeys = [
-	{ key: 'attendance_days', label: __('Attendance days'), max: 15 },
-	{ key: 'ai_mock_score', label: __('AI mock'), max: 20 },
-	{ key: 'audit_score', label: __('Audit'), max: 20 },
-	{ key: 'product_avg', label: __('Product tests'), max: 20 },
+const share = (n) => (rows.value.length ? Math.round((n / rows.value.length) * 100) : 0)
+const signed = (v) => (v == null || Number.isNaN(v) ? '—' : `${v > 0 ? '+' : ''}${fmt(Math.round(v * 10) / 10)}`)
+
+// ---- Highlights ---------------------------------------------------------------------------
+
+const readyCount = computed(() => rows.value.filter((r) => ['excellent', 'good'].includes(r.readiness_band)).length)
+const readyChip = computed(() => {
+	if (!rows.value.length) return { label: '', tone: 'good' }
+	const s = share(readyCount.value)
+	return {
+		label: `${readyCount.value} ${__('of')} ${rows.value.length} ${__('ready')}`,
+		tone: s >= 60 ? 'good' : s >= 30 ? 'warn' : 'bad',
+	}
+})
+const batchInsights = computed(() =>
+	(report.data?.insights || []).map((line) => {
+		const i = line.indexOf(':')
+		return i > 0 && i < 40 ? { lead: line.slice(0, i + 1), text: line.slice(i + 1) } : line
+	})
+)
+
+// ---- Overview -----------------------------------------------------------------------------
+
+const legend = [
+	{ key: 'excellent', text: '≥ 90% (Excellent)' },
+	{ key: 'good', text: '80% – <90% (Good)' },
+	{ key: 'average', text: '60% – <80% (Average)' },
+	{ key: 'needs_improvement', text: '<60% (Needs Improvement)' },
+	{ key: null, text: __('(Not scored)') },
 ]
+
+const inputCards = computed(() =>
+	[
+		{ key: 'attendance_days', label: __('Attendance'), max: 15 },
+		{ key: 'ai_mock_score', label: __('AI mock'), max: 20 },
+		{ key: 'audit_score', label: __('Audit'), max: 20 },
+		{ key: 'product_avg', label: __('Product tests'), max: 20 },
+	].map((c) => {
+		const s = stats.value[c.key] || {}
+		const pct = s.avg == null ? null : Math.round((s.avg / c.max) * 1000) / 10
+		return { ...c, avg: s.avg, pct, band: bandOfPct(pct), count: s.count || 0, min: s.min, max_seen: s.max }
+	})
+)
+
+const pctOf = (v, max) => (v == null ? null : Math.min(100, (v / max) * 100))
+const quadrantPoints = computed(() =>
+	rows.value.map((r) => {
+		const skill = avg([pctOf(r.ai_mock_score, 20), pctOf(r.audit_score, 20)])
+		const product = pctOf(r.product_avg, 20)
+		return {
+			id: r.name,
+			label: r.employee_name,
+			x: product,
+			y: skill,
+			rows: [
+				{ label: __('Product tests'), value: fmtPct(product == null ? null : Math.round(product)), color: '#0F6B2E' },
+				{ label: __('Call skill'), value: fmtPct(skill == null ? null : Math.round(skill)), color: '#6D4AFF' },
+				{ label: __('Readiness'), value: fmtPct(r.readiness) },
+			],
+		}
+	})
+)
+const quadrantLabels = [
+	{ title: __('High skill · High score'), hint: __('Certification ready. Keep them on live calls.') },
+	{ title: __('High skill · Low score'), hint: __('Good on calls. Revise product knowledge.') },
+	{ title: __('Low skill · High score'), hint: __('Knows the product. Needs more mock calls.') },
+	{ title: __('Low skill · Low score'), hint: __('Needs coaching on both. Start here.') },
+]
+
+function openBand(key) {
+	bandFilter.value = key
+	tab.value = 'learners'
+}
+
+// ---- Tests --------------------------------------------------------------------------------
+
+function distribution(scores) {
+	const list = scores.filter(Boolean)
+	return BAND_ORDER.map((key) => {
+		const count = list.filter((b) => b === key).length
+		return { key, label: bandStyle(key).label, count, pct: list.length ? Math.round((count / list.length) * 100) : 0 }
+	})
+}
+
+const testBreakdown = computed(() =>
+	TEST_KEYS.map((key) => {
+		const scored = rows.value.filter((r) => r[key] != null && r[key] !== '')
+		const a = avg(scored.map((r) => r[key]))
+		const pct = a == null ? null : Math.round((a / 20) * 1000) / 10
+		const label = metricLabel(key)
+		const lows = scored.filter((r) => r.scores[key]?.band === 'needs_improvement')
+		const tops = scored.filter((r) => r.scores[key]?.band === 'excellent')
+		const insights = []
+		if (!scored.length) insights.push(__('This test has not been taken by anyone in this view yet.'))
+		else {
+			if (tops.length) insights.push({ lead: `${tops.length} ${__('learners scored 18+.')}`, text: tops.slice(0, 3).map((r) => r.employee_name).join(', ') + (tops.length > 3 ? ' …' : '') })
+			if (lows.length) insights.push({ lead: `${lows.length} ${__('learners are below 12/20.')}`, text: `${__('Plan a refresher on')} ${label} ${__('for them.')}` })
+			const missing = rows.value.length - scored.length
+			if (missing) insights.push({ lead: `${missing} ${__('not taken yet.')}`, text: __('They will show here once scored.') })
+		}
+		return {
+			key,
+			label,
+			avg: a,
+			pct,
+			band: bandOfPct(pct),
+			scored: scored.length,
+			top: scored.length ? (Math.max(...scored.map((r) => r[key])) / 20) * 100 : null,
+			low: scored.length ? (Math.min(...scored.map((r) => r[key])) / 20) * 100 : null,
+			distribution: distribution(scored.map((r) => r.scores[key]?.band)),
+			learners: [...scored].sort((x, y) => y[key] - x[key]),
+			insights,
+		}
+	})
+)
+
+const weakestIndex = computed(() => {
+	let w = -1
+	testBreakdown.value.forEach((t, i) => {
+		if (t.avg != null && (w < 0 || t.avg < testBreakdown.value[w].avg)) w = i
+	})
+	return w
+})
+
+const testTrend = computed(() =>
+	testBreakdown.value.map((t) => ({
+		label: t.label,
+		value: t.pct,
+		display: t.avg == null ? __('Not taken') : `${fmt(t.avg)}/20 (${fmtPct(t.pct)})`,
+		compare: { top: t.top, low: t.low },
+		extra: [{ label: __('Scored'), value: `${t.scored}/${rows.value.length}` }],
+	}))
+)
+
+const testStats = computed(() => {
+	const taken = testBreakdown.value.filter((t) => t.scored)
+	const all = rows.value.flatMap((r) => TEST_KEYS.map((k) => r.scores[k]?.pct).filter((v) => v != null))
+	return [
+		{ label: __('Tests taken'), value: String(taken.length).padStart(2, '0'), of: TEST_KEYS.length },
+		{ label: __('Learners scored'), value: rows.value.filter((r) => r.product_avg != null).length, of: rows.value.length },
+		{ label: __('Highest score'), value: all.length ? `${Math.round(Math.max(...all))}%` : '—' },
+		{ label: __('Median score'), value: all.length ? `${Math.round(median(all))}%` : '—' },
+	]
+})
+
+// ---- Calling ------------------------------------------------------------------------------
+
+const sum = (key) => rows.value.reduce((t, r) => t + (Number(r[key]) || 0), 0)
+const calling = computed(() => ({ dc: sum('dc'), cc: sum('cc'), booked: sum('booked'), catered: sum('catered') }))
+const callers = computed(() => rows.value.filter((r) => r.dc != null && r.dc !== '').length)
+const callingSubtitle = computed(() =>
+	callers.value < rows.value.length
+		? `${callers.value} ${__('of')} ${rows.value.length} ${__('learners are on live calls; the rest are still in CRT.')}`
+		: __('Totals for everyone in this view.')
+)
+const rate = (a, b) => (b ? Math.round((a / b) * 1000) / 10 : null)
+const callingStats = computed(() => [
+	{ label: __('Dialled (DC)'), value: calling.value.dc.toLocaleString('en-IN') },
+	{ label: __('Connect rate'), value: fmtPct(rate(calling.value.cc, calling.value.dc)) },
+	{ label: __('Booking rate'), value: fmtPct(rate(calling.value.booked, calling.value.cc)) },
+	{ label: __('Avg talk time'), value: fmtDuration(stats.value.talk_seconds?.avg) },
+])
+const funnel = computed(() => {
+	const c = calling.value
+	const top = Math.max(c.dc, 1)
+	return [
+		{ label: __('Dialled (DC)'), value: c.dc, rate: null },
+		{ label: __('Connected (CC)'), value: c.cc, rate: rate(c.cc, c.dc) },
+		{ label: __('Booked'), value: c.booked, rate: rate(c.booked, c.cc) },
+		{ label: __('Catered'), value: c.catered, rate: rate(c.catered, c.booked) },
+	].map((s) => ({ ...s, width: Math.max(3, (s.value / top) * 100) }))
+})
+
+const byManager = computed(() => {
+	const groups = {}
+	rows.value.forEach((r) => (groups[r.training_manager || '—'] ||= []).push(r))
+	return Object.entries(groups)
+		.map(([email, list]) => {
+			const t = (k) => list.reduce((s, r) => s + (Number(r[k]) || 0), 0)
+			return {
+				email,
+				count: list.length,
+				readiness: avg(list.map((r) => r.readiness)),
+				ready: list.filter((r) => ['excellent', 'good'].includes(r.readiness_band)).length,
+				connect: rate(t('cc'), t('dc')),
+				booking: rate(t('booked'), t('cc')),
+			}
+		})
+		.sort((a, b) => (b.readiness ?? -1) - (a.readiness ?? -1))
+})
+
+// ---- Learners table -----------------------------------------------------------------------
 
 const columns = [
 	{ key: 'employee_name', label: __('Name'), sticky: true },
@@ -271,12 +644,7 @@ const columns = [
 ]
 
 const visibleRows = computed(() => {
-	const term = search.value.trim().toLowerCase()
-	let list = rows.value.filter(
-		(r) =>
-			(!bandFilter.value || r.readiness_band === bandFilter.value) &&
-			(!term || `${r.employee_name} ${r.email}`.toLowerCase().includes(term))
-	)
+	const list = rows.value.filter((r) => !bandFilter.value || r.readiness_band === bandFilter.value)
 	const dir = sort.dir === 'asc' ? 1 : -1
 	return [...list].sort((a, b) => {
 		const x = a[sort.key]
@@ -298,17 +666,12 @@ function cellStyle(band) {
 	return { background: s.soft, color: s.text, borderColor: s.bg }
 }
 
-function donutStyle(value) {
-	const p = Math.max(0, Math.min(100, Number(value) || 0))
-	return { '--p': p }
-}
-
 function openCard(row) {
 	router.push({ name: 'LearnerReportCard', params: { name: row.name } })
 }
 
 function exportCsv() {
-	const keys = ['employee_name', 'email', 'location', 'training_manager', 'batch_start', 'attendance_days', 'ai_mock_score', 'audit_score', 'dc', 'cc', 'talk_time', 'booked', 'catered', 'booking_rate', 'target_exam', 'cbse', 'test_prep', 'lsq', 'math_champ', 'readiness']
+	const keys = ['employee_name', 'email', 'location', 'training_manager', 'batch_start', 'attendance_days', 'ai_mock_score', 'audit_score', 'dc', 'cc', 'talk_time', 'booked', 'catered', 'booking_rate', ...TEST_KEYS, 'readiness']
 	const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
 	const csv = [keys.join(','), ...visibleRows.value.map((r) => keys.map((k) => esc(r[k])).join(','))].join('\n')
 	const link = document.createElement('a')
@@ -319,47 +682,69 @@ function exportCsv() {
 </script>
 
 <style scoped>
-.rp-filters {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.75rem;
+.cr-card,
+.cr-head {
+	border: 1px solid #edf0f4;
+	border-radius: 20px;
+	background: #fff;
+	box-shadow: 0 2px 10px rgba(0, 37, 76, 0.06);
 }
 
-.rp-select,
-.rp-search {
+.cr-head {
+	overflow: hidden;
+}
+
+.cr-head-strip {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	padding: 1rem 1.25rem;
+	background: #f4f9ff;
+}
+
+.cr-filters {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.6rem;
+	padding: 0.85rem 1.25rem;
+}
+
+.cr-select,
+.cr-search {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.5rem;
-	height: 2.75rem;
-	padding: 0 1rem;
+	height: 2.5rem;
+	padding: 0 0.9rem;
 	border: 1px solid var(--il-neutral-90);
 	border-radius: 999px;
 	background: #fff;
-	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 	font-size: 0.875rem;
 }
 
-.rp-select span {
+.cr-select span {
 	color: var(--il-muted);
-	font-size: 0.75rem;
+	font-size: 0.8125rem;
 }
 
-.rp-select select {
+.cr-select select {
 	border: 0;
 	padding: 0 1.25rem 0 0;
 	background-color: transparent;
-	color: var(--il-primary-40);
+	color: var(--il-ink);
 	font-weight: 500;
 	font-size: 0.875rem;
 	box-shadow: none;
 }
 
-.rp-search {
+.cr-search {
 	flex: 1;
-	min-width: 14rem;
+	min-width: 13rem;
 }
 
-.rp-search input {
+.cr-search input {
 	flex: 1;
 	border: 0;
 	padding: 0;
@@ -368,78 +753,197 @@ function exportCsv() {
 	font-size: 0.875rem;
 }
 
-.rp-card-title {
-	margin: 0;
-	color: var(--il-ink);
-	font-size: 1.125rem;
-	font-weight: 500;
-}
-
-.rp-donut {
-	--p: 0;
-	display: grid;
-	place-items: center;
-	width: 5.5rem;
-	height: 5.5rem;
-	border-radius: 999px;
-	background: radial-gradient(closest-side, #fff 76%, transparent 77%),
-		conic-gradient(#35c759 calc(var(--p) * 1%), #e6e7e8 0);
-}
-
-.rp-donut span {
-	color: var(--il-ink);
-	font-size: 1.125rem;
-	font-weight: 600;
-}
-
-.rp-stat {
-	border: 1px solid var(--il-neutral-90);
-	border-radius: 16px;
-	padding: 0.75rem 1rem;
-	text-align: center;
-}
-
-.rp-stat-value {
+.cr-h2 {
+	margin: 1.5rem 0 0.75rem;
 	color: var(--il-ink);
 	font-size: 1.25rem;
-	font-weight: 600;
-}
-
-.rp-stat-value small {
-	color: var(--il-neutral-60);
-	font-size: 0.75rem;
 	font-weight: 400;
 }
 
-.rp-stat-label {
-	margin-top: 0.15rem;
-	color: var(--il-muted);
-	font-size: 0.75rem;
+.cr-highlights {
+	display: grid;
+	gap: 1.25rem;
+	align-items: center;
+	padding: 1.1rem 1.25rem;
 }
 
-.rp-insights {
-	border-radius: 16px;
-	padding: 1rem 1.25rem;
-	background: linear-gradient(100deg, #ffffff 0%, #f3efff 55%, #e9e3ff 100%);
+@media (min-width: 1024px) {
+	.cr-highlights {
+		grid-template-columns: 17rem 1fr;
+	}
+
+	.cr-highlights > :first-child {
+		height: 100%;
+		border-right: 1px solid var(--il-neutral-90);
+	}
 }
 
-.rp-band {
+.cr-donut {
+	--p: 0;
+	--c: #35c759;
+	display: grid;
+	flex-shrink: 0;
+	place-items: center;
+	width: 6.25rem;
+	height: 6.25rem;
+	border-radius: 999px;
+	background: radial-gradient(closest-side, #fff 68%, transparent 69%),
+		conic-gradient(var(--c) calc(var(--p) * 1%), #e6f2ff 0);
+}
+
+.cr-donut span {
+	color: var(--il-ink);
+	font-size: 1.25rem;
+	font-weight: 500;
+}
+
+.cr-tabs {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 0.75rem;
+	margin: 1.5rem 0 1.25rem;
+}
+
+.cr-tabs button {
+	height: 2.4rem;
+	border: 1px solid var(--il-primary-40);
+	border-radius: 999px;
+	background: #fff;
+	color: var(--il-primary-20);
+	font-size: 0.875rem;
+	font-weight: 500;
+}
+
+.cr-tabs button.is-active {
+	border-color: #00254c;
+	background: #00254c;
+	color: #fff;
+}
+
+.cr-band {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	border: 1px solid;
-	border-radius: 16px;
-	padding: 0.85rem 1rem;
+	border-radius: 12px;
+	padding: 0.75rem 0.9rem;
 	text-align: left;
-	transition: opacity 0.15s ease, box-shadow 0.15s ease;
+	transition: box-shadow 0.15s ease;
 }
 
-.rp-band.is-active {
+.cr-band:hover {
 	box-shadow: 0 0 0 2px var(--il-primary-50);
 }
 
-.rp-band.is-dim {
-	opacity: 0.5;
+.cr-legend {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 0.4rem 1.25rem;
+	margin-top: 1rem;
+	border-top: 1px solid var(--il-neutral-90);
+	padding-top: 0.85rem;
+	color: var(--il-ink);
+	font-size: 0.8125rem;
+}
+
+.cr-input {
+	overflow: hidden;
+	border: 1px solid;
+	border-radius: 12px;
+}
+
+.cr-input-foot {
+	margin-top: 0.75rem;
+	border-top: 1px solid rgba(0, 0, 0, 0.08);
+	padding: 0.45rem 0.9rem;
+	background: #fff;
+	color: var(--il-muted);
+	font-size: 0.75rem;
+}
+
+.cr-stat {
+	border: 1px solid #edf0f4;
+	border-radius: 14px;
+	padding: 0.85rem 1rem;
+	text-align: center;
+	box-shadow: 0 1px 4px rgba(0, 37, 76, 0.05);
+}
+
+.cr-mini-wrap {
+	max-height: 26rem;
+	overflow: auto;
+	border: 1px solid #edf0f4;
+	border-radius: 12px;
+}
+
+.cr-mini {
+	width: 100%;
+	border-collapse: separate;
+	border-spacing: 0;
+	font-size: 0.8125rem;
+}
+
+.cr-mini th {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	padding: 0.6rem 0.75rem;
+	background: #fff;
+	color: var(--il-ink);
+	font-weight: 500;
+	text-align: left;
+	border-bottom: 1px solid var(--il-neutral-90);
+	white-space: nowrap;
+}
+
+.cr-mini td {
+	padding: 0.4rem 0.75rem;
+	border-bottom: 1px solid var(--il-neutral-95);
+	color: var(--il-ink);
+}
+
+.cr-mini-lg td {
+	padding: 0.65rem 0.75rem;
+}
+
+.cr-mini tbody tr {
+	cursor: pointer;
+}
+
+.cr-mini tbody tr:hover td {
+	background: #f7fbff;
+}
+
+.cr-name {
+	display: flex;
+	min-width: 15rem;
+	justify-content: space-between;
+	gap: 1rem;
+	border-radius: 6px;
+	padding: 0.35rem 0.7rem;
+	font-weight: 500;
+	white-space: nowrap;
+}
+
+.cr-dot {
+	display: inline-block;
+	width: 0.4rem;
+	height: 0.4rem;
+	margin-right: 0.25rem;
+	border-radius: 999px;
+	vertical-align: middle;
+}
+
+.cr-filter-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	border: 1px solid;
+	border-radius: 999px;
+	padding: 0.15rem 0.6rem;
+	font-size: 0.75rem;
+	font-weight: 500;
 }
 
 .rp-table-wrap {
@@ -455,7 +959,7 @@ function exportCsv() {
 
 .rp-table th {
 	padding: 0.6rem 0.75rem;
-	background: #f7f9fc;
+	background: #fff;
 	color: var(--il-muted);
 	font-size: 0.75rem;
 	font-weight: 500;
@@ -466,12 +970,13 @@ function exportCsv() {
 }
 
 .rp-group-row th {
-	background: #eef5ff;
-	color: var(--il-primary-20);
-	font-weight: 600;
+	background: #fff;
+	color: var(--il-ink);
+	font-size: 0.8125rem;
+	font-weight: 500;
 	text-align: center;
 	cursor: default;
-	border-left: 2px solid #fff;
+	border-bottom: 0;
 }
 
 .rp-table td {
@@ -490,7 +995,7 @@ function exportCsv() {
 }
 
 .rp-table tfoot td {
-	background: #f7f9fc;
+	background: #f4f9ff;
 	color: var(--il-ink);
 	font-weight: 500;
 }
@@ -504,12 +1009,8 @@ function exportCsv() {
 	text-align: left;
 }
 
-.rp-table th.rp-sticky {
-	background: #f7f9fc;
-}
-
-.rp-group-row th.rp-sticky {
-	background: #eef5ff;
+.rp-table tfoot .rp-sticky {
+	background: #f4f9ff;
 }
 
 .rp-avatar {
@@ -538,5 +1039,11 @@ function exportCsv() {
 .rp-cell-strong {
 	min-width: 3.5rem;
 	font-weight: 600;
+}
+
+@media (max-width: 640px) {
+	.cr-tabs {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
 }
 </style>

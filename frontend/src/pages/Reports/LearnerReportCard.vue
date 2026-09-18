@@ -1,9 +1,11 @@
 <template>
 	<div class="il-page min-h-full pb-12">
 		<nav class="flex items-center gap-1.5 pt-5 text-sm">
-			<router-link :to="{ name: 'LearnerReports' }" class="text-[color:var(--il-primary-40)]">{{ __('Learner reports') }}</router-link>
+			<router-link :to="{ name: 'LearnerReports' }" class="text-[color:var(--il-primary-40)]">{{ __('Reports') }}</router-link>
 			<span class="text-[color:var(--il-neutral-60)]">/</span>
-			<span class="text-[color:var(--il-muted)]">{{ learner?.employee_name || __('Report card') }}</span>
+			<router-link :to="{ name: 'LearnerReports' }" class="text-[color:var(--il-primary-40)]">{{ __('Sales CRT') }}</router-link>
+			<span class="text-[color:var(--il-neutral-60)]">/</span>
+			<span class="font-medium text-[color:var(--il-primary-20)]">{{ learner?.employee_name || __('Report card') }}</span>
 		</nav>
 
 		<div v-if="report.loading && !report.data" class="mt-4 space-y-4">
@@ -15,22 +17,23 @@
 		</div>
 
 		<template v-else-if="learner">
-			<!-- Profile header (PTM style) -->
-			<section class="il-card mt-3 overflow-hidden">
-				<div class="flex flex-wrap items-center justify-between gap-3 bg-[#f4f9ff] px-6 py-4">
+			<!-- Profile header (PTM board) -->
+			<section class="rc-card mt-3 overflow-hidden">
+				<div class="flex flex-wrap items-center justify-between gap-3 bg-[#f4f9ff] px-5 py-3.5">
 					<div class="flex items-center gap-3">
 						<span class="rc-avatar">{{ initials(learner.employee_name) }}</span>
 						<div>
 							<h1 class="text-xl font-semibold text-[color:var(--il-ink)]">{{ learner.employee_name }}</h1>
-							<p class="text-sm text-[color:var(--il-muted)]">{{ learner.email }}</p>
+							<p class="text-xs text-[color:var(--il-muted)]">{{ learner.email }}</p>
 						</div>
 					</div>
-					<span class="text-xs text-[color:var(--il-muted)]">{{ __('Sales CRT report card') }}</span>
+					<span v-if="learner.modified" class="text-xs text-[color:var(--il-muted)]">{{ __('Last updated') }}: {{ fmtDate(learner.modified) }}</span>
 				</div>
-				<div class="grid grid-cols-2 gap-x-6 gap-y-3 px-6 py-4 text-sm sm:grid-cols-4">
-					<div><span class="rc-meta">{{ __('Batch start') }}</span>{{ fmtDate(learner.batch_start) }}</div>
+				<div class="flex flex-wrap justify-between gap-x-8 gap-y-2 px-5 py-3.5 text-sm">
+					<div><span class="rc-meta">{{ __('Batch') }}</span>{{ fmtDate(learner.batch_start) }}</div>
 					<div><span class="rc-meta">{{ __('Location') }}</span>{{ learner.location || '—' }}</div>
 					<div><span class="rc-meta">{{ __('Training manager') }}</span>{{ managerName(learner.training_manager) }}</div>
+					<div><span class="rc-meta">{{ __('Stage') }}</span>{{ learner.stage || '—' }}</div>
 					<div>
 						<span class="rc-meta">{{ __('Rank in batch') }}</span>
 						<template v-if="batch.rank">#{{ batch.rank }} <span class="text-[color:var(--il-muted)]">{{ __('of') }} {{ batch.ranked }}</span></template>
@@ -40,120 +43,113 @@
 			</section>
 
 			<!-- Highlights -->
-			<section class="il-card mt-6 p-5">
-				<h2 class="rc-title">{{ __('Highlights') }}</h2>
-				<div class="mt-3 grid gap-5 lg:grid-cols-[auto_1fr] lg:items-center">
-					<div class="flex items-center gap-4 lg:border-e lg:border-[color:var(--il-neutral-90)] lg:pe-8">
-						<div class="rc-donut" :style="{ '--p': learner.readiness || 0, '--c': bandStyle(learner.readiness_band).dot }">
-							<span>{{ fmtPct(learner.readiness) }}</span>
-						</div>
-						<div>
-							<div class="text-base font-medium text-[color:var(--il-ink)]">{{ __('Readiness') }}</div>
-							<span class="rc-chip" :style="chip(learner.readiness_band)">{{ bandStyle(learner.readiness_band).label }}</span>
-							<div class="mt-1 text-xs text-[color:var(--il-muted)]">{{ __('Batch avg') }} {{ fmtPct(stats.readiness?.avg) }}</div>
-						</div>
+			<h2 class="rc-h2">{{ __('Highlights') }}</h2>
+			<section class="rc-card rc-highlights">
+				<div class="flex items-center gap-4">
+					<div class="rc-donut" :style="{ '--p': learner.readiness || 0, '--c': bandStyle(learner.readiness_band).dot }">
+						<span>{{ fmtPct(learner.readiness) }}</span>
 					</div>
-					<div class="rc-insights">
-						<div class="flex items-center justify-between gap-2">
-							<div class="flex items-center gap-2">
-								<Sparkles class="h-4 w-4 text-[#6D4AFF]" />
-								<span class="text-sm font-medium text-[#5B3FD6]">{{ __('Insights') }}</span>
-							</div>
-							<span class="rc-trend" :class="trendClass">{{ trendLabel }}</span>
-						</div>
-						<div class="mt-2 grid gap-3 sm:grid-cols-2">
-							<div>
-								<div class="text-xs font-semibold uppercase tracking-wide text-[#146C31]">{{ __('Strengths') }}</div>
-								<ul class="mt-1 space-y-1">
-									<li v-for="(s, i) in insights.strengths" :key="i" class="rc-li">{{ s }}</li>
-									<li v-if="!insights.strengths?.length" class="rc-li text-[color:var(--il-muted)]">{{ __('No clear strengths yet.') }}</li>
-								</ul>
-							</div>
-							<div>
-								<div class="text-xs font-semibold uppercase tracking-wide text-[#B42323]">{{ __('Focus areas') }}</div>
-								<ul class="mt-1 space-y-1">
-									<li v-for="(g, i) in insights.gaps" :key="i" class="rc-li">{{ g }}</li>
-									<li v-if="!insights.gaps?.length" class="rc-li text-[color:var(--il-muted)]">{{ __('No gaps against the batch.') }}</li>
-								</ul>
-							</div>
-						</div>
+					<div>
+						<div class="text-lg leading-6 text-[color:var(--il-ink)]">{{ __('Readiness') }}</div>
+						<span class="rc-chip" :style="chip(learner.readiness_band)">{{ bandStyle(learner.readiness_band).label }}</span>
+						<div class="mt-1 text-xs text-[color:var(--il-muted)]">{{ __('Batch avg') }} {{ fmtPct(stats.readiness?.avg) }}</div>
 					</div>
 				</div>
+				<InsightsCard :title="__('Insights')" :items="insightItems" :chip="trendLabel" :chip-tone="trendTone" :empty="__('Insights appear once this learner has scores.')" />
 			</section>
 
 			<!-- Tabs -->
-			<div class="rc-tabs mt-6">
+			<div class="rc-tabs">
 				<button v-for="t in tabs" :key="t.key" :class="{ 'is-active': tab === t.key }" @click="tab = t.key">{{ t.label }}</button>
 			</div>
 
 			<!-- Overview -->
-			<section v-if="tab === 'overview'" class="il-card mt-4 p-5">
-				<h2 class="rc-title">{{ __('Summary') }}</h2>
-				<div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-					<div v-for="c in summaryCards" :key="c.key" class="rc-sum" :style="{ background: bandStyle(c.band).soft, borderColor: bandStyle(c.band).bg }">
-						<div class="text-sm text-[color:var(--il-ink)]">{{ c.label }}</div>
-						<div class="mt-1 text-2xl font-semibold" :style="{ color: bandStyle(c.band).text }">
-							{{ fmt(c.value) }}<small class="text-sm font-normal text-[color:var(--il-muted)]">/{{ c.max }}</small>
-						</div>
-						<div class="mt-2 flex items-center gap-1 text-xs" :class="deltaClass(c.value, c.avg)">
-							<component :is="deltaIcon(c.value, c.avg)" class="h-3.5 w-3.5" />
-							{{ deltaText(c.value, c.avg) }}
+			<div v-if="tab === 'overview'" class="space-y-6">
+				<ReportSection :title="__('Input summary')" :subtitle="__('Each score against the batch average.')">
+					<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+						<div v-for="c in summaryCards" :key="c.key" class="rc-input" :style="{ background: bandStyle(c.band).soft, borderColor: bandStyle(c.band).rowBorder }">
+							<div class="px-3.5 pt-3">
+								<div class="text-[15px] text-[color:var(--il-ink)]">{{ c.label }}</div>
+								<div class="mt-1 flex items-baseline gap-2">
+									<span class="text-xl font-semibold" :style="{ color: bandStyle(c.band).text }">{{ fmt(c.value) }}</span>
+									<span class="border-s border-[color:var(--il-neutral-80)] ps-2 text-xs text-[color:var(--il-muted)]">{{ __('out of') }} {{ c.max }}</span>
+								</div>
+							</div>
+							<div class="rc-input-foot flex items-center gap-1" :class="deltaClass(c.value, c.avg)">
+								<component :is="deltaIcon(c.value, c.avg)" class="h-3.5 w-3.5" />
+								{{ deltaText(c.value, c.avg) }}
+							</div>
 						</div>
 					</div>
-				</div>
-				<div class="mt-6 grid gap-4 lg:grid-cols-2">
-					<div>
-						<h3 class="rc-sub">{{ __('Test scores vs batch') }}</h3>
-						<div class="mt-3 space-y-3">
+				</ReportSection>
+
+				<div class="grid gap-6 lg:grid-cols-2">
+					<ReportSection :title="__('Tests vs batch')" :action="__('View details')" @action="tab = 'tests'">
+						<div class="space-y-3">
 							<ScoreBar v-for="m in testMetrics" :key="m.key" :label="m.label" :value="learner[m.key]" :max="m.max" :avg="stats[m.key]?.avg" :band="learner.scores[m.key]?.band" />
 						</div>
-					</div>
-					<div>
-						<h3 class="rc-sub">{{ __('Calling funnel') }}</h3>
-						<Funnel class="mt-3" :learner="learner" :stats="stats" />
-					</div>
+						<p class="mt-3 text-[11px] text-[color:var(--il-muted)]">{{ __('The dark tick is the batch average.') }}</p>
+					</ReportSection>
+					<ReportSection :title="__('Calling funnel')" :action="__('View details')" @action="tab = 'calling'">
+						<Funnel v-if="learner.dc != null" :learner="learner" :stats="stats" />
+						<p v-else class="py-8 text-center text-sm text-[color:var(--il-muted)]">{{ __('Not on live calls yet. Calling starts after CRT.') }}</p>
+					</ReportSection>
 				</div>
-			</section>
+			</div>
 
-			<!-- Intent & Skill -->
-			<section v-if="tab === 'intent'" class="il-card mt-4 p-5">
-				<h2 class="rc-title">{{ __('Intent & Skill') }}</h2>
-				<p class="mt-1 text-sm text-[color:var(--il-muted)]">{{ __('Where this learner sits against the batch: lowest, average and highest.') }}</p>
-				<div class="mt-5 space-y-6">
-					<Benchmark v-for="m in intentMetrics" :key="m.key" :label="m.label" :value="learner[m.key]" :max="m.max" :stat="stats[m.key]" :band="learner.scores[m.key]?.band" />
-				</div>
-			</section>
+			<!-- Test performance -->
+			<div v-if="tab === 'tests'" class="space-y-6">
+				<ReportSection :title="__('Test performance')" :subtitle="__('Five CRT product tests, each out of 20.')">
+					<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+						<div v-for="s in testStats" :key="s.label" class="rc-stat">
+							<div class="text-xl font-semibold text-[color:var(--il-ink)]">
+								{{ s.value }}<small v-if="s.of" class="font-normal text-[color:var(--il-muted)]"> / {{ s.of }}</small>
+							</div>
+							<div class="mt-0.5 text-sm text-[color:var(--il-muted)]">{{ s.label }}</div>
+						</div>
+					</div>
+					<ScoreTrend
+						class="mt-5"
+						:title="__('Score trend')"
+						:items="testTrend"
+						:modes="[
+							{ key: 'self', label: __('Learner score') },
+							{ key: 'top', label: __('vs Topper') },
+							{ key: 'avg', label: __('vs Average') },
+						]"
+						:value-label="__('Score')"
+						:best-label="__('Best score')"
+					/>
+				</ReportSection>
+
+				<ReportSection :title="__('Score benchmark')" :subtitle="__('Where this learner sits in the batch on each test: lowest, average, highest.')">
+					<div class="space-y-7">
+						<Benchmark v-for="m in testMetrics" :key="m.key" :label="m.label" :value="learner[m.key]" :max="m.max" :stat="stats[m.key]" :band="learner.scores[m.key]?.band" />
+					</div>
+				</ReportSection>
+			</div>
 
 			<!-- Calling -->
-			<section v-if="tab === 'calling'" class="il-card mt-4 p-5">
-				<h2 class="rc-title">{{ __('Calling performance') }}</h2>
-				<div class="mt-4 grid gap-3 sm:grid-cols-3">
+			<ReportSection v-if="tab === 'calling'" :title="__('Calling performance')">
+				<div class="grid gap-3 sm:grid-cols-3">
 					<div class="rc-kpi"><span>{{ fmtPct(learner.connect_rate) }}</span>{{ __('Connect rate') }} <small>{{ __('avg') }} {{ fmtPct(stats.connect_rate?.avg) }}</small></div>
 					<div class="rc-kpi"><span>{{ fmtPct(learner.booking_rate) }}</span>{{ __('Booking rate') }} <small>{{ __('avg') }} {{ fmtPct(stats.booking_rate?.avg) }}</small></div>
 					<div class="rc-kpi"><span>{{ fmtPct(learner.show_rate) }}</span>{{ __('Catered / booked') }} <small>{{ __('avg') }} {{ fmtPct(stats.show_rate?.avg) }}</small></div>
 				</div>
 				<Funnel class="mt-6" :learner="learner" :stats="stats" />
-				<div class="mt-5 rounded-2xl bg-[color:var(--il-neutral-95)] px-4 py-3 text-sm">
+				<div class="mt-5 rounded-2xl bg-[#f4f9ff] px-4 py-3 text-sm">
 					<Clock class="me-1 inline h-4 w-4 text-[color:var(--il-primary-40)]" />
 					{{ __('Talk time') }}: <strong>{{ learner.talk_time || '—' }}</strong>
 					<span class="text-[color:var(--il-muted)]"> · {{ __('batch avg') }} {{ fmtDuration(stats.talk_seconds?.avg) }}</span>
 				</div>
-			</section>
+			</ReportSection>
 
-			<!-- Test scores -->
-			<section v-if="tab === 'tests'" class="il-card mt-4 p-5">
-				<h2 class="rc-title">{{ __('Test scores') }} <span class="text-sm font-normal text-[color:var(--il-muted)]">({{ __('out of 20') }})</span></h2>
-				<div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-					<div v-for="m in testMetrics" :key="m.key" class="rc-sum" :style="{ background: bandStyle(learner.scores[m.key]?.band).soft, borderColor: bandStyle(learner.scores[m.key]?.band).bg }">
-						<div class="text-sm">{{ m.label }}</div>
-						<div class="mt-1 text-2xl font-semibold" :style="{ color: bandStyle(learner.scores[m.key]?.band).text }">{{ fmt(learner[m.key]) }}</div>
-						<div class="text-xs text-[color:var(--il-muted)]">{{ bandStyle(learner.scores[m.key]?.band).label }}</div>
-					</div>
+			<!-- Intent & Skill -->
+			<ReportSection v-if="tab === 'intent'" :title="__('Intent & Skill')" :subtitle="__('Where this learner sits against the batch: lowest, average and highest.')">
+				<div class="space-y-7">
+					<Benchmark v-for="m in intentMetrics" :key="m.key" :label="m.label" :value="learner[m.key]" :max="m.max" :stat="stats[m.key]" :band="learner.scores[m.key]?.band" />
 				</div>
-				<div class="mt-6 space-y-6">
-					<Benchmark v-for="m in testMetrics" :key="m.key" :label="m.label" :value="learner[m.key]" :max="m.max" :stat="stats[m.key]" :band="learner.scores[m.key]?.band" />
-				</div>
-			</section>
+			</ReportSection>
 
 			<p class="mt-4 text-xs text-[color:var(--il-muted)]">{{ BAND_RULES }}. {{ __('Batch') }} = {{ batch.size }} {{ __('learners who started on') }} {{ fmtDate(batch.batch_start) }}.</p>
 		</template>
@@ -163,8 +159,11 @@
 <script setup>
 import { computed, h, ref } from 'vue'
 import { createResource } from 'frappe-ui'
-import { ArrowDownRight, ArrowUpRight, Clock, Minus, Sparkles } from 'lucide-vue-next'
-import { BAND_RULES, bandStyle, fmt, fmtDate, fmtDuration, fmtPct, initials, managerName } from './reportUtils'
+import { ArrowDownRight, ArrowUpRight, Clock, Minus } from 'lucide-vue-next'
+import ReportSection from './ReportSection.vue'
+import InsightsCard from './InsightsCard.vue'
+import ScoreTrend from './ScoreTrend.vue'
+import { BAND_RULES, bandStyle, fmt, fmtDate, fmtDuration, fmtPct, initials, managerName, median } from './reportUtils'
 
 const props = defineProps({ name: { type: String, required: true } })
 
@@ -185,10 +184,38 @@ const testMetrics = computed(() => metrics.value.filter((m) => m.group === 'test
 const tab = ref('overview')
 const tabs = [
 	{ key: 'overview', label: __('Overview') },
+	{ key: 'tests', label: __('Test performance') },
 	{ key: 'intent', label: __('Intent & Skill') },
 	{ key: 'calling', label: __('Calling') },
-	{ key: 'tests', label: __('Test Scores') },
 ]
+
+const insightItems = computed(() => [
+	...insights.value.strengths.map((text) => ({ lead: __('Strength:'), text })),
+	...insights.value.gaps.map((text) => ({ lead: __('Focus:'), text })),
+])
+
+const scoredTests = computed(() => testMetrics.value.filter((m) => learner.value?.[m.key] != null && learner.value?.[m.key] !== ''))
+const testStats = computed(() => {
+	const pcts = scoredTests.value.map((m) => learner.value.scores[m.key]?.pct)
+	return [
+		{ label: __('Tests taken'), value: String(scoredTests.value.length).padStart(2, '0'), of: testMetrics.value.length },
+		{ label: __('Tests pending'), value: String(testMetrics.value.length - scoredTests.value.length).padStart(2, '0'), of: testMetrics.value.length },
+		{ label: __('Highest score'), value: pcts.length ? `${Math.round(Math.max(...pcts))}%` : '—' },
+		{ label: __('Median score'), value: pcts.length ? `${Math.round(median(pcts))}%` : '—' },
+	]
+})
+const testTrend = computed(() =>
+	testMetrics.value.map((m) => {
+		const st = stats.value[m.key] || {}
+		const toPct = (v) => (v == null ? null : Math.min(100, (v / m.max) * 100))
+		return {
+			label: m.label,
+			value: learner.value.scores[m.key]?.pct ?? null,
+			display: learner.value[m.key] == null ? __('Not taken') : `${fmt(learner.value[m.key])}/${m.max}`,
+			compare: { top: toPct(st.max), avg: toPct(st.avg) },
+		}
+	})
+)
 
 const summaryCards = computed(() => {
 	const l = learner.value
@@ -211,7 +238,7 @@ const trendLabel = computed(() => {
 	const band = learner.value?.readiness_band
 	return { excellent: __('Certification ready'), good: __('On track'), average: __('Needs support'), needs_improvement: __('At risk') }[band] || __('Not scored')
 })
-const trendClass = computed(() => `is-${learner.value?.readiness_band || 'none'}`)
+const trendTone = computed(() => ({ excellent: 'good', good: 'good', average: 'warn', needs_improvement: 'bad' })[learner.value?.readiness_band] || 'warn')
 
 function chip(band) {
 	const s = bandStyle(band)
@@ -328,34 +355,76 @@ Funnel.props = ['learner', 'stats']
 	font-size: 0.75rem;
 }
 
-.rc-title {
-	margin: 0;
-	color: var(--il-ink);
-	font-size: 1.125rem;
-	font-weight: 500;
+.rc-card {
+	border: 1px solid #edf0f4;
+	border-radius: 20px;
+	background: #fff;
+	box-shadow: 0 2px 10px rgba(0, 37, 76, 0.06);
 }
 
-.rc-sub {
+.rc-h2 {
+	margin: 1.5rem 0 0.75rem;
 	color: var(--il-ink);
-	font-size: 0.95rem;
-	font-weight: 500;
+	font-size: 1.25rem;
+	font-weight: 400;
+}
+
+.rc-highlights {
+	display: grid;
+	gap: 1.25rem;
+	align-items: center;
+	padding: 1.1rem 1.25rem;
+}
+
+@media (min-width: 1024px) {
+	.rc-highlights {
+		grid-template-columns: 17rem 1fr;
+	}
+
+	.rc-highlights > :first-child {
+		height: 100%;
+		border-right: 1px solid var(--il-neutral-90);
+	}
 }
 
 .rc-donut {
 	--p: 0;
 	--c: #35c759;
 	display: grid;
+	flex-shrink: 0;
 	place-items: center;
-	width: 6rem;
-	height: 6rem;
+	width: 6.25rem;
+	height: 6.25rem;
 	border-radius: 999px;
-	background: radial-gradient(closest-side, #fff 76%, transparent 77%), conic-gradient(var(--c) calc(var(--p) * 1%), #e6e7e8 0);
+	background: radial-gradient(closest-side, #fff 68%, transparent 69%), conic-gradient(var(--c) calc(var(--p) * 1%), #e6f2ff 0);
 }
 
 .rc-donut span {
 	font-size: 1.25rem;
-	font-weight: 600;
+	font-weight: 500;
 	color: var(--il-ink);
+}
+
+.rc-input {
+	overflow: hidden;
+	border: 1px solid;
+	border-radius: 12px;
+}
+
+.rc-input-foot {
+	margin-top: 0.75rem;
+	border-top: 1px solid rgba(0, 0, 0, 0.08);
+	padding: 0.45rem 0.9rem;
+	background: #fff;
+	font-size: 0.75rem;
+}
+
+.rc-stat {
+	border: 1px solid #edf0f4;
+	border-radius: 14px;
+	padding: 0.85rem 1rem;
+	text-align: center;
+	box-shadow: 0 1px 4px rgba(0, 37, 76, 0.05);
 }
 
 .rc-chip {
@@ -368,60 +437,8 @@ Funnel.props = ['learner', 'stats']
 	font-weight: 500;
 }
 
-.rc-insights {
-	border-radius: 16px;
-	padding: 1rem 1.25rem;
-	background: linear-gradient(100deg, #ffffff 0%, #f3efff 55%, #e9e3ff 100%);
-}
-
-.rc-li {
-	position: relative;
-	padding-left: 0.9rem;
-	color: var(--il-ink);
-	font-size: 0.8125rem;
-	line-height: 1.25rem;
-}
-
-.rc-li::before {
-	content: '';
-	position: absolute;
-	left: 0;
-	top: 0.5rem;
-	width: 0.3rem;
-	height: 0.3rem;
-	border-radius: 999px;
-	background: currentColor;
-	opacity: 0.5;
-}
-
-.rc-trend {
-	border: 1px solid;
-	border-radius: 999px;
-	padding: 0.15rem 0.7rem;
-	font-size: 0.7rem;
-	font-weight: 500;
-}
-
-.rc-trend.is-excellent,
-.rc-trend.is-good {
-	border-color: #35c759;
-	background: #e7f8ec;
-	color: #146c31;
-}
-
-.rc-trend.is-average {
-	border-color: #ffab00;
-	background: #fff8e6;
-	color: #8a5a00;
-}
-
-.rc-trend.is-needs_improvement {
-	border-color: #f03e3e;
-	background: #fff1f1;
-	color: #b42323;
-}
-
 .rc-tabs {
+	margin: 1.5rem 0 1.25rem;
 	display: grid;
 	grid-template-columns: repeat(4, minmax(0, 1fr));
 	gap: 0.75rem;
@@ -441,12 +458,6 @@ Funnel.props = ['learner', 'stats']
 	border-color: #00254c;
 	background: #00254c;
 	color: #fff;
-}
-
-.rc-sum {
-	border: 1px solid;
-	border-radius: 16px;
-	padding: 1rem;
 }
 
 .rc-kpi {

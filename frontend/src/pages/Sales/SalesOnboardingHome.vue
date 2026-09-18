@@ -5,7 +5,7 @@
 			<h1 class="il-page-title">{{ __('Home') }}</h1>
 			<span class="il-pill text-sm sm:text-base">
 				<GraduationCap class="h-5 w-5 stroke-[1.75]" />
-				{{ __('Sales Onboarding · CRT') }}
+				{{ __('Sales onboarding') }}
 			</span>
 		</header>
 
@@ -29,148 +29,61 @@
 		</div>
 
 		<template v-else-if="home.data">
-			<!-- Greeting + progress banner (IL promo-banner style) -->
+			<!-- One banner: where you are and one button -->
 			<section class="il-home-banner mt-4">
-				<div class="relative z-[1] flex min-w-0 flex-1 flex-col gap-2">
+				<div class="relative z-[1] flex min-w-0 flex-1 flex-col gap-1.5">
 					<p class="text-sm font-medium text-white/75">{{ greeting }}, {{ firstName }} 👋</p>
-					<h2 class="text-2xl font-semibold leading-tight text-white sm:text-[1.75rem]">
-						{{ bannerTitle }}
-					</h2>
-					<p class="max-w-xl text-sm leading-6 text-white/80">{{ bannerDetail }}</p>
-					<div class="mt-3 flex flex-wrap gap-3">
-						<button
-							v-if="current && current.state !== 'locked' && current.state !== 'empty' && current.state !== 'completed'"
-							type="button"
-							class="il-btn il-btn-light"
-							@click="continueLearning"
-						>
-							<PlayCircle class="h-4 w-4" />
-							{{ __('Continue learning') }}
-						</button>
-						<button
-							v-else-if="home.data.ojt?.eligible"
-							type="button"
-							class="il-btn il-btn-light"
-							@click="$router.push({ name: 'SalesOJT' })"
-						>
-							<PhoneCall class="h-4 w-4" />
-							{{ __('Enter OJT') }}
-						</button>
-						<button
-							v-else-if="home.data.evaluation?.status === 'Ready' || home.data.evaluation?.status === 'Completed'"
-							type="button"
-							class="il-btn il-btn-light"
-							@click="goEval"
-						>
-							<Star class="h-4 w-4" />
-							{{ __('View evaluation') }}
+					<h2 class="text-2xl font-semibold leading-tight text-white sm:text-[1.75rem]">{{ bannerTitle }}</h2>
+					<p class="text-sm leading-6 text-white/80">{{ bannerDetail }}</p>
+					<div v-if="primaryAction" class="mt-3">
+						<button type="button" class="il-btn il-btn-light" @click="primaryAction.run">
+							<component :is="primaryAction.icon" class="h-4 w-4" />
+							{{ primaryAction.label }}
 						</button>
 					</div>
 				</div>
 				<div class="il-home-ring" :style="{ '--p': overall }" role="img" :aria-label="`${overall}% ${__('complete')}`">
 					<div class="il-home-ring-inner">
 						<span class="text-2xl font-semibold tabular-nums text-white">{{ overall }}%</span>
-						<span class="text-[11px] font-medium uppercase tracking-wider text-white/70">{{ __('CRT done') }}</span>
+						<span class="text-[11px] font-medium uppercase tracking-wider text-white/70">{{ __('Done') }}</span>
 					</div>
 				</div>
 			</section>
 
-			<!-- Journey tiles (IL subject-tile pattern) -->
-			<section class="mt-8">
-				<div class="mb-4 flex items-end justify-between gap-3">
-					<h2 class="il-section-title !mb-0">{{ __('Your journey') }}</h2>
-					<span class="text-sm text-[color:var(--il-muted)]">{{ completedCount }}/{{ totalSteps }} {{ __('steps complete') }}</span>
+			<!-- Journey: one list, one current step -->
+			<section class="il-card mt-6 p-2 sm:p-3">
+				<div class="flex items-baseline justify-between gap-3 px-3 pb-2 pt-2">
+					<h2 class="text-lg font-semibold text-[color:var(--il-ink)]">{{ __('Your journey') }}</h2>
+					<span class="text-sm text-[color:var(--il-muted)]">{{ doneCount }} {{ __('of') }} {{ steps.length }} {{ __('done') }}</span>
 				</div>
-				<div class="il-journey no-scrollbar">
-					<button
-						v-for="crt in home.data.crts"
-						:key="crt.crt_number"
-						type="button"
-						class="il-journey-step"
-						:class="`is-${crt.state}`"
-						:disabled="!home.data.is_staff && (crt.state === 'locked' || crt.state === 'empty')"
-						@click="openCrt(crt)"
-					>
-						<span class="il-journey-tile">
-							<Check v-if="crt.state === 'completed'" class="h-7 w-7" />
-							<Lock v-else-if="crt.state === 'locked' || crt.state === 'empty'" class="h-6 w-6" />
-							<span v-else class="text-2xl font-semibold">{{ crt.crt_number }}</span>
-						</span>
-						<span class="il-journey-label">{{ crt.title }}</span>
-						<span class="il-journey-state">{{ stateLabel(crt.state) }}</span>
-					</button>
-					<button type="button" class="il-journey-step is-amber" :class="`is-${evalStepClass}`" @click="goEval">
-						<span class="il-journey-tile"><Star class="h-7 w-7" /></span>
-						<span class="il-journey-label">{{ __('Evaluation') }}</span>
-						<span class="il-journey-state">{{ evalLabel }}</span>
-					</button>
-					<button
-						type="button"
-						class="il-journey-step is-green"
-						:class="`is-${ojtStepClass}`"
-						@click="$router.push({ name: 'SalesOJT' })"
-					>
-						<span class="il-journey-tile"><PhoneCall class="h-7 w-7" /></span>
-						<span class="il-journey-label">{{ __('OJT') }}</span>
-						<span class="il-journey-state">{{ home.data.ojt?.eligible ? __('Unlocked') : __('Locked') }}</span>
-					</button>
-				</div>
-			</section>
-
-			<div class="mt-8 grid gap-6 lg:grid-cols-[1.35fr_1fr]">
-				<!-- Current learning -->
-				<section class="il-card p-6">
-					<p class="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--il-primary-40)]">
-						{{ __('Resume learning') }}
-					</p>
-					<h3 class="mt-2 text-lg font-semibold text-[color:var(--il-ink)]">{{ currentTitle }}</h3>
-					<p class="mt-1 text-sm text-[color:var(--il-muted)]">{{ currentDetail }}</p>
-					<div class="mt-5 flex items-center gap-3">
-						<div class="h-2 flex-1 overflow-hidden rounded-full bg-[color:var(--il-primary-95)]">
-							<div
-								class="h-full rounded-full bg-[color:var(--il-primary-50)] transition-all duration-500"
-								:style="{ width: `${current?.progress || 0}%` }"
-							/>
-						</div>
-						<span class="text-sm font-semibold tabular-nums text-[color:var(--il-ink)]">{{ Math.round(current?.progress || 0) }}%</span>
-					</div>
-					<p class="mt-2 text-xs text-[color:var(--il-muted)]">
-						{{ current?.lessons_done || 0 }}/{{ current?.lessons_total || 0 }} {{ __('sessions complete') }}
-					</p>
-					<button
-						v-if="current && current.state !== 'locked' && current.state !== 'empty' && current.state !== 'completed'"
-						type="button"
-						class="il-btn il-btn-primary mt-5"
-						@click="continueLearning"
-					>
-						{{ __('Continue') }}
-						<ChevronRight class="h-4 w-4" />
-					</button>
-				</section>
-
-				<!-- Milestones -->
-				<section class="il-card p-6">
-					<h3 class="text-lg font-semibold text-[color:var(--il-ink)]">{{ __('Milestones') }}</h3>
-					<ul v-if="home.data.milestones?.length" class="mt-4 space-y-3">
-						<li
-							v-for="(item, idx) in home.data.milestones"
-							:key="idx"
-							class="flex items-start gap-3 rounded-2xl bg-[color:var(--il-neutral-95)] px-4 py-3"
+				<ol>
+					<li v-for="step in steps" :key="step.key">
+						<button
+							type="button"
+							class="jr-row"
+							:class="`is-${step.kind}`"
+							:disabled="!step.clickable"
+							@click="step.open()"
 						>
-							<span class="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[color:var(--il-primary-95)] text-[color:var(--il-primary-40)]">
-								<Flag class="h-3.5 w-3.5" />
+							<span class="jr-icon">
+								<Check v-if="step.kind === 'done'" class="h-5 w-5" />
+								<Lock v-else-if="step.kind === 'locked'" class="h-4 w-4" />
+								<component :is="step.icon" v-else-if="step.icon" class="h-5 w-5" />
+								<span v-else class="text-base font-semibold">{{ step.number }}</span>
 							</span>
-							<div class="min-w-0">
-								<div class="text-sm font-semibold text-[color:var(--il-ink)]">{{ item.title }}</div>
-								<div class="mt-0.5 text-xs text-[color:var(--il-muted)]">{{ item.detail }}</div>
-							</div>
-						</li>
-					</ul>
-					<p v-else class="mt-4 text-sm text-[color:var(--il-muted)]">
-						{{ __('Your next milestone will appear as you progress.') }}
-					</p>
-				</section>
-			</div>
+							<span class="min-w-0 flex-1 text-left">
+								<span class="block truncate text-[15px] font-medium text-[color:var(--il-ink)]">{{ step.title }}</span>
+								<span class="block truncate text-xs text-[color:var(--il-muted)]">{{ step.detail }}</span>
+								<span v-if="step.kind === 'current' && step.progress != null" class="jr-bar">
+									<span :style="{ width: `${Math.max(step.progress, 3)}%` }" />
+								</span>
+							</span>
+							<span v-if="step.status" class="jr-pill">{{ step.status }}</span>
+							<ChevronRight v-if="step.clickable" class="h-4 w-4 shrink-0 text-[color:var(--il-neutral-60)]" />
+						</button>
+					</li>
+				</ol>
+			</section>
 
 			<!-- OJT locked notice (IL gold "Stuck on a problem?" card) -->
 			<section
@@ -193,7 +106,7 @@
 import { computed, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { createResource } from 'frappe-ui'
-import { Check, ChevronRight, Flag, GraduationCap, Lock, PhoneCall, PlayCircle, Star } from 'lucide-vue-next'
+import { Check, ChevronRight, GraduationCap, Lock, PhoneCall, PlayCircle, Star } from 'lucide-vue-next'
 
 const user = inject('$user')
 const router = useRouter()
@@ -219,67 +132,101 @@ const greeting = computed(() => {
 	return __('Good evening')
 })
 
-const totalSteps = computed(() => (home.data?.crts?.length || 0) + 2)
+const crts = computed(() => home.data?.crts || [])
+const staff = computed(() => Boolean(home.data?.is_staff))
+const crtsDone = computed(() => crts.value.length > 0 && crts.value.every((c) => c.state === 'completed'))
+// The one step to work on now: the first CRT that is not finished.
+const currentIndex = computed(() => crts.value.findIndex((c) => c.state !== 'completed'))
+const evalStatus = computed(() => home.data?.evaluation?.status)
+const evalDone = computed(() => crtsDone.value && evalStatus.value === 'Completed')
+const ojtOpen = computed(() => evalDone.value && Boolean(home.data?.ojt?.eligible))
 
-const completedCount = computed(() => {
-	const crts = (home.data?.crts || []).filter((c) => c.state === 'completed').length
-	const evalDone = home.data?.evaluation?.status === 'Completed' ? 1 : 0
-	return crts + evalDone
+const sessions = (c) => (c.lessons_total ? `${c.lessons_done} ${__('of')} ${c.lessons_total} ${__('sessions')}` : __('Content coming soon'))
+
+// Day topics from the CRT schedule, used when the chapter title is just "CRT n".
+const DAY_TOPICS = {
+	1: __('Welcome to Infinity Learn'),
+	2: __('CBSE Foundation & Math Champ'),
+	3: __('Test Prep: JEE & NEET'),
+	4: __('LeadSquared & your leads'),
+	5: __('Mock calls & demo'),
+}
+
+// Learners think in days: "Day 1 · Topic". Chapter titles may start with "CRT n"; strip it.
+const crtTitle = (c) => {
+	const topic = String(c.title || '').replace(new RegExp(`^\\s*CRT\\s*${c.crt_number}\\s*[:·\\-–]?\\s*`, 'i'), '')
+	return `${__('Day')} ${c.crt_number} · ${topic || DAY_TOPICS[c.crt_number] || ''}`.replace(/ · $/, '')
+}
+
+const steps = computed(() => {
+	const list = crts.value.map((c, i) => {
+		let kind = 'locked'
+		let status = __('Locked')
+		if (c.state === 'completed') [kind, status] = ['done', __('Done')]
+		else if (i === currentIndex.value) [kind, status] = ['current', __('Today')]
+		else if (staff.value) [kind, status] = ['next', i === currentIndex.value + 1 ? __('Up next') : '']
+		return {
+			key: `crt-${c.crt_number}`,
+			number: c.crt_number,
+			title: crtTitle(c),
+			detail: sessions(c),
+			progress: c.progress,
+			kind,
+			status,
+			clickable: kind !== 'locked' && c.state !== 'empty',
+			open: () => openCrt(c),
+		}
+	})
+	const evalKind = evalDone.value ? 'done' : crtsDone.value ? 'current' : staff.value ? 'next' : 'locked'
+	list.push({
+		key: 'evaluation',
+		icon: Star,
+		title: __('Final review'),
+		detail: evalDone.value ? __('Your training rating is ready') : __('Your trainer rates your 5 days'),
+		kind: evalKind,
+		status: { done: __('Done'), current: __('Ready'), next: __('After Day 5'), locked: __('Locked') }[evalKind],
+		clickable: evalKind !== 'locked',
+		open: goEval,
+	})
+	const ojtKind = ojtOpen.value ? 'current' : staff.value ? 'next' : 'locked'
+	list.push({
+		key: 'ojt',
+		icon: PhoneCall,
+		title: __('Go live · OJT'),
+		detail: ojtOpen.value ? __('On-the-job calls with real leads') : __('Real calls with real leads, with your trainer'),
+		kind: ojtKind,
+		status: { current: __('Open'), next: __('After review'), locked: __('Locked') }[ojtKind],
+		clickable: ojtKind !== 'locked',
+		open: () => router.push({ name: 'SalesOJT' }),
+	})
+	return list
 })
 
+const doneCount = computed(() => steps.value.filter((s) => s.kind === 'done').length)
+
+const currentCrt = computed(() => crts.value[currentIndex.value])
+
 const bannerTitle = computed(() => {
-	if (home.data?.ojt?.eligible) return __("You're ready for OJT")
-	if (current.value?.state === 'completed') return __('Classroom training complete')
-	if (current.value) return __('Up next: {0}', [current.value.title])
+	if (ojtOpen.value) return __("You're ready for OJT")
+	if (crtsDone.value) return __('Classroom training complete')
+	if (currentCrt.value) return `${__('Up next')}: ${crtTitle(currentCrt.value)}`
 	return __('Your Sales onboarding')
 })
 
-const bannerDetail = computed(() =>
-	__(
-		'Classroom Readiness Training, then a live sales simulation. Finish CRT 1–5, review your rating, and unlock OJT.'
-	)
-)
-
-const currentTitle = computed(() => {
-	if (!current.value) return __('Sales CRT')
-	return `${current.value.title}${current.value.current_lesson ? ' · ' + current.value.current_lesson.title : ''}`
+const bannerDetail = computed(() => {
+	const c = currentCrt.value
+	if (c?.current_lesson?.title) return `${c.current_lesson.title} · ${sessions(c)}`
+	if (crtsDone.value && !evalDone.value) return __('Your final review is next.')
+	return __('5 days of classroom training, a final review, then live calls.')
 })
 
-const currentDetail = computed(() => {
-	if (!current.value) return ''
-	if (current.value.state === 'completed') {
-		return __('Classroom CRTs are complete. Review your training evaluation, then enter OJT.')
-	}
-	if (current.value.state === 'locked') {
-		return __('Finish the previous CRT to unlock this stage.')
-	}
-	return __('Stay on this CRT until every session is complete.')
+const primaryAction = computed(() => {
+	if (currentCrt.value && currentCrt.value.state !== 'empty')
+		return { label: currentCrt.value.lessons_done ? __('Continue learning') : __('Start learning'), icon: PlayCircle, run: continueLearning }
+	if (ojtOpen.value) return { label: __('Enter OJT'), icon: PhoneCall, run: () => router.push({ name: 'SalesOJT' }) }
+	if (crtsDone.value) return { label: __('View final review'), icon: Star, run: goEval }
+	return null
 })
-
-const evalLabel = computed(() => {
-	const status = home.data?.evaluation?.status
-	if (status === 'Completed') return __('Done')
-	if (status === 'Ready') return __('Ready')
-	return __('Locked')
-})
-
-const evalStepClass = computed(() => {
-	const status = home.data?.evaluation?.status
-	if (status === 'Completed') return 'completed'
-	if (status === 'Ready') return 'available'
-	return 'locked'
-})
-
-const ojtStepClass = computed(() => (home.data?.ojt?.eligible ? 'available' : 'locked'))
-
-const stateLabel = (state) =>
-	({
-		completed: __('Completed'),
-		in_progress: __('In progress'),
-		available: __('Current'),
-		locked: __('Locked'),
-		empty: __('Pending'),
-	})[state] || state
 
 const openCrt = (crt) => {
 	if (!home.data?.is_staff && (crt.state === 'locked' || crt.state === 'empty')) return
@@ -289,7 +236,8 @@ const openCrt = (crt) => {
 const goEval = () => router.push({ name: 'SalesEvaluation' })
 
 const continueLearning = () => {
-	const lesson = current.value?.current_lesson
+	const target = currentCrt.value || current.value
+	const lesson = target?.current_lesson
 	if (lesson?.number) {
 		const [chapterNumber, lessonNumber] = String(lesson.number).split('-')
 		router.push({
@@ -302,7 +250,7 @@ const continueLearning = () => {
 		})
 		return
 	}
-	openCrt(current.value)
+	openCrt(target)
 }
 </script>
 
@@ -354,106 +302,101 @@ const continueLearning = () => {
 	background: #00254c;
 }
 
-.il-journey {
+.jr-row {
 	display: flex;
-	gap: 1rem;
-	overflow-x: auto;
-	padding: 0.25rem 0.25rem 0.75rem;
-	margin: 0 -0.25rem;
-}
-
-.il-journey-step {
-	display: flex;
-	width: 7.5rem;
-	flex-shrink: 0;
-	flex-direction: column;
+	width: 100%;
 	align-items: center;
-	gap: 0.35rem;
-	text-align: center;
-	transition: transform 0.15s ease;
-}
-
-.il-journey-step:not(:disabled):hover {
-	transform: translateY(-2px);
-}
-
-.il-journey-step:disabled {
-	cursor: not-allowed;
-}
-
-.il-journey-tile {
-	display: grid;
-	place-items: center;
-	width: 7.5rem;
-	height: 5.25rem;
+	gap: 0.85rem;
+	border: 1px solid transparent;
 	border-radius: 16px;
-	background: var(--il-primary-95);
-	color: var(--il-primary-50);
-	transition: box-shadow 0.15s ease;
+	padding: 0.7rem 0.75rem;
+	text-align: left;
+	transition: background 0.15s ease;
 }
 
-.il-journey-step:not(:disabled):hover .il-journey-tile {
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+.jr-row:not(:disabled):hover {
+	background: #f7fbff;
 }
 
-.il-journey-label {
-	max-width: 100%;
-	overflow: hidden;
-	color: var(--il-ink);
-	font-size: 0.875rem;
-	font-weight: 500;
-	text-overflow: ellipsis;
+.jr-row:disabled {
+	cursor: default;
+}
+
+.jr-icon {
+	display: grid;
+	flex-shrink: 0;
+	place-items: center;
+	width: 2.5rem;
+	height: 2.5rem;
+	border-radius: 999px;
+	background: var(--il-neutral-95);
+	color: var(--il-neutral-60);
+}
+
+.jr-pill {
+	flex-shrink: 0;
+	border-radius: 999px;
+	padding: 0.2rem 0.65rem;
+	background: var(--il-neutral-95);
+	color: var(--il-muted);
+	font-size: 0.75rem;
+	font-weight: 600;
 	white-space: nowrap;
 }
 
-.il-journey-state {
+.jr-bar {
+	display: block;
+	height: 0.3rem;
+	margin-top: 0.45rem;
+	overflow: hidden;
 	border-radius: 999px;
-	padding: 0.1rem 0.6rem;
-	background: var(--il-neutral-95);
-	color: var(--il-muted);
-	font-size: 0.6875rem;
-	font-weight: 600;
+	background: var(--il-primary-95);
 }
 
-/* States */
-.il-journey-step.is-completed .il-journey-tile {
-	background: var(--il-success-95);
-	color: var(--il-success-50);
-}
-
-.il-journey-step.is-completed .il-journey-state {
-	background: var(--il-success-95);
-	color: var(--il-success-50);
-}
-
-.il-journey-step.is-in_progress .il-journey-tile,
-.il-journey-step.is-available .il-journey-tile {
+.jr-bar span {
+	display: block;
+	height: 100%;
+	border-radius: 999px;
 	background: var(--il-primary-50);
-	color: #ffffff;
-	box-shadow: 0 6px 16px rgba(2, 123, 255, 0.35);
 }
 
-.il-journey-step.is-in_progress .il-journey-state,
-.il-journey-step.is-available .il-journey-state {
+.jr-row.is-done .jr-icon {
+	background: var(--il-success-95);
+	color: var(--il-success-50);
+}
+
+.jr-row.is-done .jr-pill {
+	background: var(--il-success-95);
+	color: var(--il-success-50);
+}
+
+.jr-row.is-current {
+	border-color: #cfe5ff;
+	background: #f4f9ff;
+}
+
+.jr-row.is-current .jr-icon {
+	background: var(--il-primary-50);
+	color: #fff;
+	box-shadow: 0 4px 12px rgba(2, 123, 255, 0.35);
+}
+
+.jr-row.is-current .jr-pill {
+	background: var(--il-primary-50);
+	color: #fff;
+}
+
+.jr-row.is-next .jr-icon {
 	background: var(--il-primary-95);
 	color: var(--il-primary-40);
 }
 
-.il-journey-step.is-amber .il-journey-tile {
-	background: var(--il-warning-95);
-	color: var(--il-warning-50);
+.jr-row.is-locked {
+	opacity: 0.7;
 }
 
-.il-journey-step.is-green .il-journey-tile {
-	background: var(--il-success-95);
-	color: var(--il-success-50);
-}
-
-.il-journey-step.is-locked .il-journey-tile,
-.il-journey-step.is-empty .il-journey-tile {
-	background: var(--il-neutral-95);
-	color: var(--il-neutral-60);
-	box-shadow: none;
+li + li .jr-row {
+	margin-top: 0.15rem;
 }
 
 @media (max-width: 640px) {
