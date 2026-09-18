@@ -316,7 +316,6 @@ auth_hooks = ["lms.auth.authenticate"]
 require_type_annotated_api_methods = True
 
 before_request = [
-	"lms.lms.routing.guest_login_only",
 	"lms.lms.routing.block_desk_portal_routes",
 	"lms.lms.google_oauth.patch_google_calendar_scopes",
 	"lms.lms.request_hooks.extend_lesson_upload_limit",

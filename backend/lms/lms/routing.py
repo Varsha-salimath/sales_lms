@@ -221,32 +221,19 @@ def block_desk_portal_routes():
 	return redirect(target, code=302)
 
 
-# Before login the only screens are sign-in and set-password; everything else bounces to /login.
-GUEST_PAGES = frozenset({"/login", "/update-password", "/logout"})
-GUEST_PREFIXES = ("/api/", "/assets/", "/files/", "/socket.io")
-GUEST_STATIC = frozenset({"/robots.txt", "/website_script.js", "/favicon.ico", "/sitemap.xml"})
+# Before login the only screens are sign-in and set-password; every other page bounces to /login.
+# Enforced in resolve_sales_lms_path: Frappe ignores return values from before_request hooks.
+GUEST_PAGES = frozenset({"login", "update-password", "logout"})
 
 
-def guest_login_only():
-	"""Guests see the login screen and nothing else (no catalog, search, error or print pages)."""
-	request = getattr(frappe.local, "request", None)
-	if not request or request.method not in ("GET", "HEAD"):
-		return
-	if frappe.session.user != "Guest":
-		return
-
-	path = (request.path or "/").rstrip("/") or "/"
-	if path in GUEST_PAGES or path in GUEST_STATIC or path.startswith(GUEST_PREFIXES):
-		return
-
-	target = "/login"
-	bare = path.strip("/")
-	if bare and is_valid_spa_path(bare) and bare != "dashboard":
-		target = login_url_with_redirect(path)
-
-	from werkzeug.utils import redirect
-
-	return redirect(target, code=302)
+def guest_login_redirect(path: str | None) -> str | None:
+	"""Where to send a guest asking for `path`; None when the page is allowed."""
+	bare = (path or "").split("?", 1)[0].strip("/")
+	if bare in GUEST_PAGES:
+		return None
+	if bare and bare != "dashboard" and is_valid_spa_path(bare):
+		return login_url_with_redirect(f"/{bare}")
+	return "/login"
 
 
 def _reserved_www_path(path: str | None) -> str | None:
@@ -284,11 +271,16 @@ def resolve_sales_lms_path(path):
 	"""Auth-aware canonical redirects, then Frappe's normal website path resolution."""
 	from frappe.website.path_resolver import resolve_path
 
+	request = getattr(frappe.local, "request", None)
+	if frappe.session.user == "Guest" and (not request or request.method in ("GET", "HEAD")):
+		target = guest_login_redirect(path)
+		if target:
+			raise_page_redirect(target)
+
 	reserved = _reserved_www_path(path)
 	if reserved:
 		return reserved
 
-	request = getattr(frappe.local, "request", None)
 	if request and request.method not in ("GET", "HEAD"):
 		return resolve_path(path)
 
