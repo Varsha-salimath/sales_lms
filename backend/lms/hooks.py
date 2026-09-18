@@ -100,7 +100,6 @@ email_css = ["/assets/lms/css/il-email.css"]
 # before_install = "lms.install.before_install"
 after_install = "lms.install.after_install"
 before_uninstall = "lms.install.before_uninstall"
-setup_wizard_complete = "lms.demo.demo_data.create_demo_data"
 # after_sync is not a Frappe hook, so these never ran; after_migrate runs on every deploy.
 after_migrate = [
 	"lms.install.after_sync",

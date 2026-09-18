@@ -50,6 +50,7 @@ SPA_TOP_LEVEL = {
 	"data-import",
 	"newspaper",
 	"reports",
+	"team",
 }
 
 # Exact SPA paths the Vue router knows about (extra segments → invalid URL).
@@ -91,6 +92,7 @@ _ALLOWED_SPA_ROUTE_RES = tuple(
 		r"newspaper",
 		r"reports/[^/]+",
 		r"reports",
+		r"team",
 		r"library",
 		r"user/[^/]+/certificates",
 		r"user/[^/]+/roles",
@@ -239,6 +241,27 @@ def guest_login_redirect(path: str | None) -> str | None:
 	return "/login"
 
 
+# Desk (/desk, /app) is for the two master admins only; everyone else works inside the LMS.
+# Override per site with "lms_desk_users": [...] in site_config.json.
+DEFAULT_DESK_USERS = ("twinkle.garg@infinitylearn.com", "varsha.s@infinitylearn.com")
+DESK_PREFIXES = ("desk", "app")
+
+
+def desk_users() -> set:
+	configured = frappe.conf.get("lms_desk_users")
+	return {"Administrator", *(configured if configured else DEFAULT_DESK_USERS)}
+
+
+def desk_redirect(path: str | None) -> str | None:
+	"""Where to send a signed-in user who may not use Desk; None when allowed."""
+	head = (path or "").split("?", 1)[0].strip("/").split("/", 1)[0]
+	if head not in DESK_PREFIXES:
+		return None
+	if frappe.session.user in ("Guest", *desk_users()):
+		return None
+	return "/dashboard"
+
+
 def _reserved_www_path(path: str | None) -> str | None:
 	"""Return path unchanged when it is a Frappe www route (login, signup, etc.)."""
 	bare = (path or "").strip("/ ")
@@ -277,6 +300,11 @@ def resolve_sales_lms_path(path):
 	request = getattr(frappe.local, "request", None)
 	if frappe.session.user == "Guest" and (not request or request.method in ("GET", "HEAD")):
 		target = guest_login_redirect(path)
+		if target:
+			raise_page_redirect(target)
+
+	if not request or request.method in ("GET", "HEAD"):
+		target = desk_redirect(path)
 		if target:
 			raise_page_redirect(target)
 

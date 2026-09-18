@@ -199,6 +199,11 @@ const routes = [
 		props: true,
 	},
 	{
+		path: '/team',
+		name: 'TeamAccess',
+		component: () => import('@/pages/Team/TeamAccess.vue'),
+	},
+	{
 		path: '/newspaper',
 		name: 'Newspaper',
 		component: () => import('@/pages/Newspaper/Newspaper.vue'),
@@ -461,6 +466,7 @@ router.beforeEach(async (to, from, next) => {
 		'AdminDashboard',
 		'LearnerReports',
 		'LearnerReportCard',
+		'TeamAccess',
 	]
 	if (staffOnlyRoutes.includes(to.name)) {
 		if (!isLoggedIn) {

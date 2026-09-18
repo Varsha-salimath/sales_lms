@@ -19,6 +19,7 @@ def after_sync():
 	set_portal_as_default_app()
 	set_sales_lms_branding()
 	normalize_portal_routes()
+	add_team_access_icon()
 
 
 IL_FAVICON = "/assets/lms/images/il-favicon.png"
@@ -47,6 +48,32 @@ def set_sales_lms_branding():
 		frappe.db.commit()
 	except Exception as e:
 		frappe.log_error(f"Failed to set LMS branding: {e}")
+
+
+def add_team_access_icon():
+	"""'Team & Access' tile in the desk's Framework folder, next to Users. Opens the LMS screen."""
+	try:
+		if not frappe.db.exists("DocType", "Desktop Icon") or frappe.db.exists("Desktop Icon", {"label": "Team & Access"}):
+			return
+		icon = frappe.get_doc(
+			{
+				"doctype": "Desktop Icon",
+				"label": "Team & Access",
+				"icon_type": "Link",
+				"link_type": "External",
+				"link": "/team",
+				"parent_icon": "Framework" if frappe.db.exists("Desktop Icon", "Framework") else None,
+				"icon": "users-round",
+				"app": "lms",
+				"bg_color": "blue",
+				"roles": [{"role": "System Manager"}, {"role": "Moderator"}],
+			}
+		)
+		icon.insert(ignore_permissions=True)
+		frappe.cache.delete_key("desktop_icons")
+		frappe.db.commit()
+	except Exception as e:
+		frappe.log_error(f"Failed to add Team & Access icon: {e}")
 
 
 def set_portal_as_default_app():

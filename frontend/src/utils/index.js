@@ -575,6 +575,15 @@ const getSidebarItems = (forMobile = false) => {
 					},
 				},
 				{
+					label: 'Team & access',
+					icon: 'UsersRound',
+					to: 'TeamAccess',
+					activeFor: ['TeamAccess'],
+					condition: () => {
+						return !forMobile && userResource?.data && isAdmin()
+					},
+				},
+				{
 					label: 'Analytics dashboard',
 					icon: 'BarChart2',
 					to: 'AnalyticsDashboard',
