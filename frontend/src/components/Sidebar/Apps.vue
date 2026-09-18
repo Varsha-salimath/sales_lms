@@ -46,13 +46,8 @@ const apps = createResource({
 	cache: 'apps',
 	auto: true,
 	transform: (data) => {
-		const blocked = new Set(['/app', '/desk'])
 		return data
-			.filter((app) => {
-				if (app.name === 'lms') return false
-				const route = (app.route || '').split('?')[0]
-				return !blocked.has(route) && !route.startsWith('/app/') && !route.startsWith('/desk/')
-			})
+			.filter((app) => app.name !== 'lms')
 			.map((app) => ({
 				name: app.name,
 				logo: app.logo,

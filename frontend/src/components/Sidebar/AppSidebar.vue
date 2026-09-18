@@ -338,6 +338,7 @@ import {
 	ChevronsRight,
 	CircleHelp,
 	FolderTree,
+	Layers,
 	FileText,
 	Phone,
 	Plus,
@@ -506,6 +507,14 @@ const toggleWebPages = () => {
 	localStorage.setItem(
 		'isWebpagesCollapsed',
 		JSON.stringify(sidebarStore.isWebpagesCollapsed)
+	)
+}
+
+const togglePracticeHub = () => {
+	sidebarStore.isPracticeHubCollapsed = !sidebarStore.isPracticeHubCollapsed
+	localStorage.setItem(
+		'isPracticeHubCollapsed',
+		JSON.stringify(sidebarStore.isPracticeHubCollapsed)
 	)
 }
 

@@ -205,10 +205,6 @@ website_route_rules = [
 website_redirects = [
 	{"source": "/update-profile", "target": "/edit-profile", "redirect_http_status": 302},
 	{"source": "/statistics", "target": "/analytics-dashboard", "redirect_http_status": 302},
-	{"source": "/app", "target": "/dashboard", "redirect_http_status": 302},
-	{"source": r"/app/(.*)", "target": r"/dashboard", "redirect_http_status": 302},
-	{"source": "/desk", "target": "/dashboard", "redirect_http_status": 302},
-	{"source": r"/desk/(.*)", "target": r"/dashboard", "redirect_http_status": 302},
 ]
 
 get_website_user_home_page = "lms.lms.routing.get_website_user_home_page"

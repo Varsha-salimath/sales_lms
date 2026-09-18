@@ -199,11 +199,7 @@ def strip_legacy_lms_prefix():
 
 
 def block_desk_portal_routes():
-	"""Block Frappe Desk / App launcher HTML routes — Sales LMS uses the portal only.
-
-	website_redirects does not apply to /desk or /app (they bypass the website router).
-	Set a Werkzeug redirect on frappe.local.response instead of raising frappe.Redirect.
-	"""
+	"""Send guests away from Frappe Desk; logged-in users may open Desk via Apps."""
 	request = getattr(frappe.local, "request", None)
 	if not request or request.method not in ("GET", "HEAD"):
 		return
@@ -212,8 +208,10 @@ def block_desk_portal_routes():
 	if path not in ("/app", "/desk") and not path.startswith("/app/") and not path.startswith("/desk/"):
 		return
 
-	is_guest = frappe.session.user == "Guest"
-	target = "/login" if is_guest else "/dashboard"
+	if frappe.session.user != "Guest":
+		return
+
+	target = "/login"
 	query = _query_suffix(request)
 	if query:
 		target = f"{target}{query}"
@@ -279,8 +277,8 @@ def resolve_sales_lms_path(path):
 
 	bare_path = normalized.strip("/")
 	first_segment = bare_path.split("/")[0] if bare_path else ""
-	if first_segment in ("app", "desk"):
-		raise_page_redirect(("/login" if is_guest else "/dashboard") + query)
+	if first_segment in ("app", "desk") and is_guest:
+		raise_page_redirect("/login" + query)
 
 	invalid = invalid_spa_redirect(bare_path, is_guest, query)
 	if invalid:

@@ -175,7 +175,7 @@ def set_country_from_ip(login_manager: object = None, user: str = None):
 
 
 def on_login(login_manager):
-	frappe.local.response["home_page"] = get_lms_route()
+	frappe.local.response["home_page"] = "/dashboard"
 
 
 @frappe.whitelist()
