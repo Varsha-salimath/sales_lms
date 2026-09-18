@@ -205,6 +205,8 @@ override_whitelisted_methods = {
 	# "frappe.desk.search.get_names_for_mentions": "lms.lms.utils.get_names_for_mentions",
 	"frappe.utils.print_format.download_pdf": "lms.lms.doctype.lms_certificate.lms_certificate.download_pdf",
 	"logout": "lms.lms.user.logout",
+	# Email login links land on the LMS dashboard, not Desk (Frappe sends System Users to /app).
+	"frappe.www.login.login_via_key": "lms.lms.user.login_via_key",
 }
 #
 # each overriding function accepts a `data` argument;

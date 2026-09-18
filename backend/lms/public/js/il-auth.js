@@ -239,6 +239,7 @@
 				</div>
 			</aside>
 			<main class="il-auth-panel" data-screen="form"><div class="il-auth-content"></div></main>`;
+		section.classList.add("is-active");
 		shell.querySelector(".il-auth-content").appendChild(section);
 		document.body.prepend(shell);
 		document.querySelector(".page-content-wrapper")?.remove();

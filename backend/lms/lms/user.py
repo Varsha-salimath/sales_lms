@@ -178,6 +178,31 @@ def on_login(login_manager):
 	frappe.local.response["home_page"] = "/dashboard"
 
 
+@frappe.whitelist(allow_guest=True, methods=["GET"])
+def login_via_key(key: str):
+	"""Frappe's one-time email login, but always landing on the LMS portal.
+
+	Same key handling as frappe.www.login.login_via_key; only the destination differs.
+	"""
+	from frappe import _
+
+	cache_key = f"one_time_login_key:{key}"
+	email = frappe.cache.get_value(cache_key)
+	if not email:
+		frappe.respond_as_web_page(
+			_("Link expired"),
+			_("This sign-in link is invalid or has expired. Please request a new one from the login page."),
+			http_status_code=403,
+			indicator_color="red",
+		)
+		return
+
+	frappe.cache.delete_value(cache_key)
+	frappe.local.login_manager.login_as(email)
+	frappe.local.response["type"] = "redirect"
+	frappe.local.response["location"] = "/dashboard"
+
+
 @frappe.whitelist()
 def logout():
 	"""Force portal logout to /login — never Frappe Desk."""

@@ -530,8 +530,9 @@ body[data-path="update-password"] #update:disabled {
 
 /* ---------- /update-password (Frappe page restyled in place) ---------- */
 
-body[data-path="update-password"] .il-auth-content .for-reset-password {
-	display: block;
+/* /update-password has a single screen; always show it. */
+body[data-path="update-password"] .il-auth-content > section {
+	display: block !important;
 }
 
 body[data-path="update-password"] .il-auth-content :is(.page-card, .page-card-head, .page-card-body) {
