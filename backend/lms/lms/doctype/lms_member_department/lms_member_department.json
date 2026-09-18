@@ -1,0 +1,47 @@
+{
+ "actions": [],
+ "creation": "2026-09-19 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "department",
+  "designation",
+  "is_primary"
+ ],
+ "fields": [
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "LMS Department",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "designation",
+   "fieldtype": "Link",
+   "label": "Designation",
+   "options": "LMS Designation",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "is_primary",
+   "fieldtype": "Check",
+   "label": "Primary",
+   "in_list_view": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-09-19 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "LMS",
+ "name": "LMS Member Department",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1,
+ "editable_grid": 1
+}

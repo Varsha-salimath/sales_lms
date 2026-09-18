@@ -49,6 +49,7 @@ SPA_TOP_LEVEL = {
 	"search",
 	"data-import",
 	"newspaper",
+	"reports",
 }
 
 # Exact SPA paths the Vue router knows about (extra segments → invalid URL).
@@ -88,6 +89,8 @@ _ALLOWED_SPA_ROUTE_RES = tuple(
 		r"newspaper/new",
 		r"newspaper/[^/]+",
 		r"newspaper",
+		r"reports/[^/]+",
+		r"reports",
 		r"library",
 		r"user/[^/]+/certificates",
 		r"user/[^/]+/roles",

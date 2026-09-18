@@ -88,6 +88,15 @@ def create_lms_roles():
 	create_moderator_role()
 	create_evaluator_role()
 	create_lms_student_role()
+	create_lms_manager_role()
+
+
+def create_lms_manager_role():
+	"""Manager tier: sees and acts on their reporting tree and granted scopes (lms.lms.access)."""
+	if frappe.db.exists("Role", "LMS Manager"):
+		frappe.db.set_value("Role", "LMS Manager", "desk_access", 0)
+	else:
+		frappe.get_doc({"doctype": "Role", "role_name": "LMS Manager", "home_page": "", "desk_access": 0}).insert()
 
 
 def create_course_creator_role():
@@ -285,7 +294,7 @@ def create_role(doctype, role, permlevel, write=0, create=0):
 
 
 def delete_lms_roles():
-	roles = ["Course Creator", "Moderator", "Batch Evaluator", "LMS Student"]
+	roles = ["Course Creator", "Moderator", "Batch Evaluator", "LMS Student", "LMS Manager"]
 	for role in roles:
 		if frappe.db.exists("Role", role):
 			frappe.db.delete("Role", role)

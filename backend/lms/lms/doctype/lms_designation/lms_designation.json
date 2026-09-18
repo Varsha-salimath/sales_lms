@@ -1,0 +1,97 @@
+{
+ "actions": [],
+ "creation": "2026-09-19 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "designation_name",
+  "department",
+  "level",
+  "default_access_role"
+ ],
+ "fields": [
+  {
+   "fieldname": "designation_name",
+   "fieldtype": "Data",
+   "label": "Designation",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "LMS Department",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "level",
+   "fieldtype": "Int",
+   "label": "Level",
+   "in_list_view": 1,
+   "description": "Seniority within the department (0 = entry)."
+  },
+  {
+   "fieldname": "default_access_role",
+   "fieldtype": "Select",
+   "label": "Default Access Role",
+   "options": "User\nInstructor\nManager\nAdmin",
+   "default": "User",
+   "in_list_view": 1,
+   "description": "Applied to a person when this designation is set as their primary one."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-09-19 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "LMS",
+ "name": "LMS Designation",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Moderator",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "LMS Manager",
+   "read": 1
+  },
+  {
+   "role": "Course Creator",
+   "read": 1
+  },
+  {
+   "role": "Batch Evaluator",
+   "read": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "designation_name",
+ "autoname": "format:{department} - {designation_name}",
+ "naming_rule": "Expression",
+ "search_fields": "department,level"
+}

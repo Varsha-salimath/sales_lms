@@ -66,7 +66,11 @@ def get_user_info():
 	user.is_instructor = "Course Creator" in user.roles
 	user.is_moderator = "Moderator" in user.roles
 	user.is_evaluator = "Batch Evaluator" in user.roles
-	user.is_student = not user.is_instructor and not user.is_moderator and not user.is_evaluator
+	user.is_manager = "LMS Manager" in user.roles
+	user.is_student = not user.is_instructor and not user.is_moderator and not user.is_evaluator and not user.is_manager
+	from lms.lms import access
+
+	user.access_tier = access.get_tier_name(user.name)
 	user.is_fc_site = is_fc_site()
 	user.is_system_manager = "System Manager" in user.roles
 	user.sitename = frappe.local.site

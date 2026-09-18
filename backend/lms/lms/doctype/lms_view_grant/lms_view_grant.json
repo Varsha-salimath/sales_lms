@@ -1,0 +1,139 @@
+{
+ "actions": [],
+ "creation": "2026-09-19 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "user",
+  "user_name",
+  "scope_type",
+  "department",
+  "include_sub_departments",
+  "designation",
+  "batch",
+  "column_break_1",
+  "can_manage",
+  "is_active",
+  "reason"
+ ],
+ "fields": [
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "label": "Granted To",
+   "options": "User",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "user_name",
+   "fieldtype": "Data",
+   "label": "Name",
+   "fetch_from": "user.full_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "scope_type",
+   "fieldtype": "Select",
+   "label": "Scope",
+   "options": "Department\nDesignation\nBatch\nEveryone",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "LMS Department",
+   "depends_on": "eval:doc.scope_type=='Department'",
+   "mandatory_depends_on": "eval:doc.scope_type=='Department'",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "include_sub_departments",
+   "fieldtype": "Check",
+   "label": "Include Sub-departments",
+   "default": "1",
+   "depends_on": "eval:doc.scope_type=='Department'"
+  },
+  {
+   "fieldname": "designation",
+   "fieldtype": "Link",
+   "label": "Designation",
+   "options": "LMS Designation",
+   "depends_on": "eval:doc.scope_type=='Designation'",
+   "mandatory_depends_on": "eval:doc.scope_type=='Designation'"
+  },
+  {
+   "fieldname": "batch",
+   "fieldtype": "Link",
+   "label": "Batch",
+   "options": "LMS Batch",
+   "depends_on": "eval:doc.scope_type=='Batch'",
+   "mandatory_depends_on": "eval:doc.scope_type=='Batch'"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "can_manage",
+   "fieldtype": "Check",
+   "label": "Can Manage",
+   "description": "Off = view only. On = can also act (assign training, request accounts) within this scope, subject to the person's access role."
+  },
+  {
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Active",
+   "default": "1",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Small Text",
+   "label": "Reason"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-09-19 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "LMS",
+ "name": "LMS View Grant",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Moderator",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "user_name",
+ "autoname": "VG-.#####",
+ "naming_rule": "Expression (old style)",
+ "track_changes": 1
+}

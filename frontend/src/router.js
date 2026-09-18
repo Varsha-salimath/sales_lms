@@ -188,6 +188,17 @@ const routes = [
 		}),
 	},
 	{
+		path: '/reports',
+		name: 'LearnerReports',
+		component: () => import('@/pages/Reports/CombinedReport.vue'),
+	},
+	{
+		path: '/reports/:name',
+		name: 'LearnerReportCard',
+		component: () => import('@/pages/Reports/LearnerReportCard.vue'),
+		props: true,
+	},
+	{
 		path: '/newspaper',
 		name: 'Newspaper',
 		component: () => import('@/pages/Newspaper/Newspaper.vue'),
@@ -448,6 +459,8 @@ router.beforeEach(async (to, from, next) => {
 	const staffOnlyRoutes = [
 		'AnalyticsDashboard',
 		'AdminDashboard',
+		'LearnerReports',
+		'LearnerReportCard',
 	]
 	if (staffOnlyRoutes.includes(to.name)) {
 		if (!isLoggedIn) {
@@ -460,7 +473,9 @@ router.beforeEach(async (to, from, next) => {
 			u?.is_moderator ||
 			u?.is_instructor ||
 			u?.is_evaluator ||
-			u?.is_system_manager
+			u?.is_system_manager ||
+			// Managers (e.g. Training Managers) get learner reports, scoped server-side.
+			(u?.is_manager && ['LearnerReports', 'LearnerReportCard'].includes(to.name))
 		if (!staff) {
 			return next({ name: 'StudentDashboard' })
 		}

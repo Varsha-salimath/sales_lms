@@ -1,0 +1,105 @@
+{
+ "actions": [],
+ "creation": "2026-09-19 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "user",
+  "full_name",
+  "access_role",
+  "status",
+  "section_departments",
+  "departments"
+ ],
+ "fields": [
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "label": "User",
+   "options": "User",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "full_name",
+   "fieldtype": "Data",
+   "label": "Full Name",
+   "fetch_from": "user.full_name",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "access_role",
+   "fieldtype": "Select",
+   "label": "Access Role",
+   "options": "User\nInstructor\nManager\nAdmin",
+   "default": "User",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "What this person can do. Whose data they see comes from reporting lines and view grants."
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Active\nInactive",
+   "default": "Active",
+   "in_list_view": 1,
+   "read_only": 1,
+   "description": "Follows the User's Enabled flag."
+  },
+  {
+   "fieldname": "section_departments",
+   "fieldtype": "Section Break",
+   "label": "Departments"
+  },
+  {
+   "fieldname": "departments",
+   "fieldtype": "Table",
+   "label": "Departments",
+   "options": "LMS Member Department"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-09-19 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "LMS",
+ "name": "LMS Member",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Moderator",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "full_name",
+ "autoname": "field:user",
+ "naming_rule": "By fieldname",
+ "track_changes": 1,
+ "search_fields": "full_name,access_role"
+}

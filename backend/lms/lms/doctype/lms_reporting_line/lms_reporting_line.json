@@ -1,0 +1,156 @@
+{
+ "actions": [],
+ "creation": "2026-09-19 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "member",
+  "member_name",
+  "manager",
+  "manager_name",
+  "line_type",
+  "column_break_1",
+  "department",
+  "status",
+  "from_date",
+  "to_date",
+  "section_end",
+  "ended_by",
+  "end_reason"
+ ],
+ "fields": [
+  {
+   "fieldname": "member",
+   "fieldtype": "Link",
+   "label": "Member",
+   "options": "User",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "member_name",
+   "fieldtype": "Data",
+   "label": "Member Name",
+   "fetch_from": "member.full_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "manager",
+   "fieldtype": "Link",
+   "label": "Manager",
+   "options": "User",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "manager_name",
+   "fieldtype": "Data",
+   "label": "Manager Name",
+   "fetch_from": "manager.full_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "line_type",
+   "fieldtype": "Select",
+   "label": "Line Type",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "options": "Training Manager\nPerformance Manager\nFloor Manager\nLine Manager\nInstructor\nOther"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "LMS Department",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Active\nEnded",
+   "default": "Active",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "label": "From",
+   "default": "Today",
+   "reqd": 1
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "label": "To",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_end",
+   "fieldtype": "Section Break",
+   "label": "Ended"
+  },
+  {
+   "fieldname": "ended_by",
+   "fieldtype": "Link",
+   "label": "Ended By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "end_reason",
+   "fieldtype": "Small Text",
+   "label": "End Reason",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-09-19 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "LMS",
+ "name": "LMS Reporting Line",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Moderator",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "member_name",
+ "autoname": "RL-.YYYY.-.#####",
+ "naming_rule": "Expression (old style)",
+ "track_changes": 1
+}

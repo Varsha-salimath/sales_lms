@@ -104,6 +104,7 @@ setup_wizard_complete = "lms.demo.demo_data.create_demo_data"
 # after_sync is not a Frappe hook, so these never ran; after_migrate runs on every deploy.
 after_migrate = [
 	"lms.install.after_sync",
+	"lms.lms.org.seed_departments",
 	"lms.sqlite.build_index_in_background",
 ]
 
@@ -158,6 +159,7 @@ doc_events = {
 	"User": {
 		"validate": "lms.lms.user.validate_username_duplicates",
 		"before_insert": "lms.lms.user.add_lms_student_role",
+		"on_update": "lms.lms.org.on_user_update",
 	},
 	"Google Calendar": {
 		"on_update": "lms.lms.library.handle_google_account_change_hook",

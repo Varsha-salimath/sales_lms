@@ -33,7 +33,7 @@ from lms.lms.doctype.lms_enrollment.lms_enrollment import update_program_progres
 from lms.lms.md import find_macros
 
 RE_SLUG_NOTALLOWED = re.compile("[^a-z0-9]+")
-LMS_ROLES = ["Moderator", "Course Creator", "Batch Evaluator", "LMS Student"]
+LMS_ROLES = ["Moderator", "LMS Manager", "Course Creator", "Batch Evaluator", "LMS Student"]
 
 
 def get_lms_path():
