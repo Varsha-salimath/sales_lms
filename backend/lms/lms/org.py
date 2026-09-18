@@ -18,6 +18,7 @@ DEFAULT_DEPARTMENTS = [  # (name, parent, description)
 	("CS", None, "Customer success"),
 	("AcadOps", None, "Academic operations"),
 	("Delivery", None, ""),
+	("B2B IL Schools", None, "B2B sales to schools (IL Schools)"),
 ]
 
 
