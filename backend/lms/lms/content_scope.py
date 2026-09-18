@@ -66,12 +66,16 @@ def assignable_teams(user=None):
 	if access.is_super_admin(user):
 		return EVERYONE
 	own = access.get_departments(user)
-	if not own:
+	managed = [g for g in access._active_grants(user) if g.can_manage and g.scope_type == "Department" and g.department]
+	if not own and not managed:
 		return EVERYONE if access.is_admin(user) else set()
 	parents = access._department_parents()
 	teams = set()
 	for department in own:
 		teams |= access.expand_departments(department, parents)
+	# A team someone may manage (view grant with "Can Manage") is one they can add content to.
+	for g in managed:
+		teams |= access.expand_departments(g.department, parents, bool(g.include_sub_departments))
 	return teams
 
 
