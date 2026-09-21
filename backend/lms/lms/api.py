@@ -67,9 +67,16 @@ def get_user_info():
 	user.is_moderator = "Moderator" in user.roles
 	user.is_evaluator = "Batch Evaluator" in user.roles
 	user.is_manager = "LMS Manager" in user.roles
-	user.is_student = not user.is_instructor and not user.is_moderator and not user.is_evaluator and not user.is_manager
 	from lms.lms import access
 
+	user.is_training_manager = access.is_training_manager(user.name)
+	user.is_student = (
+		not user.is_instructor
+		and not user.is_moderator
+		and not user.is_evaluator
+		and not user.is_manager
+		and not user.is_training_manager
+	)
 	user.access_tier = access.get_tier_name(user.name)
 	user.is_fc_site = is_fc_site()
 	user.is_system_manager = "System Manager" in user.roles
@@ -317,6 +324,50 @@ def _ensure_analytics_access():
 	roles = set(frappe.get_roles())
 	if roles.isdisjoint({"System Manager", "Moderator", "Course Creator", "Batch Evaluator"}):
 		frappe.throw(_("You are not permitted to view analytics."), frappe.PermissionError)
+
+
+def _ensure_assessment_reset_access(member: str):
+	"""Analytics staff or a Training Manager with the learner in their TM reporting tree."""
+	if frappe.session.user == "Guest":
+		frappe.throw(_("You are not permitted to reset assessments."), frappe.PermissionError)
+
+	roles = set(frappe.get_roles())
+	if not roles.isdisjoint({"System Manager", "Moderator", "Course Creator", "Batch Evaluator"}):
+		return
+
+	from lms.lms import access
+
+	if member in access.training_manager_tree(frappe.session.user):
+		return
+	frappe.throw(_("You are not permitted to reset assessments for this learner."), frappe.PermissionError)
+
+
+def _training_manager_member_scope():
+	"""None if full analytics access; else set of User names a TM may view/act on."""
+	try:
+		_ensure_analytics_access()
+		return None
+	except frappe.PermissionError:
+		pass
+	from lms.lms import access
+
+	tree = access.training_manager_tree(frappe.session.user)
+	if not tree:
+		frappe.throw(_("You are not permitted to view analytics."), frappe.PermissionError)
+	return tree
+
+
+def _ensure_analytics_or_training_manager_member(member: str | None = None):
+	scope = _training_manager_member_scope()
+	if scope is not None and member and member not in scope:
+		frappe.throw(_("You do not have access to this learner."), frappe.PermissionError)
+	return scope
+
+
+def _ensure_tm_or_analytics_access():
+	if frappe.session.user == "Guest":
+		frappe.throw(_("You are not permitted to view this report."), frappe.PermissionError)
+	_training_manager_member_scope()
 
 
 @frappe.whitelist()
@@ -1515,7 +1566,7 @@ def get_analytics_learner_progress(
 	search: str = None,
 ):
 	"""Learner progress rows for a batch (or all course enrollments when no batches)."""
-	_ensure_analytics_access()
+	tm_scope = _training_manager_member_scope()
 
 	if _should_use_course_analytics(batch):
 		return _get_analytics_learner_progress_from_courses(
@@ -1523,6 +1574,7 @@ def get_analytics_learner_progress(
 			page=page,
 			page_length=page_length,
 			search=search,
+			tm_scope=tm_scope,
 		)
 
 	if _is_all_filter(batch):
@@ -1556,6 +1608,8 @@ def get_analytics_learner_progress(
 
 		for enrollment in members:
 			member = enrollment.get("member") if isinstance(enrollment, dict) else enrollment.member
+			if tm_scope is not None and member not in tm_scope:
+				continue
 			member_name = (
 				enrollment.get("member_name") if isinstance(enrollment, dict) else enrollment.member_name
 			)
@@ -1709,6 +1763,7 @@ def _get_analytics_learner_progress_from_courses(
 	page: int = 1,
 	page_length: int = 20,
 	search: str = None,
+	tm_scope=None,
 ):
 	"""Learner progress from LMS Enrollment when the site has no batches."""
 	page = max(cint(page) or 1, 1)
@@ -1724,6 +1779,8 @@ def _get_analytics_learner_progress_from_courses(
 	rows_by_member = {}
 	for enrollment in enrollments:
 		member = enrollment.member
+		if tm_scope is not None and member not in tm_scope:
+			continue
 		user = frappe.db.get_value(
 			"User",
 			member,
@@ -2091,6 +2148,43 @@ def _get_assessment_reset_config(assessment_type: str):
 	return configs.get(assessment_type)
 
 
+def _latest_quiz_submission(member: str, quiz: str):
+	rows = frappe.get_all(
+		"LMS Quiz Submission",
+		filters={"member": member, "quiz": quiz},
+		fields=["score", "score_out_of", "percentage"],
+		order_by="creation desc",
+		limit=1,
+	)
+	return rows[0] if rows else None
+
+
+def _log_assessment_reset(
+	member: str,
+	batch: str,
+	assessment_type: str,
+	assessment_name: str,
+	assessment_title: str,
+	previous_score: str | None = None,
+	previous_percentage=None,
+):
+	if not frappe.db.exists("DocType", "LMS Assessment Reset Log"):
+		return
+	frappe.get_doc(
+		{
+			"doctype": "LMS Assessment Reset Log",
+			"reset_by": frappe.session.user,
+			"learner": member,
+			"batch": batch,
+			"assessment_type": assessment_type,
+			"quiz": assessment_name if assessment_type == "LMS Quiz" else None,
+			"quiz_title": assessment_title,
+			"previous_score": previous_score,
+			"previous_percentage": previous_percentage,
+		}
+	).insert(ignore_permissions=True)
+
+
 def _delete_learner_assessment_submissions(member: str, assessment_type: str, assessment_name: str) -> int:
 	config = _get_assessment_reset_config(assessment_type)
 	submissions = frappe.get_all(
@@ -2113,13 +2207,33 @@ def reset_learner_assessment_attempt(
 	batch: str, member: str, assessment_type: str, assessment_name: str
 ):
 	"""Delete a learner's assessment submissions so they can attempt again."""
-	_ensure_analytics_access()
+	_ensure_assessment_reset_access(member)
 	_ensure_learner_in_batch(batch, member)
 	_ensure_assessment_on_batch(batch, assessment_type, assessment_name)
 
 	config = _get_assessment_reset_config(assessment_type)
+	previous_score = None
+	previous_percentage = None
+	if assessment_type == "LMS Quiz":
+		sub = _latest_quiz_submission(member, assessment_name)
+		if sub:
+			if sub.score is not None and sub.score_out_of:
+				previous_score = f"{cint(sub.score)}/{cint(sub.score_out_of)}"
+			previous_percentage = sub.percentage
+			if previous_percentage in (None, "") and sub.score is not None and sub.score_out_of:
+				previous_percentage = flt(sub.score) / flt(sub.score_out_of) * 100
+
 	deleted = _delete_learner_assessment_submissions(member, assessment_type, assessment_name)
 	title = frappe.db.get_value(config["doctype"], assessment_name, "title") or assessment_name
+	_log_assessment_reset(
+		member,
+		batch,
+		assessment_type,
+		assessment_name,
+		title,
+		previous_score=previous_score,
+		previous_percentage=previous_percentage,
+	)
 
 	return {
 		"deleted": deleted,
@@ -2132,6 +2246,100 @@ def reset_learner_assessment_attempt(
 
 
 @frappe.whitelist()
+def get_failed_quiz_blocked_learners(batch: str | None = None, page: int = 1, page_length: int = 50):
+	"""Learners who failed a batch quiz and remain blocked from the next lesson."""
+	from lms.lms.lesson_locking import get_ordered_lessons, is_lesson_unlocked, should_enforce_sequential_locking
+
+	tm_scope = _training_manager_member_scope()
+	from lms.lms import access
+
+	page = max(cint(page) or 1, 1)
+	page_length = min(max(cint(page_length) or 50, 1), 200)
+
+	if batch and batch != "__all__" and not frappe.db.exists("LMS Batch", batch):
+		frappe.throw(_("Batch not found"))
+
+	batch_names = [batch] if batch and batch != "__all__" else _get_all_batch_names()
+	visible = None if tm_scope is not None else access.get_visible_members()
+	results = []
+
+	for batch_name in batch_names:
+		batch_title = frappe.db.get_value("LMS Batch", batch_name, "title") or batch_name
+		members = frappe.get_all("LMS Batch Enrollment", filters={"batch": batch_name}, pluck="member")
+		courses = frappe.get_all("Batch Course", filters={"parent": batch_name}, pluck="course")
+		for member in members:
+			if tm_scope is not None:
+				if member not in tm_scope:
+					continue
+			elif visible is not access.EVERYONE and member not in visible:
+				continue
+			for row in _iter_learner_batch_assessment_rows(member, batch_name):
+				assessment = row["assessment"]
+				if assessment.assessment_type != "LMS Quiz" or not row["attempted"] or row["passed"]:
+					continue
+				quiz = assessment.assessment_name
+				quiz_title = frappe.db.get_value("LMS Quiz", quiz, "title") or quiz
+				passing = flt(frappe.db.get_value("LMS Quiz", quiz, "passing_percentage") or 0)
+				sub = _latest_quiz_submission(member, quiz)
+				score_display = "—"
+				pct = None
+				if sub:
+					if sub.score is not None and sub.score_out_of:
+						score_display = f"{cint(sub.score)}/{cint(sub.score_out_of)}"
+					pct = sub.percentage
+					if pct in (None, "") and sub.score is not None and sub.score_out_of:
+						pct = flt(sub.score) / flt(sub.score_out_of) * 100
+
+				from lms.lms.lesson_locking import get_completed_lessons
+
+				blocked = False
+				for course in courses:
+					if not should_enforce_sequential_locking(course, member):
+						continue
+					ordered = get_ordered_lessons(course)
+					completed = get_completed_lessons(course, member)
+					for idx, lesson in enumerate(ordered):
+						if lesson in completed:
+							continue
+						if idx > 0 and not is_lesson_unlocked(course, lesson, member):
+							blocked = True
+						break
+					if blocked:
+						break
+
+				if not blocked:
+					continue
+
+				user = frappe.db.get_value(
+					"User", member, ["full_name", "email"], as_dict=True
+				) or {}
+				results.append(
+					{
+						"member": member,
+						"full_name": user.get("full_name") or member,
+						"email": user.get("email") or member,
+						"batch": batch_name,
+						"batch_title": batch_title,
+						"quiz": quiz,
+						"quiz_title": quiz_title,
+						"score_display": score_display,
+						"percentage": pct,
+						"passing_percentage": passing,
+					}
+				)
+				break
+
+	start = (page - 1) * page_length
+	end = start + page_length
+	return {
+		"rows": results[start:end],
+		"total": len(results),
+		"page": page,
+		"page_length": page_length,
+	}
+
+
+@frappe.whitelist()
 def reset_learner_quiz_attempt(batch: str, member: str, quiz: str):
 	"""Delete a learner's quiz submissions so they can retake the quiz."""
 	return reset_learner_assessment_attempt(batch, member, "LMS Quiz", quiz)
@@ -2140,7 +2348,7 @@ def reset_learner_quiz_attempt(batch: str, member: str, quiz: str):
 @frappe.whitelist()
 def get_analytics_learner_detail(batch: str, member: str):
 	"""Detailed learner view for analytics instructor popup."""
-	_ensure_analytics_access()
+	_ensure_analytics_or_training_manager_member(member)
 
 	_ensure_learner_in_batch(batch, member)
 

@@ -571,7 +571,12 @@ const getSidebarItems = (forMobile = false) => {
 					to: 'LearnerReports',
 					activeFor: ['LearnerReports', 'LearnerReportCard'],
 					condition: () => {
-						return !forMobile && userResource?.data && (isAdmin() || userResource.data.is_manager)
+						const user = userResource?.data
+						return (
+							!forMobile &&
+							user &&
+							(isAdmin() || user.is_manager || user.is_training_manager)
+						)
 					},
 				},
 				{
@@ -589,16 +594,21 @@ const getSidebarItems = (forMobile = false) => {
 					to: 'AnalyticsDashboard',
 					activeFor: ['AnalyticsDashboard'],
 					condition: () => {
-						return !forMobile && userResource?.data && isAdmin()
+						const user = userResource?.data
+						return (
+							!forMobile &&
+							user &&
+							(isAdmin() || user.is_training_manager)
+						)
 					},
 				},
 				{
-					label: 'Newspaper',
+					label: 'Newsletter',
 					icon: 'Newspaper',
 					to: 'Newspaper',
 					activeFor: ['Newspaper', 'NewspaperCreate', 'NewspaperDetail'],
 					condition: () => {
-						return !forMobile && userResource?.data && isAdmin()
+						return !forMobile && userResource?.data
 					},
 				},
 				{

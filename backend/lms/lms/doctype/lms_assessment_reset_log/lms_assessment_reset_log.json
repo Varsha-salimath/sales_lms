@@ -1,0 +1,150 @@
+{
+ "actions": [],
+ "creation": "2026-09-21 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "reset_by",
+  "reset_at",
+  "column_break_1",
+  "learner",
+  "learner_name",
+  "batch",
+  "section_break_assessment",
+  "assessment_type",
+  "quiz",
+  "quiz_title",
+  "previous_score",
+  "previous_percentage"
+ ],
+ "fields": [
+  {
+   "fieldname": "reset_by",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Reset By",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "default": "Now",
+   "fieldname": "reset_at",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Reset At",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "learner",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Learner",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "learner.full_name",
+   "fieldname": "learner_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Learner Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "batch",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Batch",
+   "options": "LMS Batch"
+  },
+  {
+   "fieldname": "section_break_assessment",
+   "fieldtype": "Section Break",
+   "label": "Assessment"
+  },
+  {
+   "fieldname": "assessment_type",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Assessment Type",
+   "reqd": 1
+  },
+  {
+   "fieldname": "quiz",
+   "fieldtype": "Link",
+   "label": "Quiz",
+   "options": "LMS Quiz"
+  },
+  {
+   "fieldname": "quiz_title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Quiz Title"
+  },
+  {
+   "fieldname": "previous_score",
+   "fieldtype": "Data",
+   "label": "Previous Score"
+  },
+  {
+   "fieldname": "previous_percentage",
+   "fieldtype": "Float",
+   "label": "Previous Percentage"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-09-21 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "LMS",
+ "name": "LMS Assessment Reset Log",
+ "naming_rule": "Autoincrement",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Moderator",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Course Creator",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Batch Evaluator",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "LMS Manager"
+  }
+ ],
+ "sort_field": "reset_at",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

@@ -21,6 +21,9 @@
 				<span class="text-xs text-ink-gray-6">
 					{{ lastSyncedLabel }}
 				</span>
+				<Button variant="outline" @click="showCsvImport = true">
+					{{ __('Import CSV') }}
+				</Button>
 				<Button
 					variant="outline"
 					:loading="syncing"
@@ -410,6 +413,7 @@
 		</Dialog>
 
 		<OJTCertificationReportForm v-model="showForm" :record="editingRow" @saved="onReportSaved" />
+		<OJTAttendanceCsvImport v-model="showCsvImport" />
 	</section>
 </template>
 
@@ -426,6 +430,7 @@ import {
 import { Plus } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import OJTCertificationReportForm from '@/components/Analytics/OJTCertificationReportForm.vue'
+import OJTAttendanceCsvImport from '@/components/Analytics/OJTAttendanceCsvImport.vue'
 
 defineProps({
 	embedded: {
@@ -457,6 +462,7 @@ const selectedLearner = ref(null)
 const showForm = ref(false)
 const editingRow = ref(null)
 const syncing = ref(false)
+const showCsvImport = ref(false)
 const exporting = ref(false)
 let searchDebounce = null
 

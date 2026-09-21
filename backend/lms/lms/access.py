@@ -159,6 +159,33 @@ def _members_in_batch(batch):
 # ---------------------------------------------------------------------------
 
 
+def active_training_manager_lines():
+	"""Active reporting edges where the manager role is Training Manager."""
+	if not _ready():
+		return []
+	return [
+		(row.member, row.manager)
+		for row in frappe.get_all(
+			"LMS Reporting Line",
+			filters={"status": "Active", "line_type": "Training Manager"},
+			fields=["member", "manager"],
+		)
+	]
+
+
+def training_manager_tree(user=None) -> set:
+	"""Learners under `user` through Training Manager reporting lines only."""
+	user = _user(user)
+	return reporting_tree(user, active_training_manager_lines())
+
+
+def is_training_manager(user=None) -> bool:
+	user = _user(user)
+	if get_tier(user) >= MANAGER:
+		return True
+	return bool(training_manager_tree(user))
+
+
 def reporting_tree(root, lines) -> set:
 	"""Everyone below `root` through `lines` [(member, manager)], excluding root. Cycle-safe."""
 	children = {}

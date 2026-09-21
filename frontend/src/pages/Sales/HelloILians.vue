@@ -54,9 +54,9 @@
 						<Field :label="__('Joining date')" required :error="errors.joining_date">
 							<input v-model="v.joining_date" type="date" class="hi-input" />
 						</Field>
-						<Field :label="__('TL')" required :error="errors.team_lead">
+						<Field :label="__('Training Manager')" required :error="errors.team_lead">
 							<select v-model="v.team_lead" class="hi-input">
-								<option value="" disabled>{{ __('Pick your TL') }}</option>
+								<option value="" disabled>{{ __('Pick your Training Manager') }}</option>
 								<option v-for="t in options.team_leads" :key="t.value" :value="t.value">{{ t.label }}</option>
 							</select>
 						</Field>
@@ -204,7 +204,7 @@ const REQUIRED = {
 	phone: __('Enter your contact number'),
 	alternate_phone: __('Enter an alternate number'),
 	joining_date: __('Pick your joining date'),
-	team_lead: __('Pick your TL'),
+	team_lead: __('Pick your Training Manager'),
 	ac_name: __('Enter your AC’s name'),
 	ac_email: __('Enter your AC’s email'),
 	home_state: __('Pick your home state'),

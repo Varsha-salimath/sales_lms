@@ -13,6 +13,7 @@ from frappe import _
 from frappe.utils import cint, flt, getdate
 
 from lms.lms import access
+from lms.lms.library import get_batch_code
 from lms.lms.ojt_certification import DOCTYPE
 
 # OJT sheet rows are Sales CRT trainees; until they have LMS accounts they belong to this team.
@@ -273,7 +274,114 @@ def batch_insights(rows, stats):
 # ---------------------------------------------------------------------------
 
 
-def _rows(batch_start=None, location=None, training_manager=None, search=None):
+def _batch_code_index():
+	"""Map batch code (from LMS Batch title) -> list of LMS Batch names."""
+	mapping = {}
+	for batch in frappe.get_all("LMS Batch", fields=["name", "title"]):
+		code = get_batch_code(batch.title)
+		if code:
+			mapping.setdefault(code, []).append(batch.name)
+	return mapping
+
+
+def _emails_for_batch_code(batch_code: str) -> set[str]:
+	batch_names = _batch_code_index().get(batch_code, [])
+	if not batch_names:
+		return set()
+	members = frappe.get_all(
+		"LMS Batch Enrollment",
+		filters={"batch": ["in", batch_names]},
+		pluck="member",
+	)
+	if not members:
+		return set()
+	emails = set()
+	for user in frappe.get_all(
+		"User",
+		filters={"name": ["in", members], "enabled": 1},
+		fields=["name", "email"],
+	):
+		if user.email:
+			emails.add(user.email.lower())
+		emails.add(user.name.lower())
+	return emails
+
+
+def _learner_emails_for_training_manager(training_manager: str) -> set[str]:
+	"""OJT sheet TM email plus learners under this user as Training Manager."""
+	emails = {
+		(row.email or "").lower()
+		for row in frappe.get_all(
+			DOCTYPE,
+			filters={"training_manager": training_manager},
+			fields=["email"],
+		)
+		if row.email
+	}
+	tm_user = frappe.db.get_value("User", {"email": training_manager}, "name")
+	if not tm_user and frappe.db.exists("User", training_manager):
+		tm_user = training_manager
+	if tm_user:
+		for member in access.training_manager_tree(tm_user):
+			user = frappe.db.get_value("User", member, ["email", "name"], as_dict=True)
+			if not user:
+				continue
+			if user.email:
+				emails.add(user.email.lower())
+			emails.add(user.name.lower())
+	return emails
+
+
+def _ojt_batch_start_codes(training_manager: str | None) -> list[str]:
+	"""Distinct OJT sheet batch_start values (CRT rows often have no LMS Batch enrollment)."""
+	filters = {}
+	if training_manager and training_manager != "__all__":
+		filters["training_manager"] = training_manager
+	starts = frappe.get_all(
+		DOCTYPE,
+		filters=filters,
+		fields=["batch_start"],
+		distinct=True,
+		order_by="batch_start desc",
+	)
+	return sorted({str(row.batch_start) for row in starts if row.batch_start})
+
+
+def _batch_codes_for_training_manager(training_manager: str | None) -> list[str]:
+	code_map = _batch_code_index()
+	ojt_codes = set(_ojt_batch_start_codes(training_manager))
+	if not training_manager or training_manager == "__all__":
+		return sorted(set(code_map.keys()) | ojt_codes)
+	learner_emails = _learner_emails_for_training_manager(training_manager)
+	lms_codes = set()
+	if learner_emails:
+		for code, batch_names in code_map.items():
+			members = frappe.get_all(
+				"LMS Batch Enrollment",
+				filters={"batch": ["in", batch_names]},
+				pluck="member",
+			)
+			if not members:
+				continue
+			for user in frappe.get_all(
+				"User",
+				filters={"name": ["in", members]},
+				fields=["email", "name"],
+			):
+				email = (user.email or user.name or "").lower()
+				if email in learner_emails:
+					lms_codes.add(code)
+					break
+	return sorted(lms_codes | ojt_codes)
+
+
+def _rows(
+	batch_start=None,
+	batch_code=None,
+	location=None,
+	training_manager=None,
+	search=None,
+):
 	filters = {}
 	if batch_start and batch_start != "__all__":
 		filters["batch_start"] = getdate(batch_start)
@@ -285,7 +393,7 @@ def _rows(batch_start=None, location=None, training_manager=None, search=None):
 	if search:
 		term = f"%{search.strip()}%"
 		or_filters = {"employee_name": ["like", term], "email": ["like", term]}
-	return [
+	rows = [
 		enrich(r)
 		for r in frappe.get_all(
 			DOCTYPE,
@@ -296,6 +404,20 @@ def _rows(batch_start=None, location=None, training_manager=None, search=None):
 			limit_page_length=0,
 		)
 	]
+	if batch_code and batch_code != "__all__":
+		allowed = _emails_for_batch_code(batch_code)
+		if allowed:
+			rows = [r for r in rows if (r.email or "").lower() in allowed]
+		else:
+			try:
+				target = getdate(batch_code)
+			except Exception:
+				target = None
+			if target:
+				rows = [r for r in rows if r.batch_start and getdate(r.batch_start) == target]
+			else:
+				rows = []
+	return rows
 
 
 def _options(field):
@@ -309,12 +431,13 @@ def _options(field):
 @frappe.whitelist()
 def get_combined_report(
 	batch_start: str | None = None,
+	batch_code: str | None = None,
 	location: str | None = None,
 	training_manager: str | None = None,
 	search: str | None = None,
 ):
 	_ensure_report_access()
-	rows = _scoped(_rows(batch_start, location, training_manager, search))
+	rows = _scoped(_rows(batch_start, batch_code, location, training_manager, search))
 	stats = cohort_stats(rows)
 	bands = {key: 0 for _m, key, _l in BANDS}
 	for r in rows:
@@ -330,7 +453,7 @@ def get_combined_report(
 		"insights": batch_insights(rows, stats),
 		"metrics": [{"key": k, "label": _(l), "group": g, "max": SCALES[k]} for k, l, g in METRICS],
 		"options": {
-			"batch_start": [str(v) for v in _options("batch_start")],
+			"batch_code": _batch_codes_for_training_manager(training_manager),
 			"location": sorted(_options("location")),
 			"training_manager": sorted(_options("training_manager")),
 		},

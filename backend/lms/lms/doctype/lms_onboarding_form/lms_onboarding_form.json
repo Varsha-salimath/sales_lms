@@ -94,7 +94,7 @@
   {
    "fieldname": "team_lead",
    "fieldtype": "Select",
-   "label": "TL",
+   "label": "Training Manager",
    "options": "\nanteryami.panda@infinitylearn.com\numang.kumar@infinitylearn.com\nshashi.suman@infinitylearn.com\nritik.anand@infinitylearn.com\nratnesh.mishra@infinitylearn.com\nyakub.pasha@infinitylearn.com\nsoheb.murshed@infinitylearn.com\nprem.gupta@infinitylearn.com",
    "reqd": 1,
    "in_standard_filter": 1

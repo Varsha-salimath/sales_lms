@@ -4,17 +4,25 @@
 			<div class="mb-4 flex flex-wrap items-start justify-between gap-3">
 				<div class="min-w-0">
 					<h1 class="text-2xl font-semibold text-ink-gray-9">
-						{{ __('Newspaper') }}
+						{{ __('Newsletter') }}
 					</h1>
 					<p class="mt-1 text-sm text-ink-gray-6">
-						{{ __('Share important updates with your LMS learners.') }}
+						{{
+							isAdmin
+								? __('Share important updates with your LMS learners.')
+								: __('Published updates from your training team.')
+						}}
 					</p>
 				</div>
-				<Button variant="solid" @click="router.push({ name: 'NewspaperCreate' })">
+				<Button
+					v-if="isAdmin"
+					variant="solid"
+					@click="router.push({ name: 'NewspaperCreate' })"
+				>
 					<template #prefix>
 						<Plus class="h-4 w-4" />
 					</template>
-					{{ __('Add Newspaper') }}
+					{{ __('Add Newsletter') }}
 				</Button>
 			</div>
 
@@ -28,14 +36,19 @@
 			>
 				<Newspaper class="mx-auto mb-3 h-10 w-10 text-ink-gray-5" />
 				<p class="text-sm text-ink-gray-6">
-					{{ __('No newspaper updates have been sent yet.') }}
+					{{
+						isAdmin
+							? __('No newsletter updates have been sent yet.')
+							: __('No newsletters have been published yet.')
+					}}
 				</p>
 				<Button
+					v-if="isAdmin"
 					class="mt-4"
 					variant="solid"
 					@click="router.push({ name: 'NewspaperCreate' })"
 				>
-					{{ __('Add Newspaper') }}
+					{{ __('Add Newsletter') }}
 				</Button>
 			</div>
 
@@ -73,7 +86,7 @@
 								{{ item.content_preview }}
 							</p>
 							<div class="mt-4 grid gap-1 text-sm text-ink-gray-6 sm:grid-cols-2">
-								<div>
+								<div v-if="isAdmin">
 									<span class="font-medium text-ink-gray-7"
 										>{{ __('Sent to') }}:</span
 									>
@@ -85,13 +98,13 @@
 									>
 									{{ formatDateTime(item.published_at) }}
 								</div>
-								<div>
+								<div v-if="isAdmin">
 									<span class="font-medium text-ink-gray-7"
 										>{{ __('Recipients') }}:</span
 									>
 									{{ item.recipient_count }}
 								</div>
-								<div>
+								<div v-if="isAdmin">
 									<span class="font-medium text-ink-gray-7"
 										>{{ __('Status') }}:</span
 									>
@@ -108,7 +121,7 @@
 									</span>
 								</div>
 							</div>
-							<div class="mt-4">
+							<div class="mt-4 flex flex-wrap gap-2">
 								<Button
 									variant="outline"
 									@click="
@@ -120,6 +133,15 @@
 								>
 									{{ __('View') }}
 								</Button>
+								<Button
+									v-if="isAdmin"
+									variant="outline"
+									theme="red"
+									:loading="deleting === item.name"
+									@click="confirmDelete(item)"
+								>
+									{{ __('Delete') }}
+								</Button>
 							</div>
 						</div>
 					</div>
@@ -130,8 +152,8 @@
 </template>
 
 <script setup>
-import { Button, createResource, usePageMeta } from 'frappe-ui'
-import { watchEffect } from 'vue'
+import { Button, call, createResource, toast, usePageMeta } from 'frappe-ui'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Newspaper, Plus } from 'lucide-vue-next'
 import { sessionStore } from '@/stores/session'
@@ -140,20 +162,49 @@ import { usersStore } from '@/stores/user'
 const router = useRouter()
 const { brand } = sessionStore()
 const { userResource } = usersStore()
-
-watchEffect(() => {
-	if (userResource.data?.is_student) {
-		router.replace({ name: 'StudentDashboard' })
-	}
+const isAdmin = computed(() => {
+	const user = userResource.data
+	return !!(
+		user?.is_moderator ||
+		user?.is_instructor ||
+		user?.is_evaluator ||
+		user?.is_system_manager
+	)
 })
+
+const deleting = ref(null)
 
 const newspapers = createResource({
 	url: 'lms.lms.newspaper.get_newspapers',
 	auto: true,
 })
 
+const confirmDelete = (item) => {
+	if (
+		!window.confirm(
+			__('Delete this newsletter permanently? Comments will also be removed.')
+		)
+	) {
+		return
+	}
+	deleteNewsletter(item.name)
+}
+
+const deleteNewsletter = async (name) => {
+	deleting.value = name
+	try {
+		await call('lms.lms.newspaper.delete_newspaper', { name })
+		toast.success(__('Newsletter deleted'))
+		newspapers.reload()
+	} catch (err) {
+		toast.error(err.messages?.[0] || err.message || __('Could not delete newsletter'))
+	} finally {
+		deleting.value = null
+	}
+}
+
 usePageMeta(() => ({
-	title: __('Newspaper'),
+	title: __('Newsletter'),
 	icon: brand.favicon,
 }))
 

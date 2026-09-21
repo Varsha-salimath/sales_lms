@@ -106,7 +106,7 @@ def submit_form(values: dict | str):
 	if data["edtech_experience"] == "Yes" and not data.get("last_edtech_company"):
 		frappe.throw(_("Please enter your last EdTech company."))
 	if data["team_lead"] not in TEAM_LEADS:
-		frappe.throw(_("Pick your TL from the list."))
+		frappe.throw(_("Pick your Training Manager from the list."))
 	if not frappe.utils.validate_email_address(data["ac_email"]):
 		frappe.throw(_("Enter a valid AC email."))
 

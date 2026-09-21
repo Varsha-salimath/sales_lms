@@ -25,10 +25,17 @@
 			</div>
 			<div class="cr-filters">
 				<label class="cr-select">
-					<span>{{ __('Batch') }}</span>
-					<select v-model="filters.batch_start">
-						<option value="__all__">{{ __('All batches') }}</option>
-						<option v-for="b in options.batch_start" :key="b" :value="b">{{ fmtDate(b) }}</option>
+					<span>{{ __('Training manager') }}</span>
+					<select v-model="filters.training_manager">
+						<option value="__all__">{{ __('All managers') }}</option>
+						<option v-for="m in options.training_manager" :key="m" :value="m">{{ managerName(m) }}</option>
+					</select>
+				</label>
+				<label class="cr-select">
+					<span>{{ __('Batch code') }}</span>
+					<select v-model="filters.batch_code">
+						<option value="__all__">{{ __('All batch codes') }}</option>
+						<option v-for="code in options.batch_code" :key="code" :value="code">{{ code }}</option>
 					</select>
 				</label>
 				<label class="cr-select">
@@ -36,13 +43,6 @@
 					<select v-model="filters.location">
 						<option value="__all__">{{ __('All locations') }}</option>
 						<option v-for="l in options.location" :key="l" :value="l">{{ l }}</option>
-					</select>
-				</label>
-				<label class="cr-select">
-					<span>{{ __('Training manager') }}</span>
-					<select v-model="filters.training_manager">
-						<option value="__all__">{{ __('All managers') }}</option>
-						<option v-for="m in options.training_manager" :key="m" :value="m">{{ managerName(m) }}</option>
 					</select>
 				</label>
 				<label class="cr-search">
@@ -400,7 +400,11 @@ import {
 const TEST_KEYS = ['target_exam', 'cbse', 'test_prep', 'lsq', 'math_champ']
 
 const router = useRouter()
-const filters = reactive({ batch_start: '__all__', location: '__all__', training_manager: '__all__' })
+const filters = reactive({
+	batch_code: '__all__',
+	location: '__all__',
+	training_manager: '__all__',
+})
 const search = ref('')
 const bandFilter = ref(null)
 const sort = reactive({ key: 'readiness', dir: 'desc' })
@@ -418,9 +422,17 @@ const report = createResource({
 	makeParams: () => ({ ...filters }),
 	auto: true,
 })
+watch(
+	() => filters.training_manager,
+	() => {
+		filters.batch_code = '__all__'
+	}
+)
 watch(filters, () => report.reload())
 
-const options = computed(() => report.data?.options || { batch_start: [], location: [], training_manager: [] })
+const options = computed(
+	() => report.data?.options || { batch_code: [], location: [], training_manager: [] }
+)
 const stats = computed(() => report.data?.stats || {})
 const rows = computed(() => {
 	const term = search.value.trim().toLowerCase()

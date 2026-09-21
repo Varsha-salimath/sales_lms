@@ -301,6 +301,11 @@
 					</p>
 				</div>
 
+			<FailedQuizBlockedLearners
+				class="mb-4"
+				:batches="chartFilters.data?.batches || []"
+			/>
+
 			<div class="border rounded-lg bg-surface-white p-4 overflow-hidden min-w-0">
 				<div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-4 min-w-0">
 					<div class="flex flex-wrap items-center gap-2 sm:ml-auto w-full sm:w-auto">
@@ -647,6 +652,7 @@ import {
 	usePageMeta,
 } from 'frappe-ui'
 import AnalyticsSectionNav from '@/components/Analytics/AnalyticsSectionNav.vue'
+import FailedQuizBlockedLearners from '@/components/Analytics/FailedQuizBlockedLearners.vue'
 import OJTCertificationAnalytics from '@/components/Analytics/OJTCertificationAnalytics.vue'
 import LearnerProgressDetailModal from '@/components/Modals/LearnerProgressDetailModal.vue'
 import ProgressBar from '@/components/ProgressBar.vue'

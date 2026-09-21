@@ -920,3 +920,146 @@ def _fmt_number(value):
 	if value is None:
 		return 0
 	return round(flt(value), 1)
+
+
+ATTENDANCE_CSV_FIELDS = (
+	"email",
+	"batch_start",
+	"attendance_days",
+	"dc",
+	"cc",
+	"talk_time",
+	"booked",
+	"catered",
+)
+
+
+def _parse_attendance_csv_rows(text: str) -> list[dict]:
+	sample = text.lstrip("\ufeff")
+	reader = csv.reader(io.StringIO(sample))
+	rows = [row for row in reader]
+	if not rows:
+		return []
+	header = [_normalize_header(cell) for cell in rows[0]]
+	alias = {
+		"email": "email",
+		"batch start": "batch_start",
+		"batch_start": "batch_start",
+		"attendance days": "attendance_days",
+		"attendance_days": "attendance_days",
+		"dc": "dc",
+		"cc": "cc",
+		"talk time": "talk_time",
+		"talk_time": "talk_time",
+		"booked": "booked",
+		"catered": "catered",
+	}
+	field_indexes = {}
+	for idx, label in enumerate(header):
+		field = alias.get(label)
+		if field:
+			field_indexes[field] = idx
+	required = {"email", "batch_start"}
+	if not required.issubset(field_indexes.keys()):
+		frappe.throw(
+			_("CSV must include columns: email, batch_start, attendance_days, dc, cc, talk_time, booked, catered.")
+		)
+	parsed = []
+	for raw in rows[1:]:
+		if not any(str(cell).strip() for cell in raw):
+			continue
+		item = {}
+		for field, index in field_indexes.items():
+			value = raw[index].strip() if index < len(raw) and raw[index] is not None else ""
+			item[field] = _coerce_field(field, value) if value != "" else None
+		email = (item.get("email") or "").strip().lower()
+		if not email or not item.get("batch_start"):
+			continue
+		item["email"] = email
+		item["row_key"] = make_row_key(email, item.get("batch_start"))
+		parsed.append(item)
+	return parsed
+
+
+def _validate_attendance_import_rows(rows: list[dict]) -> dict:
+	errors = []
+	warnings = []
+	seen = {}
+	preview = []
+	for line_no, row in enumerate(rows, start=2):
+		row_errors = []
+		email = row.get("email")
+		if not email:
+			row_errors.append(_("Email is required."))
+		if not row.get("batch_start"):
+			row_errors.append(_("batch_start is required."))
+		key = row.get("row_key")
+		if key in seen:
+			warnings.append(
+				_("Row {0}: duplicate email + batch_start; row {1} will be replaced by this row.").format(
+					line_no, seen[key]
+				)
+			)
+		seen[key] = line_no
+		if not frappe.db.exists(DOCTYPE, {"row_key": key}):
+			row_errors.append(_("No OJT Certification Metric row found for this email and batch_start."))
+		if row_errors:
+			errors.append({"row": line_no, "email": email, "messages": row_errors})
+		else:
+			preview.append(
+				{
+					"row": line_no,
+					"email": email,
+					"batch_start": str(row.get("batch_start")),
+					"attendance_days": row.get("attendance_days"),
+					"dc": row.get("dc"),
+					"cc": row.get("cc"),
+					"talk_time": row.get("talk_time"),
+					"booked": row.get("booked"),
+					"catered": row.get("catered"),
+				}
+			)
+	return {"errors": errors, "warnings": warnings, "preview": preview, "valid_count": len(preview)}
+
+
+@frappe.whitelist()
+def preview_attendance_metrics_csv(file_content: str):
+	_ensure_analytics_access()
+	rows = _parse_attendance_csv_rows(file_content or "")
+	if not rows:
+		frappe.throw(_("No data rows found in the CSV."))
+	result = _validate_attendance_import_rows(rows)
+	result["total_rows"] = len(rows)
+	return result
+
+
+@frappe.whitelist()
+def import_attendance_metrics_csv(file_content: str):
+	_ensure_analytics_access()
+	rows = _parse_attendance_csv_rows(file_content or "")
+	if not rows:
+		frappe.throw(_("No data rows found in the CSV."))
+	validation = _validate_attendance_import_rows(rows)
+	if validation["errors"]:
+		frappe.throw(_("Fix CSV errors before import."))
+
+	by_key = {}
+	for row in rows:
+		by_key[row["row_key"]] = row
+
+	updated = 0
+	for row_key, row in by_key.items():
+		name = frappe.db.get_value(DOCTYPE, {"row_key": row_key})
+		if not name:
+			continue
+		doc = frappe.get_doc(DOCTYPE, name)
+		for field in ATTENDANCE_CSV_FIELDS:
+			if field in ("email", "batch_start"):
+				continue
+			if field in row and row[field] is not None:
+				doc.set(field, row[field])
+		doc.save(ignore_permissions=True)
+		updated += 1
+
+	frappe.db.commit()
+	return {"updated": updated, "warnings": validation["warnings"]}

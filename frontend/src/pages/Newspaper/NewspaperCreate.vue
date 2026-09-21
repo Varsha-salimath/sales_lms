@@ -8,7 +8,7 @@
 
 		<div class="mx-auto max-w-6xl p-5">
 			<h1 class="mb-6 text-2xl font-semibold text-ink-gray-9">
-				{{ __('Create Newspaper') }}
+				{{ __('Create Newsletter') }}
 			</h1>
 
 			<div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
@@ -18,6 +18,18 @@
 						v-model="form.title"
 						type="text"
 						:required="true"
+					/>
+
+					<FormControl
+						:label="__('Reply-To email')"
+						type="email"
+						v-model="form.replyTo"
+						:required="true"
+						:description="
+							__(
+								'Learners can reply to this address. The newsletter is sent to everyone in the selected audience.'
+							)
+						"
 					/>
 
 					<div>
@@ -133,7 +145,7 @@
 							{{ __('Cancel') }}
 						</Button>
 						<Button variant="solid" :loading="sending" @click="openConfirm">
-							{{ __('Send Newspaper') }}
+							{{ __('Send Newsletter') }}
 						</Button>
 					</div>
 				</div>
@@ -148,7 +160,7 @@
 						</div>
 						<div class="p-5">
 							<h3 class="text-xl font-semibold text-ink-gray-9">
-								{{ form.title || __('Newspaper Title') }}
+								{{ form.title || __('Newsletter Title') }}
 							</h3>
 							<img
 								v-if="form.image"
@@ -191,7 +203,7 @@
 			<template #body-content>
 				<p class="text-sm text-ink-gray-7">
 					{{
-						__('Send this newspaper to {0} learners?', [
+						__('Send this newsletter to {0} learners?', [
 							String(recipientCount.data?.count ?? 0),
 						])
 					}}
@@ -214,7 +226,7 @@ import {
 	toast,
 	usePageMeta,
 } from 'frappe-ui'
-import { computed, reactive, ref, watch, watchEffect } from 'vue'
+import { computed, inject, reactive, ref, watch, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import { sessionStore } from '@/stores/session'
 import { usersStore } from '@/stores/user'
@@ -223,6 +235,26 @@ import { validateFile } from '@/utils'
 const router = useRouter()
 const { brand } = sessionStore()
 const { userResource } = usersStore()
+const user = inject('$user')
+
+const form = reactive({
+	title: '',
+	content: '',
+	image: '',
+	target_type: 'All Learners',
+	selectedBatches: [],
+	replyTo: '',
+})
+
+watch(
+	() => user?.data?.email,
+	(email) => {
+		if (email && !form.replyTo) {
+			form.replyTo = email
+		}
+	},
+	{ immediate: true }
+)
 
 watchEffect(() => {
 	if (userResource.data?.is_student) {
@@ -231,17 +263,9 @@ watchEffect(() => {
 })
 
 const breadcrumbs = computed(() => [
-	{ label: __('Newspaper'), route: { name: 'Newspaper' } },
+	{ label: __('Newsletter'), route: { name: 'Newspaper' } },
 	{ label: __('Create'), route: { name: 'NewspaperCreate' } },
 ])
-
-const form = reactive({
-	title: '',
-	content: '',
-	image: '',
-	target_type: 'All Learners',
-	selectedBatches: [],
-})
 
 const showConfirm = ref(false)
 const sending = ref(false)
@@ -323,6 +347,10 @@ const openConfirm = () => {
 		toast.error(__('No eligible learners found for the selected audience.'))
 		return
 	}
+	if (!form.replyTo.trim()) {
+		toast.error(__('Reply-To email is required'))
+		return
+	}
 	showConfirm.value = true
 }
 
@@ -337,24 +365,25 @@ const confirmSend = async (close) => {
 				form.target_type === 'Selected Batch' ? form.selectedBatches : []
 			),
 			image: form.image || null,
+			reply_to: form.replyTo.trim(),
 		})
 		close()
 		toast.success(
 			__(
-				'Newspaper sent successfully. {0} learners were notified.',
+				'Newsletter sent successfully. {0} learners were notified.',
 				[String(result.recipient_count || 0)]
 			)
 		)
 		router.push({ name: 'Newspaper' })
 	} catch (err) {
-		toast.error(err.messages?.[0] || err.message || __('Failed to send newspaper'))
+		toast.error(err.messages?.[0] || err.message || __('Failed to send newsletter'))
 	} finally {
 		sending.value = false
 	}
 }
 
 usePageMeta(() => ({
-	title: __('Create Newspaper'),
+	title: __('Create Newsletter'),
 	icon: brand.favicon,
 }))
 </script>

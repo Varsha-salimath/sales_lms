@@ -66,7 +66,6 @@ import { usersStore } from '@/stores/user'
 import { useSettings } from '@/stores/settings'
 import { markRaw, watch, ref, onMounted, computed } from 'vue'
 import { createDialog } from '@/utils/dialogs'
-import Apps from '@/components/Sidebar/Apps.vue'
 import Configuration from '@/components/Sidebar/Configuration.vue'
 import SettingsModal from '@/components/Settings/Settings.vue'
 import defaultLogo from '@/assets/il-logo-white.svg'
@@ -146,10 +145,6 @@ const userDropdownOptions = computed(() => {
 					onClick: () => {
 						window.location.href = '/desk'
 					},
-					condition: () => canOpenDesk(),
-				},
-				{
-					component: markRaw(Apps),
 					condition: () => canOpenDesk(),
 				},
 				{

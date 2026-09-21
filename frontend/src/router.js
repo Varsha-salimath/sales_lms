@@ -209,6 +209,10 @@ const routes = [
 		component: () => import('@/pages/Sales/HelloILians.vue'),
 	},
 	{
+		path: '/newsletter',
+		redirect: { name: 'Newspaper' },
+	},
+	{
 		path: '/newspaper',
 		name: 'Newspaper',
 		component: () => import('@/pages/Newspaper/Newspaper.vue'),
@@ -485,7 +489,9 @@ router.beforeEach(async (to, from, next) => {
 			u?.is_instructor ||
 			u?.is_evaluator ||
 			u?.is_system_manager ||
-			// Managers (e.g. Training Managers) get learner reports, scoped server-side.
+			// Training Managers: reports + learner progress / quiz tools on Analytics.
+			(u?.is_training_manager &&
+				['LearnerReports', 'LearnerReportCard', 'AnalyticsDashboard'].includes(to.name)) ||
 			(u?.is_manager && ['LearnerReports', 'LearnerReportCard'].includes(to.name))
 		if (!staff) {
 			return next({ name: 'StudentDashboard' })
