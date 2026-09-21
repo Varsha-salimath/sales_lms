@@ -1,0 +1,11 @@
+<h1 class="email-header-title" style="font-family:Poppins, Arial, Helvetica, sans-serif; font-size:22px; font-weight:600; color:#080E14; margin:0 0 8px 0;">{{ title | e }}</h1>
+<p style="margin:0 0 16px 0;">
+	{{ _("Hello") }} {{ first_name | e }},
+</p>
+{{ content | safe }}
+<p style="margin:24px 0 20px 0;">
+	<a href="{{ link }}" rel="nofollow" class="btn btn-primary" style="display:inline-block; text-decoration:none; font-family:Poppins, Arial, Helvetica, sans-serif; font-size:15px; font-weight:500; padding:14px 32px; border-radius:100px; background-color:#027BFF; color:#FFFFFF;">{{ _("View newsletter") }}</a>
+</p>
+<p class="text-muted text-small" style="color:#6C6E72; font-size:13px; margin:0;">
+	{{ _("Or copy and paste this link:") }} <a href="{{ link }}" style="color:#0062CC; word-break:break-all;">{{ link }}</a>
+</p>

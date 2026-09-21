@@ -205,27 +205,38 @@ def strip_legacy_lms_prefix():
 	return None
 
 
+def _is_desk_path(path: str) -> bool:
+	path = (path or "").split("?", 1)[0].rstrip("/") or "/"
+	return path in ("/app", "/desk") or path.startswith("/app/") or path.startswith("/desk/")
+
+
 def block_desk_portal_routes():
-	"""Send guests away from Frappe Desk; logged-in users may open Desk via Apps."""
+	"""Keep Frappe Desk (/app, /desk) for configured admins only.
+
+	Desk routes bypass the website path resolver, so LMS users otherwise see
+	Frappe's generic "Not Permitted" page. Send everyone else to the SPA.
+	"""
 	request = getattr(frappe.local, "request", None)
 	if not request or request.method not in ("GET", "HEAD"):
 		return
 
 	path = (request.path or "").split("?", 1)[0].rstrip("/") or "/"
-	if path not in ("/app", "/desk") and not path.startswith("/app/") and not path.startswith("/desk/"):
+	if not _is_desk_path(path):
 		return
-
-	if frappe.session.user != "Guest":
-		return
-
-	target = "/login"
-	query = _query_suffix(request)
-	if query:
-		target = f"{target}{query}"
 
 	from werkzeug.utils import redirect
 
-	return redirect(target, code=302)
+	query = _query_suffix(request)
+
+	if frappe.session.user == "Guest":
+		target = "/login" + query
+		return redirect(target, code=302)
+
+	target = desk_redirect(path.lstrip("/"))
+	if target:
+		return redirect(target + query, code=302)
+
+	return None
 
 
 # Before login the only screens are sign-in and set-password; every other page bounces to /login.
@@ -309,6 +320,10 @@ def resolve_sales_lms_path(path):
 		target = desk_redirect(path)
 		if target:
 			raise_page_redirect(target)
+
+		bare_login = (path or "").strip("/").split("/")[0]
+		if bare_login == "login" and frappe.session.user != "Guest":
+			raise_page_redirect(login_redirect_from_request())
 
 	reserved = _reserved_www_path(path)
 	if reserved:

@@ -20,17 +20,20 @@
 						:required="true"
 					/>
 
-					<FormControl
-						:label="__('Reply-To email')"
-						type="email"
-						v-model="form.replyTo"
-						:required="true"
-						:description="
-							__(
-								'Learners can reply to this address. The newsletter is sent to everyone in the selected audience.'
-							)
-						"
-					/>
+					<div
+						v-if="limits.data?.outgoing_sender"
+						class="rounded-lg border border-outline-gray-2 bg-surface-gray-2 px-3 py-2 text-sm text-ink-gray-7"
+					>
+						{{ __('Sent from') }}:
+						<span class="font-medium">{{ limits.data.outgoing_sender }}</span>
+						<p class="mt-1 text-xs text-ink-gray-5">
+							{{
+								__(
+									'Same outgoing address and email layout as the welcome / registration message.'
+								)
+							}}
+						</p>
+					</div>
 
 					<div>
 						<div class="mb-2 text-sm text-ink-gray-5">{{ __('Image') }}</div>
@@ -111,6 +114,28 @@
 								/>
 								{{ __('Select Batch') }}
 							</label>
+							<label class="flex items-center gap-2 text-sm">
+								<input
+									type="radio"
+									value="Selected Members"
+									v-model="form.target_type"
+								/>
+								{{ __('Select Members') }}
+							</label>
+						</div>
+
+						<div
+							v-if="form.target_type === 'Selected Members'"
+							class="mt-3"
+						>
+							<MultiSelect
+								v-model="form.selectedMembers"
+								doctype="User"
+								:label="__('Learners')"
+								:required="true"
+								url="lms.lms.api.search_users_by_role"
+								:searchParams="{ roles: JSON.stringify(['LMS Student']) }"
+							/>
 						</div>
 
 						<div
@@ -226,16 +251,16 @@ import {
 	toast,
 	usePageMeta,
 } from 'frappe-ui'
-import { computed, inject, reactive, ref, watch, watchEffect } from 'vue'
+import { computed, reactive, ref, watch, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import { sessionStore } from '@/stores/session'
 import { usersStore } from '@/stores/user'
 import { validateFile } from '@/utils'
+import MultiSelect from '@/components/Controls/MultiSelect.vue'
 
 const router = useRouter()
 const { brand } = sessionStore()
 const { userResource } = usersStore()
-const user = inject('$user')
 
 const form = reactive({
 	title: '',
@@ -243,18 +268,8 @@ const form = reactive({
 	image: '',
 	target_type: 'All Learners',
 	selectedBatches: [],
-	replyTo: '',
+	selectedMembers: [],
 })
-
-watch(
-	() => user?.data?.email,
-	(email) => {
-		if (email && !form.replyTo) {
-			form.replyTo = email
-		}
-	},
-	{ immediate: true }
-)
 
 watchEffect(() => {
 	if (userResource.data?.is_student) {
@@ -289,12 +304,20 @@ const recipientCount = createResource({
 				form.target_type === 'Selected Batch'
 					? JSON.stringify(form.selectedBatches)
 					: JSON.stringify([]),
+			members:
+				form.target_type === 'Selected Members'
+					? JSON.stringify(form.selectedMembers)
+					: JSON.stringify([]),
 		}
 	},
 })
 
 watch(
-	() => [form.target_type, form.selectedBatches.slice()],
+	() => [
+		form.target_type,
+		form.selectedBatches.slice(),
+		form.selectedMembers.slice(),
+	],
 	() => recipientCount.reload(),
 	{ deep: true, immediate: true }
 )
@@ -307,6 +330,11 @@ const plainLength = computed(() => {
 
 const previewTargetLabel = computed(() => {
 	if (form.target_type === 'All Learners') return __('All Learners')
+	if (form.target_type === 'Selected Members') {
+		return form.selectedMembers.length
+			? form.selectedMembers.join(', ')
+			: __('Select Members')
+	}
 	const selected = (batches.data || []).filter((b) =>
 		form.selectedBatches.includes(b.name)
 	)
@@ -343,12 +371,15 @@ const openConfirm = () => {
 		toast.error(__('Select at least one batch'))
 		return
 	}
-	if (!recipientCount.data?.count) {
-		toast.error(__('No eligible learners found for the selected audience.'))
+	if (
+		form.target_type === 'Selected Members' &&
+		!form.selectedMembers.length
+	) {
+		toast.error(__('Select at least one member'))
 		return
 	}
-	if (!form.replyTo.trim()) {
-		toast.error(__('Reply-To email is required'))
+	if (!recipientCount.data?.count) {
+		toast.error(__('No eligible learners found for the selected audience.'))
 		return
 	}
 	showConfirm.value = true
@@ -364,8 +395,10 @@ const confirmSend = async (close) => {
 			batches: JSON.stringify(
 				form.target_type === 'Selected Batch' ? form.selectedBatches : []
 			),
+			members: JSON.stringify(
+				form.target_type === 'Selected Members' ? form.selectedMembers : []
+			),
 			image: form.image || null,
-			reply_to: form.replyTo.trim(),
 		})
 		close()
 		toast.success(

@@ -11,6 +11,7 @@
   "column_break_audience",
   "target_type",
   "batches",
+  "members",
   "recipient_count",
   "section_break_status",
   "status",
@@ -49,7 +50,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Target Type",
-   "options": "All Learners\nSelected Batch",
+   "options": "All Learners\nSelected Batch\nSelected Members",
    "reqd": 1
   },
   {
@@ -58,6 +59,13 @@
    "fieldtype": "Table",
    "label": "Batches",
    "options": "Sales Newspaper Batch"
+  },
+  {
+   "depends_on": "eval:doc.target_type=='Selected Members'",
+   "fieldname": "members",
+   "fieldtype": "Table",
+   "label": "Members",
+   "options": "Sales Newspaper Member"
   },
   {
    "fieldname": "recipient_count",

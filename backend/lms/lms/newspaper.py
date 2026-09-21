@@ -12,12 +12,10 @@ from frappe import _
 from frappe.utils import cint, get_url, now_datetime, strip_html
 
 from lms.lms.branding import BRAND_NAME
+from lms.lms.utils import get_lms_route
 
 MAX_TITLE_LENGTH = cint(frappe.conf.get("newspaper_max_title_length") or 200)
 MAX_CONTENT_LENGTH = cint(frappe.conf.get("newspaper_max_content_length") or 5000)
-EMAIL_BATCH_SIZE = cint(frappe.conf.get("newspaper_email_batch_size") or 500)
-
-
 def _ensure_newspaper_access():
 	from lms.lms.api import _ensure_analytics_access
 
@@ -44,7 +42,17 @@ def _strip_content_html(content: str) -> str:
 	return strip_html(content).strip()
 
 
-def _validate_newspaper_payload(title: str, content: str, target_type: str, batches=None):
+def _default_outgoing_sender() -> str | None:
+	return frappe.db.get_value(
+		"Email Account",
+		{"default_outgoing": 1, "enable_outgoing": 1},
+		"email_id",
+	)
+
+
+def _validate_newspaper_payload(
+	title: str, content: str, target_type: str, batches=None, members=None
+):
 	title = (title or "").strip()
 	if not title:
 		frappe.throw(_("Title is required."))
@@ -57,7 +65,7 @@ def _validate_newspaper_payload(title: str, content: str, target_type: str, batc
 	if len(plain) > MAX_CONTENT_LENGTH:
 		frappe.throw(_("Message cannot exceed {0} characters.").format(MAX_CONTENT_LENGTH))
 
-	if target_type not in ("All Learners", "Selected Batch"):
+	if target_type not in ("All Learners", "Selected Batch", "Selected Members"):
 		frappe.throw(_("Invalid target audience."))
 
 	if target_type == "Selected Batch":
@@ -65,10 +73,32 @@ def _validate_newspaper_payload(title: str, content: str, target_type: str, batc
 		if not batches:
 			frappe.throw(_("Select at least one batch."))
 
+	if target_type == "Selected Members":
+		members = members or []
+		if not members:
+			frappe.throw(_("Select at least one member."))
 
-def resolve_recipient_emails(target_type: str, batches=None) -> list[str]:
+
+def resolve_recipient_emails(
+	target_type: str, batches=None, members=None
+) -> list[str]:
 	"""Return unique enabled learner emails for the selected audience."""
 	batches = batches or []
+	members = members or []
+
+	if target_type == "Selected Members":
+		if not members:
+			return []
+		emails = frappe.get_all(
+			"User",
+			filters={
+				"name": ["in", members],
+				"enabled": 1,
+				"user_type": "Website User",
+			},
+			pluck="email",
+		)
+		return sorted({email for email in emails if email})
 
 	if target_type == "All Learners":
 		user_ids = frappe.get_all(
@@ -100,6 +130,9 @@ def resolve_recipient_emails(target_type: str, batches=None) -> list[str]:
 def _target_label(doc) -> str:
 	if doc.target_type == "All Learners":
 		return _("All Learners")
+	if doc.target_type == "Selected Members":
+		names = [row.user_name or row.user for row in (doc.members or [])]
+		return ", ".join(names) if names else _("Selected Members")
 	titles = [row.batch_title or row.batch for row in doc.batches]
 	return ", ".join(titles) if titles else _("Selected Batch")
 
@@ -110,6 +143,7 @@ def get_newspaper_limits():
 	return {
 		"max_title_length": MAX_TITLE_LENGTH,
 		"max_content_length": MAX_CONTENT_LENGTH,
+		"outgoing_sender": _default_outgoing_sender(),
 	}
 
 
@@ -124,12 +158,14 @@ def get_newspaper_batches():
 
 
 @frappe.whitelist()
-def get_newspaper_recipient_count(target_type: str, batches=None):
+def get_newspaper_recipient_count(target_type: str, batches=None, members=None):
 	_ensure_newspaper_access()
 	if isinstance(batches, str):
 		batches = json.loads(batches) if batches else []
+	if isinstance(members, str):
+		members = json.loads(members) if members else []
 	return {
-		"count": len(resolve_recipient_emails(target_type, batches)),
+		"count": len(resolve_recipient_emails(target_type, batches, members)),
 	}
 
 
@@ -164,13 +200,26 @@ def get_newspapers():
 	for row in records:
 		row["content_preview"] = _strip_content_html(row.pop("content", "") or "")[:180]
 		row["published_by_name"] = frappe.db.get_value("User", row.published_by, "full_name")
-		row["target_label"] = (
-			_("All Learners")
-			if row.target_type == "All Learners"
-			else _get_batch_labels_for_newspaper(row.name)
-		)
+		if row.target_type == "All Learners":
+			row["target_label"] = _("All Learners")
+		elif row.target_type == "Selected Members":
+			row["target_label"] = _get_member_labels_for_newspaper(row.name)
+		else:
+			row["target_label"] = _get_batch_labels_for_newspaper(row.name)
 
 	return records
+
+
+def _get_member_labels_for_newspaper(name: str) -> str:
+	rows = frappe.get_all(
+		"Sales Newspaper Member",
+		filters={"parent": name},
+		fields=["user_name", "user"],
+		ignore_permissions=True,
+	)
+	if not rows:
+		return _("Selected Members")
+	return ", ".join(row.user_name or row.user for row in rows)
 
 
 def _get_batch_labels_for_newspaper(name: str) -> str:
@@ -220,7 +269,19 @@ def get_newspaper(name: str):
 		fields=["batch", "batch_title"],
 		ignore_permissions=True,
 	)
-	doc = frappe._dict({**row, "batches": [frappe._dict(b) for b in batches]})
+	members = frappe.get_all(
+		"Sales Newspaper Member",
+		filters={"parent": name},
+		fields=["user", "user_name", "user_email"],
+		ignore_permissions=True,
+	)
+	doc = frappe._dict(
+		{
+			**row,
+			"batches": [frappe._dict(b) for b in batches],
+			"members": [frappe._dict(m) for m in members],
+		}
+	)
 	return {
 		"name": doc.name,
 		"title": doc.title,
@@ -228,6 +289,10 @@ def get_newspaper(name: str):
 		"image": doc.image,
 		"target_type": doc.target_type,
 		"batches": [{"batch": b.batch, "batch_title": b.batch_title} for b in doc.batches],
+		"members": [
+			{"user": m.user, "user_name": m.user_name, "user_email": m.user_email}
+			for m in doc.members
+		],
 		"recipient_count": doc.recipient_count,
 		"status": doc.status,
 		"published_by": doc.published_by,
@@ -243,10 +308,31 @@ def _build_newsletter_email_content(doc) -> str:
 	parts = []
 	if doc.image:
 		parts.append(
-			f'<p><img src="{get_url(doc.image)}" alt="" style="max-width:100%;height:auto;border-radius:8px;"></p>'
+			f'<p style="margin:0 0 16px 0;"><img src="{get_url(doc.image)}" alt="" style="max-width:100%;height:auto;border-radius:8px;"></p>'
 		)
-	parts.append(doc.content or "")
+	if doc.content:
+		parts.append(f'<div style="margin:0 0 16px 0;">{doc.content}</div>')
 	return "".join(parts)
+
+
+def _newsletter_view_link(doc) -> str:
+	return get_url() + get_lms_route(f"newspaper/{doc.name}")
+
+
+def _recipient_first_name(email: str) -> str:
+	user = frappe.db.get_value(
+		"User",
+		{"email": email},
+		["first_name", "full_name"],
+		as_dict=True,
+	)
+	if not user:
+		return _("Learner")
+	if user.first_name:
+		return user.first_name
+	if user.full_name:
+		return user.full_name.split()[0]
+	return _("Learner")
 
 
 @frappe.whitelist()
@@ -255,19 +341,26 @@ def send_newspaper(
 	content: str,
 	target_type: str,
 	batches=None,
+	members=None,
 	image: str | None = None,
-	reply_to: str | None = None,
 ):
 	_ensure_newspaper_access()
 
 	if isinstance(batches, str):
 		batches = json.loads(batches) if batches else []
+	if isinstance(members, str):
+		members = json.loads(members) if members else []
 
-	_validate_newspaper_payload(title, content, target_type, batches)
+	_validate_newspaper_payload(title, content, target_type, batches, members)
 
-	recipients = resolve_recipient_emails(target_type, batches)
+	recipients = resolve_recipient_emails(target_type, batches, members)
 	if not recipients:
 		frappe.throw(_("No eligible learners found for the selected audience."))
+
+	if not _default_outgoing_sender():
+		frappe.throw(
+			_("Outgoing email is not configured. Set SMTP settings and DEFAULT_SENDER.")
+		)
 
 	doc = frappe.new_doc("Sales Newspaper")
 	doc.title = title.strip()
@@ -282,19 +375,21 @@ def send_newspaper(
 	if target_type == "Selected Batch":
 		for batch_name in batches:
 			doc.append("batches", {"batch": batch_name})
+	elif target_type == "Selected Members":
+		for user_name in members:
+			doc.append("members", {"user": user_name})
 
 	doc.insert(ignore_permissions=True)
 
-	reply_to = (reply_to or frappe.db.get_value("User", doc.published_by, "email") or "").strip()
-	if not reply_to:
-		frappe.throw(_("Reply-To email is required."))
-
+	sync_threshold = cint(frappe.conf.get("newspaper_email_sync_threshold") or 75)
 	frappe.enqueue(
 		"lms.lms.newspaper.deliver_newspaper_emails",
-		queue="long",
+		queue="short",
+		timeout=3600,
 		newspaper=doc.name,
-		reply_to=reply_to,
 		job_name=f"newspaper-{doc.name}",
+		now=cint(frappe.conf.get("newspaper_email_sync"))
+		or len(recipients) <= sync_threshold,
 	)
 
 	return {
@@ -304,51 +399,57 @@ def send_newspaper(
 	}
 
 
-def deliver_newspaper_emails(newspaper: str, reply_to: str | None = None):
-	from frappe.core.doctype.communication.email import make as make_email_communication
-
+def deliver_newspaper_emails(newspaper: str):
 	doc = frappe.get_doc("Sales Newspaper", newspaper)
 	recipients = resolve_recipient_emails(
 		doc.target_type,
 		[row.batch for row in doc.batches],
+		[row.user for row in doc.members],
 	)
 
 	if not recipients:
 		doc.db_set({"status": "Failed", "email_failed_count": 0, "email_sent_count": 0})
 		return
 
-	reply_to = (reply_to or frappe.db.get_value("User", doc.published_by, "email") or "").strip()
-	if not reply_to:
-		doc.db_set({"status": "Failed", "email_failed_count": len(recipients), "email_sent_count": 0})
+	sender = _default_outgoing_sender()
+	if not sender:
+		doc.db_set(
+			{
+				"status": "Failed",
+				"email_failed_count": len(recipients),
+				"email_sent_count": 0,
+			}
+		)
 		return
 
 	sent = 0
 	failed = 0
 	subject = f"[{BRAND_NAME}] {doc.title}"
-	content = _build_newsletter_email_content(doc)
-	reference_doctype = "Sales Newspaper"
-	reference_name = doc.name
-	if doc.target_type == "Selected Batch" and doc.batches:
-		reference_doctype = "LMS Batch"
-		reference_name = doc.batches[0].batch
+	body_html = _build_newsletter_email_content(doc)
+	link = _newsletter_view_link(doc)
 
-	for i in range(0, len(recipients), EMAIL_BATCH_SIZE):
-		chunk = recipients[i : i + EMAIL_BATCH_SIZE]
+	for email in recipients:
 		try:
-			make_email_communication(
-				recipients=reply_to,
-				bcc=", ".join(chunk),
+			frappe.sendmail(
+				recipients=email,
 				subject=subject,
-				content=content,
-				doctype=reference_doctype,
-				name=reference_name,
-				send_email=1,
-				send_me_a_copy=0,
+				template="newspaper_announcement",
+				args={
+					"title": doc.title,
+					"first_name": _recipient_first_name(email),
+					"content": body_html,
+					"link": link,
+				},
+				header=[doc.title, "blue"],
+				reply_to=sender,
+				retry=3,
+				reference_doctype="Sales Newspaper",
+				reference_name=doc.name,
 			)
-			sent += len(chunk)
+			sent += 1
 		except Exception:
-			frappe.log_error(title=f"Newspaper email batch failed ({newspaper})")
-			failed += len(chunk)
+			frappe.log_error(title=f"Newspaper email failed ({newspaper}) → {email}")
+			failed += 1
 
 	status = "Sent" if failed == 0 else ("Failed" if sent == 0 else "Sent")
 	doc.db_set(
