@@ -113,10 +113,14 @@ def get_team_access():
 		fields=["name as user", "full_name", "access_role", "status"],
 		order_by="full_name asc",
 	)
-	images = {
-		u.name: u.user_image
-		for u in frappe.get_all("User", filters={"name": ["in", [m.user for m in members] or [""]]}, fields=["name", "user_image"])
+	code_field = ["employee_code"] if frappe.db.has_column("User", "employee_code") else []
+	user_rows = {
+		u.name: u
+		for u in frappe.get_all(
+			"User", filters={"name": ["in", [m.user for m in members] or [""]]}, fields=["name", "user_image", *code_field]
+		)
 	}
+	images = {name: u.user_image for name, u in user_rows.items()}
 
 	lines = frappe.get_all(
 		"LMS Reporting Line",
@@ -133,6 +137,7 @@ def get_team_access():
 		m_teams = member_teams.get(m.user, [])
 		m.departments = sorted(m_teams, key=lambda d: (not d["is_primary"], d["department"]))
 		m.user_image = images.get(m.user)
+		m.employee_code = (user_rows.get(m.user) or {}).get("employee_code")
 		m.managers = managers_of.get(m.user, [])
 		in_scope = teams is None or not m_teams or any(d["department"] in teams for d in m_teams)
 		m.can_edit = teams is None or (in_scope and m.access_role != "Admin")
@@ -325,6 +330,7 @@ def create_account(
 	access_role: str = "User",
 	departments=None,
 	primary: str | None = None,
+	employee_code: str | None = None,
 ):
 	"""Create a learner account and put it straight into the admin's team.
 
@@ -356,6 +362,11 @@ def create_account(
 			"roles": [{"role": "LMS Student"}] if frappe.db.exists("Role", "LMS Student") else [],
 		}
 	)
+	code = (employee_code or "").strip().upper()
+	if code:
+		if frappe.db.exists("User", {"employee_code": code}):
+			frappe.throw(_("Employee code {0} already belongs to someone else.").format(code))
+		user.employee_code = code  # otherwise a TEMP-#### placeholder is assigned
 	user.insert(ignore_permissions=True)
 	save_member(email, access_role, chosen, primary)
 	return {"user": email}

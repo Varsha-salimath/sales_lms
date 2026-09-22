@@ -106,6 +106,7 @@ _ALLOWED_SPA_ROUTE_RES = tuple(
 		r"library",
 		r"user/[^/]+/certificates",
 		r"user/[^/]+/roles",
+		r"user/[^/]+/account",
 		r"user/[^/]+/slots",
 		r"user/[^/]+/schedule",
 		r"user/[^/]+/mock-results",

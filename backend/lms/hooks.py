@@ -106,6 +106,7 @@ after_migrate = [
 	"lms.lms.org.seed_departments",
 	"lms.lms.content_scope.tag_existing_content",
 	"lms.lms.day_journey.setup_crt_journey",
+	"lms.lms.identity.setup",
 	"lms.sqlite.build_index_in_background",
 ]
 
@@ -163,7 +164,7 @@ doc_events = {
 	"Notification Log": {"on_change": "lms.lms.utils.publish_notifications"},
 	"User": {
 		"validate": "lms.lms.user.validate_username_duplicates",
-		"before_insert": "lms.lms.user.add_lms_student_role",
+		"before_insert": ["lms.lms.user.add_lms_student_role", "lms.lms.identity.assign_code"],
 		"on_update": "lms.lms.org.on_user_update",
 	},
 	"Google Calendar": {

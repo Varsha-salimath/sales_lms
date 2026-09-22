@@ -227,7 +227,7 @@ const coverImage = createResource({
 
 const setActiveTab = () => {
 	let fragments = route.path.split('/')
-	let sections = ['certificates', 'roles', 'slots', 'schedule', 'mock-results']
+	let sections = ['certificates', 'roles', 'slots', 'schedule', 'mock-results', 'account']
 	sections.forEach((section) => {
 		if (fragments.includes(section)) {
 			activeTab.value = convertToTitleCase(section)
@@ -245,6 +245,7 @@ watchEffect(() => {
 			Slots: { name: 'ProfileEvaluator' },
 			Schedule: { name: 'ProfileEvaluationSchedule' },
 			'Mock Results': { name: 'ProfileMockResults' },
+			Account: { name: 'ProfileAccount' },
 		}[activeTab.value]
 		router.push(route)
 	}
@@ -286,6 +287,10 @@ const getTabButtons = () => {
 	}
 	if ($user.data?.is_moderator) {
 		buttons.push({ label: __('Roles'), value: 'Roles' })
+	}
+	// Own profile, or someone who manages people (the API checks they can see this person).
+	if (isSessionUser() || $user.data?.is_moderator || $user.data?.is_manager || $user.data?.is_training_manager) {
+		buttons.push({ label: __('Account'), value: 'Account' })
 	}
 
 	if (currentUserHasHigherAccess() && isEvaluatorOrModerator()) {

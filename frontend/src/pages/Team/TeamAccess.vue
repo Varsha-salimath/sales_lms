@@ -83,7 +83,9 @@
 								{{ m.full_name || m.user }}
 								<span v-if="m.status === 'Inactive'" class="ms-1 text-xs font-normal text-[color:var(--il-muted)]">· {{ __('Deactivated') }}</span>
 							</div>
-							<div class="truncate text-xs text-[color:var(--il-muted)]">{{ m.user }}</div>
+							<div class="truncate text-xs text-[color:var(--il-muted)]">
+								{{ m.user }}<template v-if="m.employee_code"> · {{ m.employee_code }}</template>
+							</div>
 						</div>
 						<span class="ta-role" :class="`is-${m.access_role.toLowerCase()}`">{{ roleLabel(m.access_role) }}</span>
 						<div class="ta-teams-cell">
@@ -196,6 +198,10 @@
 							<span class="ta-label">{{ __('Last name') }}</span>
 							<input v-model.trim="form.last_name" class="ta-select w-full" />
 						</label>
+						<label class="block sm:col-span-2">
+							<span class="ta-label">{{ __('Employee code (optional)') }}</span>
+							<input v-model.trim="form.employee_code" class="ta-select w-full" :placeholder="__('Leave empty for a TEMP code; set the real one later')" />
+						</label>
 						<p class="text-xs text-[color:var(--il-muted)] sm:col-span-2">{{ __('They get a welcome email with a link to set their password.') }}</p>
 					</div>
 				</div>
@@ -233,6 +239,11 @@
 							<option v-for="d in form.departments" :key="d" :value="d">{{ d }}</option>
 						</select>
 					</div>
+				</div>
+
+				<div v-if="!form.isNew">
+					<div class="ta-label">{{ __('Account & ID') }}</div>
+					<IdentityPanel :user="form.user" @changed="identityChanged" />
 				</div>
 
 				<div v-if="!form.isNew">
@@ -338,8 +349,15 @@ import { call, createResource, toast } from 'frappe-ui'
 import { Check, Pencil, Plus, Search, UserPlus } from 'lucide-vue-next'
 import Sheet from './Sheet.vue'
 import UserPicker from './UserPicker.vue'
+import IdentityPanel from '@/components/IdentityPanel.vue'
 
 const res = createResource({ url: 'lms.lms.team_access.get_team_access', auto: true })
+
+// After an email change the person's ID is the new email: keep editing them, refresh the list.
+function identityChanged(result) {
+	if (result?.user && result.user !== form.user) form.user = result.user
+	res.reload()
+}
 const data = computed(() => res.data)
 
 const tab = ref('people')
@@ -416,6 +434,7 @@ const form = reactive({
 	user: '',
 	full_name: '',
 	email: '',
+	employee_code: '',
 	first_name: '',
 	last_name: '',
 	access_role: 'User',
@@ -445,6 +464,7 @@ function openMember(m) {
 		email: '',
 		first_name: '',
 		last_name: '',
+		employee_code: '',
 		access_role: m?.access_role || 'User',
 		departments: m ? m.departments.filter((d) => assignableTeams.value.some((t) => t.name === d.department)).map((d) => d.department) : defaultTeams(),
 		primary: m?.departments.find((d) => d.is_primary)?.department || '',
@@ -476,6 +496,7 @@ async function saveMember() {
 				email: form.email,
 				first_name: form.first_name,
 				last_name: form.last_name,
+				employee_code: form.employee_code || null,
 			})
 			toast.success(__('Account created. Welcome email sent.'))
 		} else {
