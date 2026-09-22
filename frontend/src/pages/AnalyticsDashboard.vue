@@ -504,13 +504,15 @@
 			</div>
 			</div>
 
-			<div v-show="activeSection === 'operations' && canViewOperations">
+			<!-- v-if (not only v-show) so admin-only resources never load for TMs -->
+			<div v-if="canViewOperations" v-show="activeSection === 'operations'">
 				<AnalyticsOperationsSection />
 			</div>
 
 			<div v-show="activeSection === 'certification'" class="space-y-6">
 				<IssuedCertificatesList />
-				<OJTCertificationAnalytics embedded />
+				<!-- OJT certification APIs are staff-only (not scoped to a TM's tree) -->
+				<OJTCertificationAnalytics v-if="isAnalyticsStaff" embedded />
 			</div>
 
 			<div v-show="activeSection === 'feedback'" class="space-y-4">
@@ -678,6 +680,18 @@ const BASE_SECTIONS = ['overview', 'progress', 'certification', 'feedback']
 const canViewOperations = computed(() => {
 	const u = userResource.data
 	return Boolean(u?.is_moderator || u?.is_system_manager || u?.name === 'Administrator')
+})
+
+// Full analytics staff; Training Managers without these roles get tree-scoped data only.
+const isAnalyticsStaff = computed(() => {
+	const u = userResource.data
+	return Boolean(
+		u?.is_moderator ||
+			u?.is_instructor ||
+			u?.is_evaluator ||
+			u?.is_system_manager ||
+			u?.name === 'Administrator'
+	)
 })
 
 function normalizeSectionQuery(raw) {

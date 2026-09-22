@@ -33,12 +33,21 @@ def _ensure_analytics_access():
 
 
 def _ensure_user_time_access(user_id: str):
-	"""Allow users to view their own time data; instructors/admins can view anyone."""
+	"""Allow users to view their own time data; instructors/admins can view anyone;
+	Training Managers can view learners in their reporting tree."""
 	if frappe.session.user == "Guest":
 		frappe.throw(_("You must be logged in."), frappe.PermissionError)
 	if user_id == frappe.session.user:
 		return
-	_ensure_analytics_access()
+	try:
+		_ensure_analytics_access()
+		return
+	except frappe.PermissionError:
+		from lms.lms import access
+
+		if user_id and user_id in access.training_manager_tree(frappe.session.user):
+			return
+		raise
 
 
 def _get_user_role(user: str) -> str:

@@ -118,7 +118,12 @@
 						<label class="text-sm font-medium text-ink-gray-8">
 							{{ __('Mock result') }}
 						</label>
-						<Button variant="solid" size="sm" @click="openMockWizard()">
+						<Button
+							v-if="isAnalyticsStaff"
+							variant="solid"
+							size="sm"
+							@click="openMockWizard()"
+						>
 							{{ __('Add mock') }}
 						</Button>
 					</div>
@@ -146,7 +151,10 @@
 									</span>
 								</div>
 							</div>
-							<div class="flex flex-wrap items-center gap-2 shrink-0">
+							<div
+								v-if="isAnalyticsStaff"
+								class="flex flex-wrap items-center gap-2 shrink-0"
+							>
 								<Button variant="outline" size="sm" @click="viewMock(mock.name)">
 									{{ __('View') }}
 								</Button>
@@ -244,7 +252,7 @@
 					</div>
 				</div>
 
-				<div>
+				<div v-if="isAnalyticsStaff">
 					<label class="text-sm font-medium text-ink-gray-8 mb-1 block">
 						{{ __('Add assessment after lesson') }}
 					</label>
@@ -325,11 +333,12 @@ import {
 	createResource,
 	toast,
 } from 'frappe-ui'
-import { getCurrentInstance, ref, watch } from 'vue'
+import { computed, getCurrentInstance, ref, watch } from 'vue'
 import AssessmentModal from '@/components/Modals/AssessmentModal.vue'
 import MockAssessmentWizard from '@/components/MockAssessment/MockAssessmentWizard.vue'
 import MockAssessmentViewModal from '@/components/MockAssessment/MockAssessmentViewModal.vue'
 import ActivityHeatmap from '@/components/Analytics/ActivityHeatmap.vue'
+import { usersStore } from '@/stores/user'
 
 const show = defineModel({ type: Boolean, default: false })
 const props = defineProps({
@@ -338,6 +347,20 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['saved'])
+
+const { userResource } = usersStore()
+// Mock-assessment and course-assessment actions are staff-only APIs; Training
+// Managers (no staff role) get a read-only view of mocks plus notes and resets.
+const isAnalyticsStaff = computed(() => {
+	const u = userResource.data
+	return Boolean(
+		u?.is_moderator ||
+			u?.is_instructor ||
+			u?.is_evaluator ||
+			u?.is_system_manager ||
+			u?.name === 'Administrator'
+	)
+})
 
 const instructorNotes = ref('')
 const showAssessmentModal = ref(false)

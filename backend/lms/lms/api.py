@@ -370,10 +370,41 @@ def _ensure_tm_or_analytics_access():
 	_training_manager_member_scope()
 
 
+def _scope_members(scope) -> list:
+	"""TM scope as a list safe for SQL `in` filters (sentinel when empty)."""
+	return list(scope or []) or [""]
+
+
+def _scoped_course_names(scope) -> list:
+	"""Courses (title order) that at least one member in `scope` is enrolled in."""
+	enrolled = set(
+		frappe.get_all(
+			"LMS Enrollment",
+			filters={"member": ["in", _scope_members(scope)]},
+			pluck="course",
+			distinct=True,
+		)
+	)
+	return [name for name in _get_all_course_names() if name in enrolled]
+
+
+def _scoped_batch_names(scope) -> list:
+	"""Batches (newest first) that contain at least one member in `scope`."""
+	enrolled = set(
+		frappe.get_all(
+			"LMS Batch Enrollment",
+			filters={"member": ["in", _scope_members(scope)]},
+			pluck="batch",
+			distinct=True,
+		)
+	)
+	return [name for name in _get_all_batch_names() if name in enrolled]
+
+
 @frappe.whitelist()
 def get_analytics_overview():
-	"""Overview metrics for the analytics dashboard (site-wide, non-students only)."""
-	_ensure_analytics_access()
+	"""Overview metrics for the analytics dashboard (site-wide, or a TM's reporting tree)."""
+	scope = _training_manager_member_scope()
 
 	from frappe.utils import add_days, get_first_day, getdate
 
@@ -390,6 +421,16 @@ def get_analytics_overview():
 		if is_demo_course(row.name)
 	]
 	course_filters = {"name": ["not in", demo_course_names]} if demo_course_names else {}
+	member_filters = {}
+
+	if scope is not None:
+		# Training Manager: only courses/batches their learners are enrolled in.
+		members = _scope_members(scope)
+		member_filters = {"member": ["in", members]}
+		scoped_courses = [
+			name for name in _scoped_course_names(scope) if name not in demo_course_names
+		]
+		course_filters = {"name": ["in", scoped_courses or [""]]}
 
 	total_courses = frappe.db.count("LMS Course", course_filters or None)
 	published_courses = frappe.db.count(
@@ -399,26 +440,36 @@ def get_analytics_overview():
 		"LMS Course",
 		{**course_filters, "published": 1, "published_on": [">=", month_start]},
 	)
-	total_batches = (
-		frappe.db.count("LMS Batch") if frappe.db.exists("DocType", "LMS Batch") else 0
-	)
+	if not frappe.db.exists("DocType", "LMS Batch"):
+		total_batches = 0
+	elif scope is not None:
+		total_batches = len(_scoped_batch_names(scope))
+	else:
+		total_batches = frappe.db.count("LMS Batch")
 
+	student_filters = {"role": "LMS Student", "parenttype": "User"}
+	if scope is not None:
+		student_filters["parent"] = ["in", members]
 	student_users = frappe.get_all(
 		"Has Role",
-		filters={"role": "LMS Student", "parenttype": "User"},
+		filters=student_filters,
 		pluck="parent",
 	)
-	enrolled_members = frappe.get_all("LMS Enrollment", pluck="member", distinct=True)
+	enrolled_members = frappe.get_all(
+		"LMS Enrollment", filters=member_filters, pluck="member", distinct=True
+	)
 	student_set = set(student_users or []) | set(enrolled_members or [])
 	student_set.discard("Guest")
 	student_set.discard("Administrator")
 	total_learners = len(student_set)
 
-	if student_users:
+	# TMs: count activity across every learner in scope (role or enrollment).
+	active_pool = student_users if scope is None else list(student_set)
+	if active_pool:
 		active_learners = frappe.db.count(
 			"User",
 			{
-				"name": ["in", student_users],
+				"name": ["in", active_pool],
 				"enabled": 1,
 				"last_active": [">=", active_since],
 			},
@@ -426,15 +477,21 @@ def get_analytics_overview():
 	else:
 		active_learners = 0
 
-	avg_completion = frappe.db.sql(
-		"SELECT AVG(progress) FROM `tabLMS Enrollment`",
-	)[0][0]
+	if scope is None:
+		avg_completion = frappe.db.sql(
+			"SELECT AVG(progress) FROM `tabLMS Enrollment`",
+		)[0][0]
+	else:
+		avg_completion = frappe.db.sql(
+			"SELECT AVG(progress) FROM `tabLMS Enrollment` WHERE member IN %(members)s",
+			{"members": tuple(members)},
+		)[0][0]
 	avg_completion = cint(flt(avg_completion, 0))
 
-	total_certificates = frappe.db.count("LMS Certificate", {"published": 1})
+	total_certificates = frappe.db.count("LMS Certificate", {**member_filters, "published": 1})
 	certificates_this_week = frappe.db.count(
 		"LMS Certificate",
-		{"published": 1, "issue_date": [">=", week_start]},
+		{**member_filters, "published": 1, "issue_date": [">=", week_start]},
 	)
 
 	return {
@@ -452,7 +509,7 @@ def get_analytics_overview():
 		},
 		"total_learners": {
 			"value": total_learners,
-			"subtext": _("LMS learners"),
+			"subtext": _("LMS learners") if scope is None else _("In your team"),
 		},
 		"active_learners": {
 			"value": active_learners,
@@ -460,7 +517,7 @@ def get_analytics_overview():
 		},
 		"avg_completion": {
 			"value": avg_completion,
-			"subtext": _("Across all courses"),
+			"subtext": _("Across all courses") if scope is None else _("Across your team's courses"),
 		},
 		"certificates_issued": {
 			"value": total_certificates,
@@ -877,15 +934,23 @@ def get_admin_dashboard_data():
 @frappe.whitelist()
 def get_analytics_chart_filters():
 	"""Course and batch options for analytics chart filters."""
-	_ensure_analytics_access()
+	scope = _training_manager_member_scope()
+
+	course_filters = {}
+	batch_filters = {}
+	if scope is not None:
+		course_filters = {"name": ["in", _scoped_course_names(scope) or [""]]}
+		batch_filters = {"name": ["in", _scoped_batch_names(scope) or [""]]}
 
 	courses = frappe.get_all(
 		"LMS Course",
+		filters=course_filters,
 		fields=["name", "title"],
 		order_by="title asc",
 	)
 	batches = frappe.get_all(
 		"LMS Batch",
+		filters=batch_filters,
 		fields=["name", "title"],
 		order_by="start_date desc",
 	)
@@ -909,9 +974,10 @@ def _has_lms_batches() -> bool:
 	return bool(frappe.db.count("LMS Batch"))
 
 
-def _get_course_enrolled_members() -> list:
+def _get_course_enrolled_members(scope=None) -> list:
 	"""Unique learners enrolled in any course (course-centric analytics)."""
-	members = frappe.get_all("LMS Enrollment", pluck="member")
+	filters = {"member": ["in", _scope_members(scope)]} if scope is not None else {}
+	members = frappe.get_all("LMS Enrollment", filters=filters, pluck="member")
 	return list(dict.fromkeys(members))
 
 
@@ -940,14 +1006,14 @@ def _member_course_status(member: str) -> str:
 	return "not_started"
 
 
-def _course_learner_status_counts() -> dict:
+def _course_learner_status_counts(scope=None) -> dict:
 	counts = {"completed": 0, "in_progress": 0, "not_started": 0}
-	for member in _get_course_enrolled_members():
+	for member in _get_course_enrolled_members(scope):
 		counts[_member_course_status(member)] += 1
 	return counts
 
 
-def _course_learner_status_counts_as_of(as_of_date) -> dict:
+def _course_learner_status_counts_as_of(as_of_date, scope=None) -> dict:
 	"""Approximate historical status using certificates issued by date + live enrollment."""
 	from frappe.utils import getdate
 
@@ -960,7 +1026,7 @@ def _course_learner_status_counts_as_of(as_of_date) -> dict:
 			pluck="member",
 		)
 	)
-	for member in _get_course_enrolled_members():
+	for member in _get_course_enrolled_members(scope):
 		if member in certified_members:
 			counts["completed"] += 1
 			continue
@@ -1014,23 +1080,31 @@ def _get_course_lessons_ordered(course: str) -> list:
 @frappe.whitelist()
 def get_analytics_lesson_completion(course: str = None):
 	"""Per-lesson completion rate (%) for enrolled students in a course."""
-	_ensure_analytics_access()
+	scope = _training_manager_member_scope()
+	member_filters = {"member": ["in", _scope_members(scope)]} if scope is not None else {}
 
 	if _is_all_filter(course):
-		course_names = _get_all_course_names()
+		course_names = _get_all_course_names() if scope is None else _scoped_course_names(scope)
 		chart_data = []
 		enrolled_count = 0
 
 		for course_name in course_names:
 			course_title = frappe.db.get_value("LMS Course", course_name, "title") or course_name
-			course_enrolled = frappe.db.count("LMS Enrollment", {"course": course_name})
+			course_enrolled = frappe.db.count(
+				"LMS Enrollment", {**member_filters, "course": course_name}
+			)
 			enrolled_count += course_enrolled
 			lessons = _get_course_lessons_ordered(course_name)
 
 			for lesson in lessons:
 				completed_count = frappe.db.count(
 					"LMS Course Progress",
-					{"course": course_name, "lesson": lesson.name, "status": "Complete"},
+					{
+						**member_filters,
+						"course": course_name,
+						"lesson": lesson.name,
+						"status": "Complete",
+					},
 				)
 				completion_rate = (
 					flt((completed_count / course_enrolled) * 100, 1) if course_enrolled else 0
@@ -1058,14 +1132,14 @@ def get_analytics_lesson_completion(course: str = None):
 	if not frappe.db.exists("LMS Course", course):
 		frappe.throw(_("Course not found"))
 
-	enrolled_count = frappe.db.count("LMS Enrollment", {"course": course})
+	enrolled_count = frappe.db.count("LMS Enrollment", {**member_filters, "course": course})
 	lessons = _get_course_lessons_ordered(course)
 	chart_data = []
 
 	for lesson in lessons:
 		completed_count = frappe.db.count(
 			"LMS Course Progress",
-			{"course": course, "lesson": lesson.name, "status": "Complete"},
+			{**member_filters, "course": course, "lesson": lesson.name, "status": "Complete"},
 		)
 		completion_rate = flt((completed_count / enrolled_count) * 100, 1) if enrolled_count else 0
 		chart_data.append(
@@ -1112,12 +1186,13 @@ def get_analytics_active_learners_trend(batch: str = None, weeks: int = 8):
 	Each week is a rolling 7-day window (inclusive) counting backward from today.
 	The oldest window is returned first; the newest window ends on today.
 	Uses batch enrollments when batches exist; otherwise course enrollments.
+	Training Managers only see learners in their reporting tree.
 	"""
-	_ensure_analytics_access()
+	scope = _training_manager_member_scope()
 
 	if _should_use_course_analytics(batch):
 		batch = "__all__"
-		members = _get_course_enrolled_members()
+		members = _get_course_enrolled_members(scope)
 	elif _is_all_filter(batch):
 		batch = "__all__"
 		members = frappe.get_all("LMS Batch Enrollment", pluck="member")
@@ -1126,6 +1201,9 @@ def get_analytics_active_learners_trend(batch: str = None, weeks: int = 8):
 		frappe.throw(_("Batch not found"))
 	else:
 		members = frappe.get_all("LMS Batch Enrollment", filters={"batch": batch}, pluck="member")
+
+	if scope is not None:
+		members = [member for member in members if member in scope]
 
 	weeks = cint(weeks) or 8
 
@@ -1197,21 +1275,24 @@ def _learner_batch_progress_status(member: str, courses: list, batch: str) -> st
 	return "not_started"
 
 
-def _batch_learner_status_counts(batch: str) -> dict:
+def _batch_learner_status_counts(batch: str, scope=None) -> dict:
 	members, courses = _get_batch_members_and_courses(batch)
 	counts = {"completed": 0, "in_progress": 0, "not_started": 0}
 
 	for member in members:
+		if scope is not None and member not in scope:
+			continue
 		status = _learner_batch_progress_status(member, courses, batch)
 		counts[status] += 1
 
 	return counts
 
 
-def _all_batches_learner_status_counts() -> dict:
+def _all_batches_learner_status_counts(scope=None) -> dict:
 	counts = {"completed": 0, "in_progress": 0, "not_started": 0}
-	for batch in _get_all_batch_names():
-		batch_counts = _batch_learner_status_counts(batch)
+	batch_names = _get_all_batch_names() if scope is None else _scoped_batch_names(scope)
+	for batch in batch_names:
+		batch_counts = _batch_learner_status_counts(batch, scope)
 		for key in counts:
 			counts[key] += batch_counts[key]
 	return counts
@@ -1292,7 +1373,7 @@ def _learner_status_as_of(member: str, courses: list, batch: str, as_of_date) ->
 	return "not_started"
 
 
-def _batch_learner_status_counts_as_of(batch: str, as_of_date) -> dict:
+def _batch_learner_status_counts_as_of(batch: str, as_of_date, scope=None) -> dict:
 	from frappe.utils import getdate
 
 	as_of = getdate(as_of_date)
@@ -1304,37 +1385,40 @@ def _batch_learner_status_counts_as_of(batch: str, as_of_date) -> dict:
 	)
 	counts = {"completed": 0, "in_progress": 0, "not_started": 0}
 	for member in enrollments:
+		if scope is not None and member not in scope:
+			continue
 		status = _learner_status_as_of(member, courses, batch, as_of)
 		counts[status] += 1
 	return counts
 
 
-def _learner_status_counts_as_of(batch: str, as_of_date) -> dict:
+def _learner_status_counts_as_of(batch: str, as_of_date, scope=None) -> dict:
 	if batch == "__all__":
 		counts = {"completed": 0, "in_progress": 0, "not_started": 0}
-		for batch_name in _get_all_batch_names():
-			batch_counts = _batch_learner_status_counts_as_of(batch_name, as_of_date)
+		batch_names = _get_all_batch_names() if scope is None else _scoped_batch_names(scope)
+		for batch_name in batch_names:
+			batch_counts = _batch_learner_status_counts_as_of(batch_name, as_of_date, scope)
 			for key in counts:
 				counts[key] += batch_counts[key]
 		return counts
-	return _batch_learner_status_counts_as_of(batch, as_of_date)
+	return _batch_learner_status_counts_as_of(batch, as_of_date, scope)
 
 
 @frappe.whitelist()
 def get_analytics_course_status_breakdown(batch: str = None):
 	"""Donut chart data: learner status distribution for a batch or all courses."""
-	_ensure_analytics_access()
+	scope = _training_manager_member_scope()
 
 	if _should_use_course_analytics(batch):
 		batch = "__all__"
-		counts = _course_learner_status_counts()
+		counts = _course_learner_status_counts(scope)
 	elif _is_all_filter(batch):
 		batch = "__all__"
-		counts = _all_batches_learner_status_counts()
+		counts = _all_batches_learner_status_counts(scope)
 	elif not frappe.db.exists("LMS Batch", batch):
 		frappe.throw(_("Batch not found"))
 	else:
-		counts = _batch_learner_status_counts(batch)
+		counts = _batch_learner_status_counts(batch, scope)
 
 	total = sum(counts.values())
 
@@ -1365,7 +1449,7 @@ def get_analytics_course_status_breakdown(batch: str = None):
 @frappe.whitelist()
 def get_analytics_certifications_trend(batch: str = None, months: int = 6):
 	"""Monthly certifications issued for a batch/course with summary counts."""
-	_ensure_analytics_access()
+	scope = _training_manager_member_scope()
 
 	use_courses = _should_use_course_analytics(batch)
 	if use_courses or _is_all_filter(batch):
@@ -1377,12 +1461,12 @@ def get_analytics_certifications_trend(batch: str = None, months: int = 6):
 
 	months = cint(months) or 6
 	if use_courses:
-		counts = _course_learner_status_counts()
+		counts = _course_learner_status_counts(scope)
 	else:
 		counts = (
-			_all_batches_learner_status_counts()
+			_all_batches_learner_status_counts(scope)
 			if batch == "__all__"
-			else _batch_learner_status_counts(batch)
+			else _batch_learner_status_counts(batch, scope)
 		)
 	summary = {
 		"certified": counts["completed"],
@@ -1402,9 +1486,9 @@ def get_analytics_certifications_trend(batch: str = None, months: int = 6):
 		if month_index == 0:
 			status_as_of = counts
 		elif use_courses:
-			status_as_of = _course_learner_status_counts_as_of(month_end)
+			status_as_of = _course_learner_status_counts_as_of(month_end, scope)
 		else:
-			status_as_of = _learner_status_counts_as_of(batch, month_end)
+			status_as_of = _learner_status_counts_as_of(batch, month_end, scope)
 
 		cert_filters = {
 			"published": 1,
@@ -1412,6 +1496,8 @@ def get_analytics_certifications_trend(batch: str = None, months: int = 6):
 		}
 		if batch != "__all__":
 			cert_filters["batch_name"] = batch
+		if scope is not None:
+			cert_filters["member"] = ["in", _scope_members(scope)]
 
 		certificates = frappe.get_all(
 			"LMS Certificate",
@@ -2515,11 +2601,14 @@ def save_analytics_learner_review(
 	mock_result: str = None,
 	mock_file_name: str = None,
 ):
-	"""Save instructor-only learner review fields."""
-	_ensure_analytics_access()
+	"""Save instructor-only learner review fields (TMs: learners in their tree only)."""
+	scope = _ensure_analytics_or_training_manager_member(member)
 
 	if not batch or not member:
 		frappe.throw(_("Batch and member are required"))
+
+	if scope is not None:
+		_ensure_learner_in_batch(batch, member)
 
 	doc = _get_or_create_learner_review(batch, member)
 
@@ -2540,10 +2629,11 @@ def save_analytics_learner_review(
 @frappe.whitelist()
 def get_analytics_lesson_feedback(course: str = None):
 	"""Lesson feedback satisfaction bars for a course."""
-	_ensure_analytics_access()
+	scope = _training_manager_member_scope()
+	member_filters = {"member": ["in", _scope_members(scope)]} if scope is not None else {}
 
 	if _is_all_filter(course):
-		course_names = _get_all_course_names()
+		course_names = _get_all_course_names() if scope is None else _scoped_course_names(scope)
 		feedback_rows = []
 
 		for course_name in course_names:
@@ -2557,11 +2647,11 @@ def get_analytics_lesson_feedback(course: str = None):
 
 				yes_count = frappe.db.count(
 					"LMS Lesson Feedback",
-					{"lesson": lesson_name, "reaction": "Yes"},
+					{**member_filters, "lesson": lesson_name, "reaction": "Yes"},
 				)
 				no_count = frappe.db.count(
 					"LMS Lesson Feedback",
-					{"lesson": lesson_name, "reaction": "No"},
+					{**member_filters, "lesson": lesson_name, "reaction": "No"},
 				)
 				total = yes_count + no_count
 				satisfaction = cint((yes_count / total) * 100) if total else 0
@@ -2595,11 +2685,11 @@ def get_analytics_lesson_feedback(course: str = None):
 
 		yes_count = frappe.db.count(
 			"LMS Lesson Feedback",
-			{"lesson": lesson_name, "reaction": "Yes"},
+			{**member_filters, "lesson": lesson_name, "reaction": "Yes"},
 		)
 		no_count = frappe.db.count(
 			"LMS Lesson Feedback",
-			{"lesson": lesson_name, "reaction": "No"},
+			{**member_filters, "lesson": lesson_name, "reaction": "No"},
 		)
 		total = yes_count + no_count
 		satisfaction = cint((yes_count / total) * 100) if total else 0
