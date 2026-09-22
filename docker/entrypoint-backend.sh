@@ -170,8 +170,38 @@ assert_prod_admin_password() {
 	fi
 }
 
+assert_database_is_empty() {
+	# The database lives outside this container (RDS). If the sites folder goes missing — a lost
+	# volume, a new VM, a changed SITE_NAME — creating a site here would recreate that database and
+	# take every learner's data with it. So: never create a site over a database that has tables.
+	local tables
+	tables=$(mysql --host="${DB_HOST}" --port="${DB_PORT}" \
+		--user="${DB_ROOT_USERNAME}" --password="${DB_ROOT_PASSWORD}" \
+		--skip-column-names --batch \
+		-e "select count(*) from information_schema.tables where table_schema='${DB_NAME}'" 2>/dev/null) || tables=""
+	if [[ -z "${tables}" ]]; then
+		echo "FATAL: could not check whether database '${DB_NAME}' is empty. Refusing to create a site." >&2
+		echo "       Check DB_HOST/DB_ROOT_USERNAME/DB_ROOT_PASSWORD, then retry." >&2
+		exit 1
+	fi
+	if [[ "${tables}" != "0" ]]; then
+		echo "FATAL: database '${DB_NAME}' already holds ${tables} tables, but sites/${SITE_NAME} is missing." >&2
+		echo "       Creating a site now would DESTROY that data. Restore the sites volume instead," >&2
+		echo "       or point SITE_NAME/DB_NAME at the right place." >&2
+		echo "       To create a site on a fresh database on purpose, set ALLOW_NEW_SITE=1." >&2
+		exit 1
+	fi
+}
+
 create_mysql_site() {
+	if [[ "${ALLOW_NEW_SITE:-0}" != "1" ]]; then
+		assert_database_is_empty
+	else
+		echo "ALLOW_NEW_SITE=1 — creating a site without checking the database first."
+	fi
 	echo "Creating site ${SITE_NAME} (${DB_TYPE} db=${DB_NAME} on ${DB_HOST}:${DB_PORT})..."
+	# --force lets bench reuse an empty database that RDS already has. It is only reached after the
+	# check above proves the database holds no tables.
 	bench new-site "${SITE_NAME}" \
 		--force \
 		--db-type "${DB_TYPE}" \
@@ -188,7 +218,26 @@ ensure_site() {
 	if [[ -d "sites/${SITE_NAME}" ]]; then
 		echo "Site ${SITE_NAME} exists — migrate."
 		bench use "${SITE_NAME}" || true
-		bench --site "${SITE_NAME}" migrate || true
+		# Back up before touching the schema, and stop if the migration fails: a half-migrated
+		# database served to learners is worse than a container that refuses to start.
+		if [[ "${SKIP_BACKUP:-0}" != "1" ]]; then
+			# Keep the 5 most recent database dumps so restart loops can't fill the disk.
+			local backups="sites/${SITE_NAME}/private/backups"
+			if [[ -d "${backups}" ]]; then
+				ls -1t "${backups}"/*-database.sql.gz 2>/dev/null | tail -n +6 | xargs -r rm -f
+			fi
+			echo "Backing up before migrate..."
+			bench --site "${SITE_NAME}" backup --compress || {
+				echo "FATAL: backup failed — not migrating. Set SKIP_BACKUP=1 to override." >&2
+				exit 1
+			}
+		fi
+		if ! bench --site "${SITE_NAME}" migrate; then
+			echo "FATAL: migrate failed for ${SITE_NAME}. The app is NOT starting on a half-migrated" >&2
+			echo "       database. Check the output above, fix the patch, and redeploy." >&2
+			echo "       A backup was taken in sites/${SITE_NAME}/private/backups." >&2
+			exit 1
+		fi
 		bench --site "${SITE_NAME}" set-config host_name "${HOST_NAME}" || true
 		bootstrap_smtp
 		apply_lms_security

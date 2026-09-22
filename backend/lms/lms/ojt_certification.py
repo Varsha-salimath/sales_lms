@@ -16,6 +16,8 @@ import frappe
 from frappe import _
 from frappe.utils import cint, flt, getdate, now_datetime
 
+from lms.lms import access
+
 DOCTYPE = "Sales OJT Certification Metric"
 SETTINGS = "Sales OJT Certification Settings"
 STAGES = [
@@ -515,7 +517,10 @@ def export_ojt_certification_report(
 @frappe.whitelist()
 def sync_ojt_certification_metrics(sheet_url: str | None = None):
 	"""Fetch the Google Sheet and replace stored learner rows. No fake success."""
-	_ensure_analytics_access()
+	# Syncing replaces everyone's OJT data, and a caller-supplied URL decides where it comes from.
+	# That is an org-wide action, so it stays with Super Admins rather than every instructor.
+	if not access.is_super_admin():
+		frappe.throw(_("Only a Super Admin can sync the OJT certification sheet."), frappe.PermissionError)
 	settings = frappe.get_single(SETTINGS)
 	url = (sheet_url or settings.sheet_url or DEFAULT_SHEET_URL).strip()
 	if sheet_url:
@@ -539,6 +544,10 @@ def sync_ojt_certification_metrics(sheet_url: str | None = None):
 			"sync": _sync_payload(settings),
 		}
 	except Exception as exc:
+		# Throw away everything this sync wrote before recording the failure, so a sheet that breaks
+		# halfway can't leave learners' rows missing.
+		frappe.db.rollback()
+		settings = frappe.get_single(SETTINGS)
 		settings.last_sync_status = "Failed"
 		settings.last_sync_message = str(exc)[:500]
 		settings.save(ignore_permissions=True)
@@ -598,19 +607,60 @@ def parse_ojt_certification_csv(text: str) -> list[dict]:
 
 
 def replace_ojt_certification_rows(rows: list[dict]) -> int:
-	frappe.db.delete(DOCTYPE)
+	"""Bring stored rows in line with the sheet.
+
+	Rows are updated in place by `row_key` rather than deleted and re-inserted, so a bad sheet can
+	never leave the table half empty, and anything the sheet doesn't carry (manual edits to other
+	fields) survives. Rows that have left the sheet are removed only after every other row landed.
+	"""
+	# The sheet can repeat a learner+batch; the last row wins. Duplicates used to break the insert
+	# halfway through, after the whole table had already been deleted.
+	unique: dict[str, dict] = {}
 	for item in rows:
+		key = item.get("row_key")
+		if key:
+			unique[key] = item
+
+	for key, item in unique.items():
 		email = (item.get("email") or "").strip().lower()
 		if email:
 			user = frappe.db.get_value("User", {"email": email}, "name")
 			if not user and frappe.db.exists("User", email):
 				user = email
+			if not user:
+				# The learner may have moved to a work email since the sheet was written.
+				user = _user_by_former_email(email)
 			if user:
 				item["learner"] = user
-		doc = frappe.get_doc({"doctype": DOCTYPE, **item})
+				item["email"] = frappe.db.get_value("User", user, "email") or email
+				item["row_key"] = make_row_key(item["email"], item.get("batch_start"))
+		existing = frappe.db.exists(DOCTYPE, {"row_key": key})
+		doc = frappe.get_doc(DOCTYPE, existing) if existing else frappe.new_doc(DOCTYPE)
+		doc.update(item)
 		doc.flags.from_sheet_sync = True
-		doc.insert(ignore_permissions=True)
-	return len(rows)
+		doc.save(ignore_permissions=True) if existing else doc.insert(ignore_permissions=True)
+
+	keys = list(unique)
+	stale = frappe.get_all(DOCTYPE, filters={"row_key": ["not in", keys]}, pluck="name") if keys else []
+	for name in stale:
+		frappe.delete_doc(DOCTYPE, name, ignore_permissions=True, force=True, delete_permanently=True)
+	return len(unique)
+
+
+def _user_by_former_email(email: str) -> str | None:
+	"""Follow an email change: the sheet may still hold someone's old personal address."""
+	if not frappe.db.exists("DocType", "LMS Identity Change"):
+		return None
+	changed = frappe.get_all(
+		"LMS Identity Change",
+		filters={"field": "Email", "old_value": email},
+		fields=["new_value"],
+		order_by="changed_on desc",
+		limit=1,
+	)
+	if changed and frappe.db.exists("User", changed[0].new_value):
+		return changed[0].new_value
+	return None
 
 
 def _find_header(rows):

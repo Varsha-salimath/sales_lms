@@ -27,6 +27,7 @@ from lms.lms.utils import (
 from lms.lms.ppt_content import build_lesson_content, to_curriculum
 
 COURSE_SLUG = "sales-crt"
+DEMO_LEARNER_EMAIL = "learner@sales.localhost"
 COURSE_TITLE = "Sales CRT - Classroom Readiness Training"
 REQUIRED_COLUMNS = ["day", "time", "stakeholder", "topic", "description", "content link"]
 BUNDLED_EXCEL = os.path.join(os.path.dirname(__file__), "data", "CRT-Schedule.xlsx")
@@ -380,20 +381,9 @@ def _resolve_excel_path(file_url: str | None = None, file_name: str | None = Non
 
 def _ensure_course() -> str:
 	if frappe.db.exists("LMS Course", COURSE_SLUG):
-		course = frappe.get_doc("LMS Course", COURSE_SLUG)
-		course.title = COURSE_TITLE
-		course.short_introduction = "Infinity Learn Sales CRT — Classroom Readiness Training for Academic Counsellors."
-		course.description = (
-			"<p>Five-day Classroom Readiness Training covering Infinity Learn products, "
-			"call flow, demo conduction, LSQ, and live calling for Academic Counsellors.</p>"
-		)
-		course.published = 1
-		course.upcoming = 0
-		course.featured = 1
-		course.disable_self_learning = 0
-		course.enable_certification = 1
-		course.save(ignore_permissions=True)
-		return course.name
+		# The course already exists: an import updates its sessions, not its settings. Title,
+		# description and the published/featured flags belong to whoever edits the course.
+		return COURSE_SLUG
 
 	course = frappe.get_doc(
 		{
@@ -516,6 +506,34 @@ def _ensure_lesson(course: str, chapter: str, session: dict) -> str:
 	return lesson_name
 
 
+def _rekey_moved_session(course: str, session: dict):
+	"""Re-attach a session that changed position in the Excel.
+
+	Session keys are positional (`crt-d2-s03`), so inserting one row in the sheet used to shift every
+	later session: each lesson was re-titled with the next session's content, and the last one was
+	deleted along with its progress. Before treating a key as new, look for the same day+topic under
+	another key and move that record onto the new key instead.
+	"""
+	key = session["session_key"]
+	if frappe.db.exists("Sales CRT Session", key):
+		return
+	topic = (session.get("topic") or "").strip()
+	if not topic:
+		return
+	moved = frappe.get_all(
+		"Sales CRT Session",
+		filters={"course": course, "day_number": session["day_number"], "topic": topic},
+		pluck="name",
+		limit=2,
+	)
+	if len(moved) != 1 or moved[0] == key:
+		return  # ambiguous (the same topic twice in a day): leave it to the normal path
+	from frappe.model.rename_doc import rename_doc
+
+	rename_doc("Sales CRT Session", moved[0], key, force=True, ignore_permissions=True, show_alert=False)
+	frappe.db.set_value("Sales CRT Session", key, "session_key", key, update_modified=False)
+
+
 def _upsert_session(course: str, chapter: str, lesson: str, session: dict) -> str:
 	payload = {
 		"doctype": "Sales CRT Session",
@@ -560,6 +578,7 @@ def _apply_import(parsed: dict) -> dict:
 		chapter = _ensure_chapter(course, day["day_number"], day["day_label"])
 		chapter_by_day[day["day_number"]] = chapter
 		for session in day["sessions"]:
+			_rekey_moved_session(course, session)
 			lesson = _ensure_lesson(course, chapter, session)
 			action = _upsert_session(course, chapter, lesson, session)
 			keep_keys.add(session["session_key"])
@@ -574,7 +593,15 @@ def _apply_import(parsed: dict) -> dict:
 		filters={"course": course, "session_key": ["not in", list(keep_keys)]},
 		fields=["name", "lesson", "chapter"],
 	)
+	kept = 0
 	for row in stale:
+		has_progress = row.lesson and frappe.db.exists("LMS Course Progress", {"lesson": row.lesson})
+		if has_progress:
+			# Learners have already worked through this lesson. Drop the schedule row, but keep the
+			# lesson and its progress: deleting it would orphan everyone's completion.
+			frappe.delete_doc("Sales CRT Session", row.name, ignore_permissions=True, force=True)
+			kept += 1
+			continue
 		if row.lesson and frappe.db.exists("Course Lesson", row.lesson):
 			frappe.db.delete("Lesson Reference", {"lesson": row.lesson})
 			frappe.delete_doc("Course Lesson", row.lesson, ignore_permissions=True, force=True)
@@ -589,6 +616,8 @@ def _apply_import(parsed: dict) -> dict:
 		has_session = frappe.db.exists("Sales CRT Session", {"chapter": chapter.name})
 		if has_session:
 			continue
+		if frappe.db.exists("Lesson Reference", {"parent": chapter.name}):
+			continue  # a day an admin built by hand, or lessons kept for their progress
 		frappe.db.delete("Chapter Reference", {"chapter": chapter.name})
 		frappe.db.delete("Lesson Reference", {"parent": chapter.name})
 		frappe.delete_doc("Course Chapter", chapter.name, ignore_permissions=True, force=True)
@@ -683,7 +712,15 @@ def ensure_demo_learner(email: str | None = None, password: str | None = None):
 			_("Demo learner setup is disabled on this site."),
 			frappe.PermissionError,
 		)
-	email = (email or "learner@sales.localhost").strip().lower()
+	# This sets a password and strips roles, so it must never be usable against a real account:
+	# only a System Manager may call it, and only for the fixed demo address.
+	frappe.only_for("System Manager")
+	email = (email or DEMO_LEARNER_EMAIL).strip().lower()
+	if email != DEMO_LEARNER_EMAIL:
+		frappe.throw(
+			_("The demo learner account is {0}.").format(DEMO_LEARNER_EMAIL),
+			frappe.PermissionError,
+		)
 	password = password or os.environ.get("DEMO_LEARNER_PASSWORD")
 	if not password:
 		frappe.throw(
@@ -775,6 +812,7 @@ def ensure_bundled_crt_bootstrap():
 		frappe.set_user(previous_user)
 
 
+@frappe.whitelist(methods=["POST"])
 def import_schedule(file_url: str | None = None, file_name: str | None = None, use_bundled: int = 0):
 	"""Idempotent CRT Excel → LMS Course / chapters / lessons / Sales CRT Session."""
 	_ensure_can_import()
