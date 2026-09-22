@@ -299,6 +299,7 @@ lms_markdown_macro_renderers = {
 }
 
 page_renderer = [
+	"lms.page_renderers.VivaDemoRenderer",
 	"lms.page_renderers.SCORMRenderer",
 	"lms.page_renderers.SalesLmsSpaRenderer",
 ]
@@ -330,5 +331,6 @@ before_request = [
 	"lms.lms.routing.block_desk_portal_routes",
 	"lms.lms.google_oauth.patch_google_calendar_scopes",
 	"lms.lms.request_hooks.extend_lesson_upload_limit",
+	"lms.lms.request_hooks.allow_sarvam_viva_csrf",
 	"lms.lms.request_hooks.rewrite_progress_like_filters",
 ]

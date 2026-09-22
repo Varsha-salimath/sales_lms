@@ -156,6 +156,7 @@ RESERVED_WWW_PATHS = frozenset(
 		"404",
 		"app",
 		"desk",
+		"viva",
 	}
 )
 
@@ -191,6 +192,8 @@ def canonical_destination(path: str, is_guest: bool, query: str = "") -> str | N
 		rest = f"/{rest}"
 	if rest in ("/", ""):
 		return ("/login" if is_guest else "/dashboard") + query
+	if rest.rstrip("/") == "/viva":
+		return "/viva" + query
 	if is_guest:
 		return login_url_with_redirect(rest)
 	return rest + query
@@ -241,7 +244,7 @@ def block_desk_portal_routes():
 
 # Before login the only screens are sign-in and set-password; every other page bounces to /login.
 # Enforced in resolve_sales_lms_path: Frappe ignores return values from before_request hooks.
-GUEST_PAGES = frozenset({"login", "update-password", "logout"})
+GUEST_PAGES = frozenset({"login", "update-password", "logout", "viva", "lms/viva"})
 
 
 def guest_login_redirect(path: str | None) -> str | None:
