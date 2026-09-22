@@ -82,7 +82,7 @@
 								:inlineCreate="true"
 								:onCreate="createCategory"
 							/>
-							<TeamSelect v-model="batchDetail.doc.team" class="mt-4" />
+							<TeamSelect v-model="batchDetail.doc.teams" class="mt-4" />
 						</div>
 					</div>
 				</div>

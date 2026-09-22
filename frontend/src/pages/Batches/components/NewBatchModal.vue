@@ -51,7 +51,7 @@
 						:label="__('Category')"
 						:onCreate="createCategory"
 					/>
-					<TeamSelect v-model="batch.team" />
+					<TeamSelect v-model="batch.teams" />
 					<FormControl
 						v-model="batch.seat_count"
 						:label="__('Seat Count')"
@@ -149,7 +149,7 @@ type Batch = {
 	batch_details: string
 	instructors: string[]
 	category: string | null
-	team: string | null
+	teams: { team: string }[]
 	seat_count: number
 	medium: string | null
 }
@@ -165,7 +165,7 @@ const batch = ref<Batch>({
 	batch_details: '',
 	instructors: [],
 	category: null,
-	team: null,
+	teams: [],
 	seat_count: 0,
 	medium: null,
 })

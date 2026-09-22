@@ -22,7 +22,7 @@
 						:inlineCreate="true"
 						:onCreate="createCategory"
 					/>
-					<TeamSelect v-model="course.team" />
+					<TeamSelect v-model="course.teams" />
 					<MultiSelect
 						v-model="course.instructors"
 						doctype="User"
@@ -108,7 +108,7 @@ type Course = {
 	description: string
 	instructors: string[]
 	category: string | null
-	team: string | null
+	teams: { team: string }[]
 	image: string | null
 }
 
@@ -118,7 +118,7 @@ const course = ref<Course>({
 	description: '',
 	instructors: [],
 	category: null,
-	team: null,
+	teams: [],
 	image: null,
 })
 

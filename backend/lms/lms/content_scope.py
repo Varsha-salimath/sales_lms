@@ -1,18 +1,20 @@
 # Copyright (c) 2026, Varsity Education and contributors
 # For license information, please see license.txt
 
-"""Which team owns a course, batch or program, and who may see it.
+"""Which teams own a course, batch or program, and who may see it.
 
-Every course, batch and program has a `team` (LMS Department). A person sees:
+Every course, batch and program has `teams` (LMS Content Team rows → LMS Department); the first one is
+mirrored into the legacy `team` field. A person sees:
   - everything, if they are a Super Admin;
-  - content of their own teams (with sub-teams) and of teams they hold a view grant on;
+  - content where ANY of its teams is one of their own teams (with sub-teams) or a team they hold a view grant on;
   - anything they are enrolled in;
   - content with no team yet (shared/legacy).
 Someone not placed in any team yet keeps the old behaviour and sees everything, so a new
 joiner is never locked out before an admin assigns them.
 
-New content defaults to the creator's main team, and people can only file content under
-their own teams.
+New content defaults to the creator's main team. People can only add or remove teams they are
+allowed to file content under, so a team admin can share content with their teams but can't take
+another team's access away.
 """
 
 import frappe
@@ -25,8 +27,15 @@ EVERYONE = None
 DEFAULT_CRT_TEAM = "Retail Sales"
 
 
+CHILD = "LMS Content Team"
+
+
 def _ready(doctype="LMS Course"):
-	return frappe.db.has_column(doctype, "team")
+	return frappe.db.has_column(doctype, "team") and frappe.db.table_exists(CHILD)
+
+
+def content_teams(doctype, name) -> list[str]:
+	return frappe.get_all(CHILD, {"parenttype": doctype, "parent": name, "parentfield": "teams"}, pluck="team", order_by="idx")
 
 
 def visible_teams(user=None):
@@ -95,14 +104,13 @@ def allowed_names(doctype, user=None):
 	teams = visible_teams(user)
 	if teams is EVERYONE or not _ready(doctype):
 		return EVERYONE
+	# Visible if any of the content's teams is visible to the user; content with no team is shared.
 	names = set(
-		frappe.get_all(
-			doctype,
-			or_filters=[[doctype, "team", "in", sorted(teams) or [""]], [doctype, "team", "is", "not set"]],
-			pluck="name",
-		)
+		frappe.get_all(CHILD, {"parenttype": doctype, "parentfield": "teams", "team": ["in", sorted(teams) or [""]]}, pluck="parent")
 	)
-	return names | _enrolled(doctype, user)
+	tagged = set(frappe.get_all(CHILD, {"parenttype": doctype, "parentfield": "teams"}, pluck="parent", distinct=True))
+	untagged = set(frappe.get_all(doctype, {"name": ["not in", sorted(tagged) or [""]]}, pluck="name"))
+	return names | untagged | _enrolled(doctype, user)
 
 
 def can_access(doctype, name, user=None):
@@ -131,23 +139,44 @@ def scope_filters(doctype, filters, user=None):
 # ---------------------------------------------------------------------------
 
 
+def _team_list(doc) -> list[str]:
+	out = []
+	for row in doc.get("teams") or []:
+		team = row.get("team") if isinstance(row, dict) else row.team
+		if team and team not in out:
+			out.append(team)
+	return out
+
+
 def set_team(doc, method=None):
-	"""Default a new record's team to the creator's main team; keep people inside their teams."""
+	"""Default new content to the creator's main team; people may only add or remove teams they can use."""
 	if not _ready(doc.doctype) or frappe.flags.in_install or frappe.flags.in_migrate:
 		return
 	user = frappe.session.user
 	allowed = assignable_teams(user)
-	if not doc.get("team"):
+	teams = _team_list(doc)
+	if not teams and doc.get("team") and doc.meta.has_field("teams"):
+		teams = [doc.team]  # older clients still send the single team
+	if not teams and doc.is_new():
 		primary = frappe.db.get_value(
 			"LMS Member Department", {"parenttype": "LMS Member", "parent": user, "is_primary": 1}, "department"
 		)
 		if primary:
-			doc.team = primary
+			teams = [primary]
 		elif allowed:
-			doc.team = sorted(allowed)[0]
-	if allowed is not EVERYONE and doc.get("team") and doc.team not in allowed:
-		if doc.is_new() or doc.has_value_changed("team"):
-			frappe.throw(_("You can only add this to your own teams: {0}.").format(", ".join(sorted(allowed))))
+			teams = [sorted(allowed)[0]]
+	if allowed is not EVERYONE:
+		before = [] if doc.is_new() else content_teams(doc.doctype, doc.name)
+		changed = (set(teams) - set(before)) | (set(before) - set(teams))
+		outside = sorted(changed - set(allowed))
+		if outside:
+			frappe.throw(
+				_("You can only add or remove your own teams ({0}). Not allowed: {1}.").format(
+					", ".join(sorted(allowed)), ", ".join(outside)
+				)
+			)
+	doc.set("teams", [{"team": t} for t in teams])
+	doc.team = teams[0] if teams else None
 
 
 def _query_conditions(doctype, user):
@@ -187,6 +216,16 @@ def has_course_permission(doc, ptype="read", user=None):
 
 
 @frappe.whitelist()
+def get_content_teams(doctype: str, name: str):
+	"""Teams of one course/batch/program (for forms that load it from a list)."""
+	if doctype not in CONTENT_DOCTYPES:
+		frappe.throw(_("Not a team-owned doctype."))
+	if not can_access(doctype, name):
+		frappe.throw(_("Not permitted."), frappe.PermissionError)
+	return content_teams(doctype, name)
+
+
+@frappe.whitelist()
 def get_assignable_teams():
 	"""Teams the current user can pick when creating a course, batch or program."""
 	allowed = assignable_teams()
@@ -201,8 +240,14 @@ def get_assignable_teams():
 	return {"teams": teams, "default": primary if primary in teams else (teams[0] if len(teams) == 1 else None)}
 
 
+def _add_team_row(doctype, name, team, idx):
+	frappe.get_doc(
+		{"doctype": CHILD, "parent": name, "parenttype": doctype, "parentfield": "teams", "team": team, "idx": idx}
+	).db_insert()
+
+
 def tag_existing_content():
-	"""after_migrate: file the Sales CRT course under Retail Sales if it has no team yet."""
+	"""after_migrate: copy each record's single `team` into `teams`, and file Sales CRT under Retail Sales."""
 	if not _ready("LMS Course"):
 		return
 	from lms.lms.sales_journey import COURSE_SLUG
@@ -210,3 +255,8 @@ def tag_existing_content():
 	if frappe.db.exists("LMS Course", COURSE_SLUG) and not frappe.db.get_value("LMS Course", COURSE_SLUG, "team"):
 		if frappe.db.exists("LMS Department", DEFAULT_CRT_TEAM):
 			frappe.db.set_value("LMS Course", COURSE_SLUG, "team", DEFAULT_CRT_TEAM, update_modified=False)
+	for doctype in CONTENT_DOCTYPES:
+		tagged = set(frappe.get_all(CHILD, {"parenttype": doctype, "parentfield": "teams"}, pluck="parent", distinct=True))
+		for row in frappe.get_all(doctype, {"team": ["is", "set"]}, ["name", "team"]):
+			if row.name not in tagged and frappe.db.exists("LMS Department", row.team):
+				_add_team_row(doctype, row.name, row.team, 1)

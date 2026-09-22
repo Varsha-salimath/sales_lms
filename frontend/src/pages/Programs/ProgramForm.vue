@@ -28,7 +28,7 @@
 							:required="true"
 							@change="dirty = true"
 						/>
-						<TeamSelect v-model="program.team" @change="dirty = true" />
+						<TeamSelect v-model="program.teams" @change="dirty = true" />
 					</div>
 					<div class="flex flex-col space-y-3">
 						<FormControl
@@ -243,6 +243,7 @@
 import {
 	Badge,
 	Button,
+	call,
 	createListResource,
 	Dialog,
 	FormControl,
@@ -307,7 +308,14 @@ const setProgramData = () => {
 	programs.value?.data.forEach((p: Program) => {
 		if (p.name === props.programName) {
 			isNew = false
-			program.value = { ...p }
+			program.value = { ...p, teams: [] }
+			// The list resource can't return child tables: load this program's teams separately.
+			call('lms.lms.content_scope.get_content_teams', { doctype: 'LMS Program', name: p.name }).then((teams: string[]) => {
+				if (program.value?.name === p.name) {
+					program.value.teams = teams.map((team) => ({ team }))
+					dirty.value = false
+				}
+			})
 		}
 	})
 
@@ -315,7 +323,7 @@ const setProgramData = () => {
 		program.value = {
 			name: '',
 			title: '',
-			team: null,
+			teams: [],
 			published: false,
 			enforce_course_order: false,
 			program_courses: [],

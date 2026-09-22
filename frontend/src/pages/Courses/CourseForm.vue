@@ -25,7 +25,7 @@
 								:onCreate="createCategory"
 								@update:modelValue="makeFormDirty()"
 							/>
-							<TeamSelect v-model="courseResource.doc.team" @change="makeFormDirty()" />
+							<TeamSelect v-model="courseResource.doc.teams" @change="makeFormDirty()" />
 						</div>
 						<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 							<MultiSelect
