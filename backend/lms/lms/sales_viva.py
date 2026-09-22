@@ -981,6 +981,18 @@ SCORE_SCHEMA = {
 }
 
 
+def _refresh_recording_fields(doc):
+	"""Take the recording fields from the database before saving.
+
+	The browser uploads the audio while the attempt is being scored, and that upload writes
+	straight to the row. Without this, saving a copy loaded a moment earlier would mark a finished
+	recording as still in progress.
+	"""
+	for field in ("recording", "recording_final"):
+		if doc.meta.has_field(field):
+			doc.set(field, frappe.db.get_value("Sales Viva Attempt", doc.name, field))
+
+
 def _fluency(turn: dict[str, Any]) -> tuple[float, list[str]]:
 	"""Delivery score from timing alone. Hesitation lowers it and is flagged; it never fails anyone by itself."""
 	flags = []
@@ -1140,6 +1152,7 @@ def _finalize(doc, state: dict[str, Any], reason: str = "finished"):
 	doc.watch_outs = "\n".join(all_flags)
 	passed = doc.overall_score >= PASS_MARK and len(answered) >= n - 1
 	doc.verdict = _("Ready") if passed and doc.overall_score >= READY_MARK else (_("Passed") if passed else _("Not yet"))
+	_refresh_recording_fields(doc)
 	doc.status = "Passed" if passed else "Not Passed"
 	doc.live_state_json = json.dumps(state)
 	doc.save(ignore_permissions=True)
