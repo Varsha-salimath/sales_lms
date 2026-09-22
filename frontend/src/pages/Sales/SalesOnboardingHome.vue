@@ -106,7 +106,7 @@
 import { computed, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { createResource } from 'frappe-ui'
-import { Check, ChevronRight, ClipboardList, GraduationCap, Lock, PhoneCall, PlayCircle, Star } from 'lucide-vue-next'
+import { Check, ChevronRight, ClipboardList, GraduationCap, Lock, Mic, PhoneCall, PlayCircle, Star } from 'lucide-vue-next'
 
 const user = inject('$user')
 const router = useRouter()
@@ -182,13 +182,14 @@ const steps = computed(() => {
 		let status = __('Locked')
 		if (c.state === 'completed') [kind, status] = ['done', __('Done')]
 		else if (helloPending.value) [kind, status] = ['locked', i === 0 ? __('After the form') : __('Locked')]
-		else if (i === currentIndex.value) [kind, status] = ['current', __('Today')]
+		else if (i === currentIndex.value)
+			[kind, status] = ['current', c.state === 'viva_pending' ? __('Voice viva') : __('Today')]
 		else if (staff.value) [kind, status] = ['next', i === currentIndex.value + 1 ? __('Up next') : '']
 		return {
 			key: `crt-${c.crt_number}`,
 			number: c.crt_number,
 			title: crtTitle(c),
-			detail: sessions(c),
+			detail: c.state === 'viva_pending' ? vivaDetail(c) : sessions(c),
 			progress: c.progress,
 			kind,
 			status,
@@ -233,9 +234,16 @@ const bannerTitle = computed(() => {
 	return __('Your Sales onboarding')
 })
 
+const vivaDetail = (c) => {
+	const v = c.viva || {}
+	if (v.blocked) return __('All attempts used · your Training Manager can unlock more')
+	return `${__('Sessions done · voice viva to finish the day')} · ${v.attempts_left ?? 3} ${__('attempts left')}`
+}
+
 const bannerDetail = computed(() => {
 	if (helloPending.value) return __('Fill your 2-minute joining form. Day 1 opens as soon as you submit.')
 	const c = currentCrt.value
+	if (c?.state === 'viva_pending') return vivaDetail(c)
 	if (c?.current_lesson?.title) return `${c.current_lesson.title} · ${sessions(c)}`
 	if (crtsDone.value && !evalDone.value) return __('Your final review is next.')
 	return __('5 days of classroom training, a final review, then live calls.')
@@ -243,6 +251,8 @@ const bannerDetail = computed(() => {
 
 const primaryAction = computed(() => {
 	if (helloPending.value) return { label: __('Fill the form'), icon: ClipboardList, run: openHello }
+	if (currentCrt.value?.state === 'viva_pending')
+		return { label: __('Take the voice viva'), icon: Mic, run: () => openViva(currentCrt.value) }
 	if (currentCrt.value && currentCrt.value.state !== 'empty')
 		return { label: currentCrt.value.lessons_done ? __('Continue learning') : __('Start learning'), icon: PlayCircle, run: continueLearning }
 	if (ojtOpen.value) return { label: __('Enter OJT'), icon: PhoneCall, run: () => router.push({ name: 'SalesOJT' }) }
@@ -250,8 +260,11 @@ const primaryAction = computed(() => {
 	return null
 })
 
+const openViva = (crt) => router.push({ name: 'SalesViva', params: { crtNumber: String(crt.crt_number) } })
+
 const openCrt = (crt) => {
 	if (!home.data?.is_staff && (crt.state === 'locked' || crt.state === 'empty')) return
+	if (crt.state === 'viva_pending') return openViva(crt)
 	router.push({ name: 'SalesCRT', params: { crtNumber: String(crt.crt_number) } })
 }
 

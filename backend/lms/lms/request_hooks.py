@@ -6,23 +6,11 @@ def extend_lesson_upload_limit():
 	if not frappe.request:
 		return
 	path = frappe.request.path or ""
-	if "upload_and_create_lesson" not in path and "sales_viva.sarvam_stt" not in path and "sales_viva.submit_audio" not in path:
+	if "upload_and_create_lesson" not in path:
 		return
 	from frappe.core.api.file import get_max_file_size
 
-	limit = get_max_file_size()
-	if "sales_viva.sarvam_stt" in path or "sales_viva.submit_audio" in path:
-		limit = max(limit, 8 * 1024 * 1024)
-	frappe.request.max_content_length = limit
-
-
-def allow_sarvam_viva_csrf():
-	"""Standalone /viva HTML is not a Frappe desk page; accept its POSTs."""
-	if not frappe.request:
-		return
-	path = frappe.request.path or ""
-	if "lms.lms.sales_viva." in path:
-		frappe.flags.ignore_csrf = True
+	frappe.request.max_content_length = get_max_file_size()
 
 
 def rewrite_progress_like_filters():

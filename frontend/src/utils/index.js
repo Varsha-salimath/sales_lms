@@ -571,6 +571,16 @@ const getSidebarItems = (forMobile = false) => {
 					},
 				},
 				{
+					label: 'Voice vivas',
+					icon: 'Mic',
+					to: 'VivaResults',
+					activeFor: ['VivaResults', 'VivaReport'],
+					condition: () => {
+						const user = userResource?.data
+						return !forMobile && user && (isAdmin() || user.is_manager || user.is_training_manager)
+					},
+				},
+				{
 					label: 'Team & access',
 					icon: 'UsersRound',
 					to: 'TeamAccess',

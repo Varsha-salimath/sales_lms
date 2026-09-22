@@ -29,6 +29,21 @@ const routes = [
 		redirect: { name: 'StudentDashboard' },
 	},
 	{
+		path: '/crt/:crtNumber/viva',
+		name: 'SalesViva',
+		component: () => import('@/pages/Sales/SalesViva.vue'),
+	},
+	{
+		path: '/viva/:attempt',
+		name: 'VivaReport',
+		component: () => import('@/pages/Sales/VivaReport.vue'),
+	},
+	{
+		path: '/vivas',
+		name: 'VivaResults',
+		component: () => import('@/pages/Sales/VivaResults.vue'),
+	},
+	{
 		path: '/crt/:crtNumber',
 		name: 'SalesCRT',
 		component: () => import('@/pages/Sales/SalesCRTDetail.vue'),
@@ -479,6 +494,7 @@ router.beforeEach(async (to, from, next) => {
 		'LearnerReports',
 		'LearnerReportCard',
 		'TeamAccess',
+		'VivaResults',
 	]
 	if (staffOnlyRoutes.includes(to.name)) {
 		if (!isLoggedIn) {
@@ -494,8 +510,8 @@ router.beforeEach(async (to, from, next) => {
 			u?.is_system_manager ||
 			// Training Managers: reports + learner progress / quiz tools on Analytics.
 			(u?.is_training_manager &&
-				['LearnerReports', 'LearnerReportCard', 'AnalyticsDashboard'].includes(to.name)) ||
-			(u?.is_manager && ['LearnerReports', 'LearnerReportCard'].includes(to.name))
+				['LearnerReports', 'LearnerReportCard', 'AnalyticsDashboard', 'VivaResults'].includes(to.name)) ||
+			(u?.is_manager && ['LearnerReports', 'LearnerReportCard', 'VivaResults'].includes(to.name))
 		if (!staff) {
 			return next({ name: 'StudentDashboard' })
 		}

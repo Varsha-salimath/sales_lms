@@ -1,0 +1,223 @@
+{
+ "actions": [],
+ "creation": "2026-09-22 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "member",
+  "member_name",
+  "course",
+  "crt_number",
+  "attempt_no",
+  "status",
+  "column_break_a1",
+  "started_at",
+  "ended_at",
+  "duration_s",
+  "model",
+  "section_scores",
+  "overall_score",
+  "knowledge_score",
+  "fluency_score",
+  "verdict",
+  "column_break_a2",
+  "summary",
+  "strengths",
+  "improvements",
+  "flags",
+  "section_turns",
+  "turns",
+  "section_internal",
+  "paper_json",
+  "live_state_json",
+  "scoring_error"
+ ],
+ "fields": [
+  {
+   "fieldname": "member",
+   "fieldtype": "Link",
+   "label": "Learner",
+   "options": "User",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "member_name",
+   "fieldtype": "Data",
+   "label": "Learner name",
+   "fetch_from": "member.full_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "label": "Course",
+   "options": "LMS Course"
+  },
+  {
+   "fieldname": "crt_number",
+   "fieldtype": "Int",
+   "label": "Day",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "attempt_no",
+   "fieldtype": "Int",
+   "label": "Attempt",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "In Progress\nScoring\nPassed\nNot Passed\nAbandoned",
+   "default": "In Progress",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_a1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "started_at",
+   "fieldtype": "Datetime",
+   "label": "Started"
+  },
+  {
+   "fieldname": "ended_at",
+   "fieldtype": "Datetime",
+   "label": "Ended"
+  },
+  {
+   "fieldname": "duration_s",
+   "fieldtype": "Int",
+   "label": "Duration (s)"
+  },
+  {
+   "fieldname": "model",
+   "fieldtype": "Data",
+   "label": "Voice model",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_scores",
+   "fieldtype": "Section Break",
+   "label": "Result"
+  },
+  {
+   "fieldname": "overall_score",
+   "fieldtype": "Float",
+   "label": "Overall",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "knowledge_score",
+   "fieldtype": "Float",
+   "label": "Knowledge"
+  },
+  {
+   "fieldname": "fluency_score",
+   "fieldtype": "Float",
+   "label": "Fluency"
+  },
+  {
+   "fieldname": "verdict",
+   "fieldtype": "Data",
+   "label": "Verdict"
+  },
+  {
+   "fieldname": "column_break_a2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "summary",
+   "fieldtype": "Small Text",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "strengths",
+   "fieldtype": "Small Text",
+   "label": "Strengths"
+  },
+  {
+   "fieldname": "improvements",
+   "fieldtype": "Small Text",
+   "label": "To improve"
+  },
+  {
+   "fieldname": "flags",
+   "fieldtype": "Small Text",
+   "label": "Flags"
+  },
+  {
+   "fieldname": "section_turns",
+   "fieldtype": "Section Break",
+   "label": "Questions"
+  },
+  {
+   "fieldname": "turns",
+   "fieldtype": "Table",
+   "label": "Turns",
+   "options": "Sales Viva Turn"
+  },
+  {
+   "fieldname": "section_internal",
+   "fieldtype": "Section Break",
+   "label": "Internal",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "paper_json",
+   "fieldtype": "Long Text",
+   "label": "Question paper (server only)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "live_state_json",
+   "fieldtype": "Long Text",
+   "label": "Live state (server only)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "scoring_error",
+   "fieldtype": "Small Text",
+   "label": "Scoring error",
+   "read_only": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-09-22 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "LMS",
+ "name": "Sales Viva Attempt",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "read": 1,
+   "role": "Moderator",
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "track_changes": 1,
+ "autoname": "hash",
+ "naming_rule": "Random",
+ "title_field": "member_name",
+ "show_title_field_in_link": 0
+}

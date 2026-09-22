@@ -82,6 +82,11 @@ def _crt_states(member: str) -> list[dict]:
 	from lms.lms.hello_ilians import is_required as hello_ilians_required
 
 	prev_complete = staff or not hello_ilians_required(member)
+	# Each day ends with a voice viva; until it is passed the day is "viva_pending" and the next stays locked.
+	from lms.lms import sales_viva
+
+	viva_on = sales_viva.is_required() and not staff
+	viva_passed = sales_viva.passed_days(member) if viva_on else set()
 	for idx in range(1, 6):
 		chapter = next((c for c in outline if cint(c.get("idx")) == idx), None)
 		lessons = (chapter or {}).get("lessons") or []
@@ -93,6 +98,9 @@ def _crt_states(member: str) -> list[dict]:
 		elif not prev_complete and not staff:
 			state = "locked"
 			progress = 0
+		elif done >= total and viva_on and idx not in viva_passed:
+			state = "viva_pending"
+			progress = 95
 		elif done >= total:
 			state = "completed"
 			progress = 100
@@ -118,6 +126,10 @@ def _crt_states(member: str) -> list[dict]:
 				"progress": progress,
 				"lessons_total": total,
 				"lessons_done": done,
+				"viva": sales_viva.day_viva_state(member, idx) if viva_on and state == "viva_pending" else {
+					"required": viva_on,
+					"passed": idx in viva_passed,
+				},
 				"current_lesson": {
 					"name": current_lesson.get("name"),
 					"title": current_lesson.get("title"),
@@ -266,7 +278,7 @@ def _certificate_eligibility(member: str, crts: list[dict], evaluation) -> dict:
 
 def _session_milestones(crts: list[dict]) -> list[dict]:
 	items = []
-	current = next((c for c in crts if c["state"] in {"available", "in_progress"}), None)
+	current = next((c for c in crts if c["state"] in {"available", "in_progress", "viva_pending"}), None)
 	if current and current.get("current_lesson"):
 		items.append(
 			{
@@ -309,7 +321,9 @@ def _session_milestones(crts: list[dict]) -> list[dict]:
 				{
 					"kind": "upcoming",
 					"title": f"Complete {left['title']}",
-					"detail": f"{left['lessons_done']}/{left['lessons_total']} sessions done.",
+					"detail": "Sessions done. Take the voice viva to finish the day."
+					if left["state"] == "viva_pending"
+					else f"{left['lessons_done']}/{left['lessons_total']} sessions done.",
 					"crt_number": left["crt_number"],
 				}
 			)

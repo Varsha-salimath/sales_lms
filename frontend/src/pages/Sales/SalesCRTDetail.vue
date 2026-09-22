@@ -74,6 +74,24 @@
 					</li>
 				</ol>
 
+				<div v-if="crt.viva?.required" class="viva-card mt-6" :class="{ 'is-ready': vivaReady }">
+					<div class="viva-icon"><Mic class="h-5 w-5" /></div>
+					<div class="min-w-0 flex-1">
+						<div class="text-sm font-semibold text-[color:var(--il-ink)]">{{ __('Voice viva') }}</div>
+						<div class="text-xs text-[color:var(--il-muted)]">{{ vivaLine }}</div>
+					</div>
+					<button
+						v-if="crt.viva.passed || vivaReady || crt.viva.history?.length"
+						type="button"
+						class="rounded-full px-4 py-2 text-xs font-semibold"
+						:class="vivaReady ? 'text-white' : 'border'"
+						:style="vivaReady ? 'background: #0075ff' : 'border-color: #d7e4f7; color: #0075ff'"
+						@click="$router.push({ name: 'SalesViva', params: { crtNumber: String(crt.crt_number) } })"
+					>
+						{{ vivaReady ? __('Start viva') : __('View') }}
+					</button>
+				</div>
+
 				<div class="mt-8 flex flex-wrap gap-3">
 					<button
 						v-if="crt.crt_number < 5"
@@ -103,6 +121,7 @@
 import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createResource } from 'frappe-ui'
+import { Mic } from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
@@ -123,6 +142,7 @@ const crt = computed(() => detail.data?.crt)
 const badgeClass = computed(() => {
 	const state = crt.value?.state
 	if (state === 'completed') return 'bg-green-50 text-green-700'
+	if (state === 'viva_pending') return 'bg-amber-50 text-amber-700'
 	if (state === 'in_progress' || state === 'available') return 'bg-[#e8f2ff] text-[#005fe0]'
 	return 'bg-slate-100 text-slate-500'
 })
@@ -130,11 +150,23 @@ const badgeClass = computed(() => {
 const stateLabel = (state) =>
 	({
 		completed: __('Completed'),
+		viva_pending: __('Viva pending'),
 		in_progress: __('In progress'),
 		available: __('Available'),
 		locked: __('Locked'),
 		empty: __('No sessions'),
 	})[state] || state
+
+const vivaReady = computed(() => crt.value?.state === 'viva_pending' && !crt.value?.viva?.blocked)
+
+const vivaLine = computed(() => {
+	const c = crt.value
+	const v = c?.viva || {}
+	if (v.passed) return __('Passed · this day is complete')
+	if (v.blocked) return __('All attempts used · your Training Manager can unlock more')
+	if (c?.state === 'viva_pending') return `${__('A 3–4 minute spoken check on today’s content')} · ${v.attempts_left ?? 3} ${__('attempts left')}`
+	return __('Unlocks when all sessions above are done')
+})
 
 const sessionMeta = (lesson) => {
 	const row = (detail.data?.sessions || []).find((s) => s.lesson === lesson.name)
@@ -154,3 +186,29 @@ const openLesson = (lesson) => {
 	})
 }
 </script>
+
+<style scoped>
+.viva-card {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 16px 20px;
+	border-radius: 20px;
+	border: 1px dashed #cfe5ff;
+	background: #ffffff;
+}
+.viva-card.is-ready {
+	border-style: solid;
+	background: #f4f9ff;
+}
+.viva-icon {
+	display: grid;
+	place-items: center;
+	width: 40px;
+	height: 40px;
+	border-radius: 999px;
+	flex: none;
+	background: #e6f2ff;
+	color: #0062cc;
+}
+</style>

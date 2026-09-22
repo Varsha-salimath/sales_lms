@@ -1,0 +1,151 @@
+{
+ "actions": [],
+ "creation": "2026-09-22 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "question",
+  "concept",
+  "probe_asked",
+  "answer",
+  "column_break_t1",
+  "think_ms",
+  "answer_ms",
+  "speech_ms",
+  "pause_count",
+  "longest_pause_ms",
+  "tab_switches",
+  "words",
+  "wpm",
+  "fillers",
+  "section_t2",
+  "knowledge_score",
+  "fluency_score",
+  "feedback",
+  "covered_points",
+  "missed_points",
+  "flags"
+ ],
+ "fields": [
+  {
+   "fieldname": "question",
+   "fieldtype": "Small Text",
+   "label": "Question",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "concept",
+   "fieldtype": "Data",
+   "label": "Concept"
+  },
+  {
+   "fieldname": "probe_asked",
+   "fieldtype": "Check",
+   "label": "Follow-up asked"
+  },
+  {
+   "fieldname": "answer",
+   "fieldtype": "Long Text",
+   "label": "Answer (transcript)"
+  },
+  {
+   "fieldname": "column_break_t1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "think_ms",
+   "fieldtype": "Int",
+   "label": "Time to start answering (ms)",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "answer_ms",
+   "fieldtype": "Int",
+   "label": "Answer length (ms)"
+  },
+  {
+   "fieldname": "speech_ms",
+   "fieldtype": "Int",
+   "label": "Speaking time (ms)"
+  },
+  {
+   "fieldname": "pause_count",
+   "fieldtype": "Int",
+   "label": "Pauses over 2 s"
+  },
+  {
+   "fieldname": "longest_pause_ms",
+   "fieldtype": "Int",
+   "label": "Longest pause (ms)"
+  },
+  {
+   "fieldname": "tab_switches",
+   "fieldtype": "Int",
+   "label": "Left the tab"
+  },
+  {
+   "fieldname": "words",
+   "fieldtype": "Int",
+   "label": "Words"
+  },
+  {
+   "fieldname": "wpm",
+   "fieldtype": "Float",
+   "label": "Words per minute"
+  },
+  {
+   "fieldname": "fillers",
+   "fieldtype": "Int",
+   "label": "Filler words"
+  },
+  {
+   "fieldname": "section_t2",
+   "fieldtype": "Section Break",
+   "label": "Scores"
+  },
+  {
+   "fieldname": "knowledge_score",
+   "fieldtype": "Float",
+   "label": "Knowledge",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "fluency_score",
+   "fieldtype": "Float",
+   "label": "Fluency",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "feedback",
+   "fieldtype": "Small Text",
+   "label": "Feedback"
+  },
+  {
+   "fieldname": "covered_points",
+   "fieldtype": "Small Text",
+   "label": "Points covered"
+  },
+  {
+   "fieldname": "missed_points",
+   "fieldtype": "Small Text",
+   "label": "Points missed"
+  },
+  {
+   "fieldname": "flags",
+   "fieldtype": "Small Text",
+   "label": "Flags"
+  }
+ ],
+ "links": [],
+ "modified": "2026-09-22 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "LMS",
+ "name": "Sales Viva Turn",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "track_changes": 0,
+ "istable": 1,
+ "editable_grid": 1
+}
