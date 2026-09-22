@@ -73,7 +73,10 @@ const routes = [
 	{
 		path: '/admin',
 		name: 'AdminDashboard',
-		component: () => import('@/pages/Dashboard/AdminDashboard.vue'),
+		redirect: (to) => ({
+			name: 'AnalyticsDashboard',
+			query: { ...to.query, section: to.query.section || 'operations' },
+		}),
 	},
 	{
 		path: '/home',

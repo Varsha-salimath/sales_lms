@@ -6,12 +6,12 @@
 			>
 				<div class="min-w-0">
 					<h1 class="text-xl font-semibold text-ink-gray-9">
-						{{ __('Analytics Dashboard') }}
+						{{ __('Analytics') }}
 					</h1>
 					<p class="text-sm text-ink-gray-6 mt-1 max-w-2xl">
 						{{
 							__(
-								'Monitor learner engagement, progress, certification and feedback from one place.'
+								'Metrics, learner progress, certification, feedback, and admin operations in one place.'
 							)
 						}}
 					</p>
@@ -504,7 +504,12 @@
 			</div>
 			</div>
 
-			<div v-if="activeSection === 'certification'">
+			<div v-show="activeSection === 'operations' && canViewOperations">
+				<AnalyticsOperationsSection />
+			</div>
+
+			<div v-show="activeSection === 'certification'" class="space-y-6">
+				<IssuedCertificatesList />
 				<OJTCertificationAnalytics embedded />
 			</div>
 
@@ -522,7 +527,7 @@
 					</p>
 				</div>
 
-			<div class="border rounded-lg bg-surface-white p-4 overflow-hidden min-w-0">
+				<div class="border rounded-lg bg-surface-white p-4 overflow-hidden min-w-0">
 				<div class="flex items-center gap-3 mb-4 min-w-0">
 					<h3
 						class="flex-1 min-w-0 text-base font-semibold text-ink-gray-9 leading-snug truncate"
@@ -627,7 +632,7 @@
 						</div>
 					</div>
 				</div>
-			</div>
+				</div>
 			</div>
 		</div>
 
@@ -651,7 +656,9 @@ import {
 	Tooltip,
 	usePageMeta,
 } from 'frappe-ui'
+import AnalyticsOperationsSection from '@/components/Analytics/AnalyticsOperationsSection.vue'
 import AnalyticsSectionNav from '@/components/Analytics/AnalyticsSectionNav.vue'
+import IssuedCertificatesList from '@/components/Analytics/IssuedCertificatesList.vue'
 import FailedQuizBlockedLearners from '@/components/Analytics/FailedQuizBlockedLearners.vue'
 import OJTCertificationAnalytics from '@/components/Analytics/OJTCertificationAnalytics.vue'
 import LearnerProgressDetailModal from '@/components/Modals/LearnerProgressDetailModal.vue'
@@ -666,30 +673,57 @@ const route = useRoute()
 const { brand } = sessionStore()
 const { userResource } = usersStore()
 
-const ANALYTICS_SECTIONS = ['overview', 'progress', 'certification', 'feedback']
-const activeSection = ref('overview')
+const BASE_SECTIONS = ['overview', 'progress', 'certification', 'feedback']
 
-function resolveSection(section) {
-	return ANALYTICS_SECTIONS.includes(section) ? section : 'overview'
+const canViewOperations = computed(() => {
+	const u = userResource.data
+	return Boolean(u?.is_moderator || u?.is_system_manager || u?.name === 'Administrator')
+})
+
+function normalizeSectionQuery(raw) {
+	if (raw == null || raw === '') return undefined
+	const value = Array.isArray(raw) ? raw[0] : String(raw)
+	return value || undefined
 }
 
+function resolveSection(section) {
+	const normalized = normalizeSectionQuery(section)
+	if (normalized === 'operations') {
+		return canViewOperations.value ? 'operations' : 'overview'
+	}
+	if (normalized && BASE_SECTIONS.includes(normalized)) {
+		return normalized
+	}
+	return 'overview'
+}
+
+const activeSection = ref(resolveSection(route.query.section))
+
 onMounted(() => {
-	activeSection.value = resolveSection(route.query.section)
 	initChartFilters(chartFilters.data)
 })
 
 watch(
-	() => route.query.section,
-	(section) => {
-		const next = resolveSection(section)
+	() => [normalizeSectionQuery(route.query.section), canViewOperations.value],
+	() => {
+		const next = resolveSection(route.query.section)
 		if (activeSection.value !== next) {
 			activeSection.value = next
 		}
-	}
+	},
+	{ immediate: true }
 )
 
 watch(activeSection, (section) => {
-	if (route.query.section === section) return
+	if (section === 'operations' && !canViewOperations.value) {
+		if (activeSection.value !== 'overview') {
+			activeSection.value = 'overview'
+		}
+		return
+	}
+	if (normalizeSectionQuery(route.query.section) === section) {
+		return
+	}
 	router.replace({
 		name: 'AnalyticsDashboard',
 		query: { ...route.query, section },
@@ -1334,12 +1368,19 @@ const overviewCards = computed(() => {
 	if (!overview.data) return []
 
 	const data = overview.data
+	const learners =
+		data.total_learners?.value ??
+		data.total_users?.value ??
+		0
+	const learnersSub =
+		data.total_learners?.subtext ?? data.total_users?.subtext ?? ''
+
 	return [
 		{
-			key: 'total_users',
+			key: 'total_learners',
 			label: 'Total learners',
-			displayValue: data.total_users?.value ?? 0,
-			subtext: data.total_users?.subtext ?? '',
+			displayValue: learners,
+			subtext: learnersSub,
 		},
 		{
 			key: 'active_learners',
@@ -1355,15 +1396,33 @@ const overviewCards = computed(() => {
 		},
 		{
 			key: 'certificates_issued',
-			label: 'Certified learners',
+			label: 'Certificates issued',
 			displayValue: data.certificates_issued?.value ?? 0,
 			subtext: data.certificates_issued?.subtext ?? '',
+		},
+		{
+			key: 'total_courses',
+			label: 'Total courses',
+			displayValue: data.total_courses?.value ?? 0,
+			subtext: data.total_courses?.subtext ?? '',
+		},
+		{
+			key: 'published_courses',
+			label: 'Published courses',
+			displayValue: data.published_courses?.value ?? 0,
+			subtext: data.published_courses?.subtext ?? '',
+		},
+		{
+			key: 'total_batches',
+			label: 'Total batches',
+			displayValue: data.total_batches?.value ?? 0,
+			subtext: data.total_batches?.subtext ?? '',
 		},
 	]
 })
 
 usePageMeta(() => ({
-	title: __('Analytics Dashboard'),
+	title: __('Analytics'),
 	icon: brand.favicon,
 }))
 </script>

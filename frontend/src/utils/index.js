@@ -557,15 +557,6 @@ const getSidebarItems = (forMobile = false) => {
 					},
 				},
 				{
-					label: 'Admin',
-					icon: 'LayoutDashboard',
-					to: 'AdminDashboard',
-					activeFor: ['AdminDashboard'],
-					condition: () => {
-						return !forMobile && userResource?.data && isAdmin()
-					},
-				},
-				{
 					label: 'Learner reports',
 					icon: 'ClipboardList',
 					to: 'LearnerReports',
@@ -589,10 +580,10 @@ const getSidebarItems = (forMobile = false) => {
 					},
 				},
 				{
-					label: 'Analytics dashboard',
+					label: 'Analytics',
 					icon: 'BarChart2',
 					to: 'AnalyticsDashboard',
-					activeFor: ['AnalyticsDashboard'],
+					activeFor: ['AnalyticsDashboard', 'AdminDashboard'],
 					condition: () => {
 						const user = userResource?.data
 						return (

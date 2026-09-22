@@ -21,19 +21,31 @@
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue'
+
+const props = defineProps({
 	modelValue: {
 		type: String,
 		required: true,
+	},
+	showOperations: {
+		type: Boolean,
+		default: false,
 	},
 })
 
 defineEmits(['update:modelValue'])
 
-const items = [
-	{ id: 'overview', label: __('Overview') },
-	{ id: 'progress', label: __('Learner Progress') },
-	{ id: 'certification', label: __('Certification') },
-	{ id: 'feedback', label: __('Feedback') },
-]
+const items = computed(() => {
+	const list = [
+		{ id: 'overview', label: __('Overview') },
+		...(props.showOperations
+			? [{ id: 'operations', label: __('Operations') }]
+			: []),
+		{ id: 'progress', label: __('Learner Progress') },
+		{ id: 'certification', label: __('Certification') },
+		{ id: 'feedback', label: __('Feedback') },
+	]
+	return list
+})
 </script>

@@ -382,18 +382,25 @@ def get_analytics_overview():
 	active_since = add_days(today, -15)
 	week_start = add_days(today, -7)
 
-	total_courses = frappe.db.count("LMS Course")
+	from lms.lms.utils import is_demo_course
+
+	demo_course_names = [
+		row.name
+		for row in frappe.get_all("LMS Course", fields=["name"])
+		if is_demo_course(row.name)
+	]
+	course_filters = {"name": ["not in", demo_course_names]} if demo_course_names else {}
+
+	total_courses = frappe.db.count("LMS Course", course_filters or None)
+	published_courses = frappe.db.count(
+		"LMS Course", {**course_filters, "published": 1}
+	)
 	published_this_month = frappe.db.count(
 		"LMS Course",
-		{"published": 1, "published_on": [">=", month_start]},
+		{**course_filters, "published": 1, "published_on": [">=", month_start]},
 	)
-
-	total_users = frappe.db.count(
-		"User",
-		{
-			"enabled": 1,
-			"name": ["not in", ("Guest",)],
-		},
+	total_batches = (
+		frappe.db.count("LMS Batch") if frappe.db.exists("DocType", "LMS Batch") else 0
 	)
 
 	student_users = frappe.get_all(
@@ -401,6 +408,12 @@ def get_analytics_overview():
 		filters={"role": "LMS Student", "parenttype": "User"},
 		pluck="parent",
 	)
+	enrolled_members = frappe.get_all("LMS Enrollment", pluck="member", distinct=True)
+	student_set = set(student_users or []) | set(enrolled_members or [])
+	student_set.discard("Guest")
+	student_set.discard("Administrator")
+	total_learners = len(student_set)
+
 	if student_users:
 		active_learners = frappe.db.count(
 			"User",
@@ -429,9 +442,17 @@ def get_analytics_overview():
 			"value": total_courses,
 			"subtext": _("{0} published this month").format(published_this_month),
 		},
-		"total_users": {
-			"value": total_users,
-			"subtext": _("Total registered"),
+		"published_courses": {
+			"value": published_courses,
+			"subtext": _("Live on catalog"),
+		},
+		"total_batches": {
+			"value": total_batches,
+			"subtext": _("Cohorts"),
+		},
+		"total_learners": {
+			"value": total_learners,
+			"subtext": _("LMS learners"),
 		},
 		"active_learners": {
 			"value": active_learners,
@@ -1422,6 +1443,65 @@ def get_analytics_certifications_trend(batch: str = None, months: int = 6):
 		)
 
 	return {"batch": batch, "summary": summary, "months": chart_data}
+
+
+def _issued_certificates_query(search=None, scope=None):
+	"""Base query builder for staff certificate listings (optional TM member scope)."""
+	Certificate = frappe.qb.DocType("LMS Certificate")
+	User = frappe.qb.DocType("User")
+
+	query = frappe.qb.from_(Certificate).left_join(User).on(Certificate.member == User.name)
+
+	if scope is not None:
+		query = query.where(Certificate.member.isin(list(scope)))
+
+	if search and cstr(search).strip():
+		term = f"%{cstr(search).strip()}%"
+		query = query.where(
+			(Certificate.member_name.like(term))
+			| (User.email.like(term))
+			| (User.full_name.like(term))
+			| (Certificate.course_title.like(term))
+			| (Certificate.batch_title.like(term))
+		)
+
+	return Certificate, User, query
+
+
+@frappe.whitelist()
+def get_analytics_issued_certificates(search=None, start=0, page_length=50):
+	"""Paginated LMS certificates for analytics staff and training managers."""
+	_ensure_tm_or_analytics_access()
+	scope = _training_manager_member_scope()
+
+	start = cint(start) or 0
+	page_length = min(cint(page_length) or 50, 200)
+
+	Certificate, User, base = _issued_certificates_query(search, scope)
+
+	total_row = base.select(fn.Count(Certificate.name).as_("cnt")).run(as_dict=True)
+	total = int(total_row[0].cnt if total_row else 0)
+
+	rows = (
+		base.select(
+			Certificate.name,
+			Certificate.member,
+			Certificate.member_name,
+			User.email.as_("email"),
+			User.full_name.as_("full_name"),
+			Certificate.course,
+			Certificate.course_title,
+			Certificate.batch_title,
+			Certificate.issue_date,
+			Certificate.published,
+		)
+		.orderby(Certificate.issue_date, order=frappe.qb.desc)
+		.offset(start)
+		.limit(page_length)
+		.run(as_dict=True)
+	)
+
+	return {"rows": rows, "total": total}
 
 
 def _relative_last_active(last_active) -> str:
