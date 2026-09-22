@@ -1,0 +1,4 @@
+# Linux images fail if these files are checked out with CRLF on Windows.
+docker/** text eol=lf
+*.sh text eol=lf
+Dockerfile* text eol=lf

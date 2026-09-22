@@ -67,6 +67,22 @@ class SCORMRenderer(BaseRenderer):
 from lms.lms.routing import SPA_TOP_LEVEL, is_valid_spa_path
 
 
+class VivaDemoRenderer(BaseRenderer):
+	"""CRT viva — Gemini Live native audio. Must run before the Vue SPA renderer."""
+
+	def can_render(self):
+		return (self.path or "").strip("/") in ("viva", "lms/viva")
+
+	def render(self):
+		html_path = os.path.join(os.path.dirname(__file__), "www", "viva.html")
+		with open(html_path, encoding="utf-8") as f:
+			html = f.read()
+		response = Response(html)
+		response.mimetype = "text/html"
+		response.headers["Cache-Control"] = "no-store"
+		return response
+
+
 class SalesLmsSpaRenderer(BaseRenderer):
 	"""Serve the Vue SPA at clean paths without stealing /login, /app, or Frappe www pages."""
 
