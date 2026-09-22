@@ -507,7 +507,7 @@ def _attempts(member: str, course: str, day: int | None = None) -> list[dict]:
 	return frappe.get_all(
 		"Sales Viva Attempt",
 		filters,
-		["name", "crt_number", "attempt_no", "status", "overall_score", "knowledge_score", "fluency_score", "verdict", "started_at", "ended_at", "flags"],
+		["name", "crt_number", "attempt_no", "status", "overall_score", "knowledge_score", "fluency_score", "verdict", "started_at", "ended_at", "watch_outs"],
 		order_by="creation asc",
 	)
 
@@ -986,7 +986,6 @@ def _fallback_knowledge(q: dict[str, Any], answer: str) -> float:
 def _finalize(doc, state: dict[str, Any], reason: str = "finished"):
 	paper = _paper(doc)
 	turns = sorted(state.get("turns") or [], key=lambda t: t["idx"])
-	doc.flags.ignore_version = True  # a version diff of the paper/live-state JSON isn't useful (and broke saving)
 	doc.status = "Scoring"
 	doc.ended_at = now_datetime()
 	doc.duration_s = int((get_datetime(doc.ended_at) - get_datetime(doc.started_at)).total_seconds())
@@ -1039,7 +1038,7 @@ def _finalize(doc, state: dict[str, Any], reason: str = "finished"):
 				"feedback": g.get("feedback") or "",
 				"covered_points": "\n".join(g.get("covered_points") or []),
 				"missed_points": "\n".join(g.get("missed_points") or []),
-				"flags": "\n".join(flags),
+				"watch_outs": "\n".join(flags),
 			},
 		)
 	# Unanswered questions count as zero so running out the clock can't help.
@@ -1047,7 +1046,7 @@ def _finalize(doc, state: dict[str, Any], reason: str = "finished"):
 		if idx not in answered:
 			knowledge.append(0.0)
 			fluency.append(0.0)
-			doc.append("turns", {"question": q["stem"], "concept": q.get("concept"), "answer": "", "knowledge_score": 0, "fluency_score": 0, "flags": _("Not answered")})
+			doc.append("turns", {"question": q["stem"], "concept": q.get("concept"), "answer": "", "knowledge_score": 0, "fluency_score": 0, "watch_outs": _("Not answered")})
 	n = max(1, len(paper))
 	doc.knowledge_score = round(sum(knowledge) / n, 1)
 	doc.fluency_score = round(sum(fluency) / n, 1)
@@ -1057,7 +1056,7 @@ def _finalize(doc, state: dict[str, Any], reason: str = "finished"):
 	if error:
 		all_flags.append(_("Knowledge scored automatically (AI grading unavailable) — trainer should review"))
 		doc.scoring_error = error[-1000:]
-	doc.flags = "\n".join(all_flags)
+	doc.watch_outs = "\n".join(all_flags)
 	passed = doc.overall_score >= PASS_MARK and len(answered) >= n - 1
 	doc.verdict = _("Ready") if passed and doc.overall_score >= READY_MARK else (_("Passed") if passed else _("Not yet"))
 	doc.status = "Passed" if passed else "Not Passed"
@@ -1131,7 +1130,7 @@ def get_viva_report(attempt: str):
 		"summary": doc.summary,
 		"strengths": [s for s in (doc.strengths or "").split("\n") if s],
 		"improvements": [s for s in (doc.improvements or "").split("\n") if s],
-		"flags": [s for s in (doc.flags or "").split("\n") if s],
+		"flags": [s for s in (doc.watch_outs or "").split("\n") if s],
 		"pass_mark": PASS_MARK,
 		"is_own": doc.member == user,
 		"can_unlock": _can_unlock(doc.member, user) and state["blocked"],
@@ -1155,7 +1154,7 @@ def get_viva_report(attempt: str):
 				"feedback": t.feedback,
 				"covered_points": [s for s in (t.covered_points or "").split("\n") if s],
 				"missed_points": [s for s in (t.missed_points or "").split("\n") if s],
-				"flags": [s for s in (t.flags or "").split("\n") if s],
+				"flags": [s for s in (t.watch_outs or "").split("\n") if s],
 			}
 			for t in doc.turns
 		],
@@ -1189,7 +1188,7 @@ def get_viva_results(crt_number=None, status: str | None = None, search: str | N
 	rows = frappe.get_all(
 		"Sales Viva Attempt",
 		filters,
-		["name", "member", "member_name", "course", "crt_number", "attempt_no", "status", "overall_score", "knowledge_score", "fluency_score", "verdict", "flags", "started_at"],
+		["name", "member", "member_name", "course", "crt_number", "attempt_no", "status", "overall_score", "knowledge_score", "fluency_score", "verdict", "watch_outs", "started_at"],
 		order_by="started_at desc",
 		limit=500,
 	)
@@ -1200,7 +1199,7 @@ def get_viva_results(crt_number=None, status: str | None = None, search: str | N
 	for r in rows:
 		r.course = r.course or COURSE_SLUG
 		r.course_title = titles.get(r.course) or course_title(r.course)
-		r.flag_count = len([f for f in (r.flags or "").split("\n") if f])
+		r.flag_count = len([f for f in (r.watch_outs or "").split("\n") if f])
 	blocked = []
 	for member, crs, day in {(r.member, r.course, r.crt_number) for r in rows if r.status == "Not Passed"}:
 		st = day_viva_state(member, crs, day)

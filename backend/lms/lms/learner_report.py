@@ -444,7 +444,7 @@ def viva_summary(users, course: str = "sales-crt") -> dict:
 	for a in frappe.get_all(
 		"Sales Viva Attempt",
 		{"member": ["in", users], "course": course, "status": ["in", ["Passed", "Not Passed"]]},
-		["name", "member", "crt_number", "status", "overall_score", "knowledge_score", "fluency_score", "flags", "started_at"],
+		["name", "member", "crt_number", "status", "overall_score", "knowledge_score", "fluency_score", "watch_outs", "started_at"],
 		order_by="started_at asc",
 	):
 		user = out.setdefault(a.member.lower(), {"days": {}})
@@ -460,7 +460,7 @@ def viva_summary(users, course: str = "sales-crt") -> dict:
 				knowledge=flt(a.knowledge_score),
 				fluency=flt(a.fluency_score),
 				best_attempt=a.name,
-				flags=len([f for f in (a.flags or "").split("\n") if f]),
+				flags=len([f for f in (a.watch_outs or "").split("\n") if f]),
 			)
 	for user in out.values():
 		days = sorted(user["days"].values(), key=lambda d: d["day"])

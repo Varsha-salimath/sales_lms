@@ -24,7 +24,7 @@
   "summary",
   "strengths",
   "improvements",
-  "flags",
+  "watch_outs",
   "section_turns",
   "turns",
   "section_internal",
@@ -150,9 +150,9 @@
    "label": "To improve"
   },
   {
-   "fieldname": "flags",
+   "fieldname": "watch_outs",
    "fieldtype": "Small Text",
-   "label": "Flags"
+   "label": "Watch-outs"
   },
   {
    "fieldname": "section_turns",

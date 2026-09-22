@@ -24,7 +24,7 @@
   "feedback",
   "covered_points",
   "missed_points",
-  "flags"
+  "watch_outs"
  ],
  "fields": [
   {
@@ -131,9 +131,9 @@
    "label": "Points missed"
   },
   {
-   "fieldname": "flags",
+   "fieldname": "watch_outs",
    "fieldtype": "Small Text",
-   "label": "Flags"
+   "label": "Watch-outs"
   }
  ],
  "links": [],
