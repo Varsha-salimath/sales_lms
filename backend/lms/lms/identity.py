@@ -59,6 +59,8 @@ def setup():
 
 
 def next_temp_code() -> str:
+	# Two accounts created at once would otherwise both read the same highest code.
+	frappe.db.sql("select name from `tabUser` where employee_code like %s order by employee_code desc limit 1 for update", f"{TEMP_PREFIX}%")
 	codes = frappe.get_all("User", {"employee_code": ["like", f"{TEMP_PREFIX}%"]}, pluck="employee_code")
 	highest = max((int(c[len(TEMP_PREFIX):]) for c in codes if c[len(TEMP_PREFIX):].isdigit()), default=0)
 	return f"{TEMP_PREFIX}{highest + 1:04d}"
@@ -160,6 +162,8 @@ def set_employee_code(user: str, employee_code: str, reason: str = ""):
 	code = (employee_code or "").strip().upper()
 	if not re.fullmatch(r"[A-Z0-9][A-Z0-9\-_/]{1,29}", code):
 		frappe.throw(_("Use letters, numbers and - _ / only (2–30 characters)."))
+	# Lock the row we are about to change so a second admin can't slip the same code past the check.
+	frappe.db.get_value("User", user, "name", for_update=True)
 	if frappe.db.exists("User", {"employee_code": code, "name": ["!=", user]}):
 		frappe.throw(_("Employee code {0} already belongs to someone else.").format(code))
 	old = frappe.db.get_value("User", user, "employee_code")
@@ -189,6 +193,12 @@ def change_email(user: str, new_email: str, reason: str = ""):
 
 	# The account ID is the email: rename moves every Link to User (enrollments, progress, quizzes,
 	# vivas, reporting lines, grants…) to the new ID.
+	# Their open sessions still carry the old ID, and every write from those tabs would fail link
+	# validation until they signed in again, so end them first.
+	try:
+		frappe.sessions.clear_sessions(user=user, force=True)
+	except Exception:
+		pass
 	rename_doc("User", user, new, force=True, ignore_permissions=True, show_alert=False)
 	frappe.db.set_value("User", new, "email", new)
 	# Records named after the user keep their old name unless renamed too.
@@ -197,6 +207,12 @@ def change_email(user: str, new_email: str, reason: str = ""):
 			rename_doc(doctype, user, new, force=True, ignore_permissions=True, show_alert=False)
 	# Places that store the email as plain text.
 	if frappe.db.table_exists("Sales OJT Certification Metric"):
+		# They may also be somebody's training manager: that column holds an email, not a link, so
+		# the rename leaves it behind and their trainees drop out of their reports.
+		frappe.db.sql(
+			"update `tabSales OJT Certification Metric` set training_manager=%s where training_manager=%s",
+			(new, user),
+		)
 		for row in frappe.get_all("Sales OJT Certification Metric", {"email": user}, ["name", "batch_start"]):
 			frappe.db.set_value(
 				"Sales OJT Certification Metric",
@@ -205,6 +221,9 @@ def change_email(user: str, new_email: str, reason: str = ""):
 				update_modified=False,
 			)
 	frappe.db.sql(f"update `tab{LOG}` set member=%s where member=%s", (new, user))
+	for doctype, field in (("LMS Onboarding Form", "ac_email"), ("LMS Course Feedback", "learner_email")):
+		if frappe.db.table_exists(doctype) and frappe.db.has_column(doctype, field):
+			frappe.db.sql(f"update `tab{doctype}` set `{field}`=%s where `{field}`=%s", (new, user))
 	_log(new, "Email", user, new, reason)
 	access.clear_cache()
 	return get_identity(new)

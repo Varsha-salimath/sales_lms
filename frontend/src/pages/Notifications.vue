@@ -268,7 +268,7 @@ const navigateToPage = (log) => {
 			})
 		} else {
 			router.push({
-				name: 'Batch',
+				name: 'BatchDetail',
 				params: { batchName: link.pop() },
 			})
 		}

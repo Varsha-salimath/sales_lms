@@ -355,7 +355,7 @@ def _recipient_first_name(email: str) -> str:
 	return _("Learner")
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def send_newspaper(
 	title: str,
 	content: str,
@@ -482,7 +482,7 @@ def deliver_newspaper_emails(newspaper: str):
 	)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def delete_newspaper(name: str):
 	_ensure_newspaper_access()
 	if not frappe.db.exists("Sales Newspaper", name):
@@ -520,7 +520,7 @@ def get_newspaper_comments(newspaper: str):
 	return rows
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def add_newspaper_comment(newspaper: str, content: str, parent_comment: str | None = None):
 	_ensure_logged_in()
 	content = (content or "").strip()

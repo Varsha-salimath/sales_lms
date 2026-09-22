@@ -112,6 +112,9 @@ def submit_form(values: dict | str):
 
 	doc = frappe.get_doc(DOCTYPE, user) if frappe.db.exists(DOCTYPE, user) else frappe.new_doc(DOCTYPE)
 	doc.member = user
+	# The employee code belongs to the admin who assigns it (and is logged when it changes), so the
+	# joining form shows it but can never set it.
+	data["employee_code"] = frappe.db.get_value("User", user, "employee_code") or doc.get("employee_code") or ""
 	doc.update(data)
 	doc.submitted_on = doc.submitted_on or now_datetime()
 	doc.save(ignore_permissions=True)

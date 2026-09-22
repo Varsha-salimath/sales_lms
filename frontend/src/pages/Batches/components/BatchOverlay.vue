@@ -153,7 +153,7 @@ const enrollInBatch = () => {
 			onSuccess(data) {
 				toast.success(__('You have been enrolled in this batch'))
 				router.push({
-					name: 'Batch',
+					name: 'BatchDetail',
 					params: {
 						batchName: props.batch.data.name,
 					},

@@ -695,8 +695,13 @@ function openCard(row) {
 }
 
 function exportCsv() {
-	const keys = ['employee_name', 'email', 'location', 'training_manager', 'batch_start', 'attendance_days', 'ai_mock_score', 'audit_score', 'dc', 'cc', 'talk_time', 'booked', 'catered', 'booking_rate', ...TEST_KEYS, 'readiness']
-	const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
+	const keys = ['employee_name', 'email', 'location', 'training_manager', 'batch_start', 'attendance_days', 'ai_mock_score', 'audit_score', 'viva_avg', 'dc', 'cc', 'talk_time', 'booked', 'catered', 'booking_rate', ...TEST_KEYS, 'readiness']
+	const esc = (v) => {
+		const text = String(v ?? '')
+		// A cell starting with = + - @ is run as a formula when the file is opened in Excel.
+		const safe = /^[=+\-@]/.test(text) ? `'${text}` : text
+		return `"${safe.replace(/"/g, '""')}"`
+	}
 	const csv = [keys.join(','), ...visibleRows.value.map((r) => keys.map((k) => esc(r[k])).join(','))].join('\n')
 	const link = document.createElement('a')
 	link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))

@@ -530,11 +530,7 @@ onMounted(() => {
 	document.addEventListener('fullscreenchange', attachFullscreenEvent)
 	window.addEventListener('message', handleQuizMessage)
 	window.addEventListener('lms-feedback-next-lesson', handleFeedbackNextLesson)
-	socket.on('update_lesson_progress', (data) => {
-		if (data.course === props.courseName) {
-			lessonProgress.value = data.progress
-		}
-	})
+	socket.on('update_lesson_progress', onLessonProgress)
 })
 
 const attachFullscreenEvent = () => {
@@ -549,7 +545,12 @@ const attachFullscreenEvent = () => {
 	}
 }
 
+const onLessonProgress = (data) => {
+	if (data.course === props.courseName) lessonProgress.value = data.progress
+}
+
 onBeforeUnmount(() => {
+	socket.off('update_lesson_progress', onLessonProgress)
 	document.removeEventListener('fullscreenchange', attachFullscreenEvent)
 	window.removeEventListener('message', handleQuizMessage)
 	window.removeEventListener('lms-feedback-next-lesson', handleFeedbackNextLesson)

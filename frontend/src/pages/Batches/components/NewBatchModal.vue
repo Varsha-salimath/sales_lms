@@ -51,7 +51,7 @@
 						:label="__('Category')"
 						:onCreate="createCategory"
 					/>
-					<TeamSelect v-model="batch.teams" />
+					<TeamSelect v-model="batch.teams" apply-default />
 					<FormControl
 						v-model="batch.seat_count"
 						:label="__('Seat Count')"

@@ -704,7 +704,7 @@ def preview_import(file_url: str | None = None, file_name: str | None = None, us
 	return preview
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def ensure_demo_learner(email: str | None = None, password: str | None = None):
 	"""Create or reset a learner-only account for local/user-side testing."""
 	if not cint(frappe.conf.get("allow_demo_learner")):

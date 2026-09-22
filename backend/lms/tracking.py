@@ -486,14 +486,18 @@ def aggregate_daily_activity(target_date=None):
 
 def purge_old_heartbeats():
 	"""Delete raw heartbeat logs older than retention window (weekly job)."""
+	# Heartbeats arrive once a minute per active learner — hundreds of thousands a week. Deleting
+	# them one document at a time, 5000 per run, never caught up, so the table only ever grew.
 	cutoff = add_days(today(), -RAW_HEARTBEAT_RETENTION_DAYS)
-	old_names = frappe.get_all(
-		"LMS Activity Heartbeat",
-		filters=[["timestamp", "<", cutoff]],
-		pluck="name",
-		limit=5000,
-	)
-	for name in old_names:
-		frappe.delete_doc("LMS Activity Heartbeat", name, ignore_permissions=True, force=True)
-	if old_names:
+	deleted = 0
+	while True:
+		batch = frappe.db.sql(
+			"delete from `tabLMS Activity Heartbeat` where timestamp < %s limit 10000", cutoff
+		)
 		frappe.db.commit()
+		removed = frappe.db._cursor.rowcount if hasattr(frappe.db, "_cursor") else 0
+		deleted += max(removed, 0)
+		if removed < 10000:
+			break
+		if deleted >= 1_000_000:  # keep one run bounded; the next run continues
+			break

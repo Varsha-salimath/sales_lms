@@ -32,7 +32,12 @@ import { Check, Lock } from 'lucide-vue-next'
 
 // Teams (LMS Department) that own a course, batch or program. v-model is the `teams` child table:
 // an array of { team } rows (plain strings are accepted too).
-const props = defineProps({ modelValue: { type: Array, default: () => [] } })
+const props = defineProps({
+	modelValue: { type: Array, default: () => [] },
+	// Only new records start with the editor's own team; an existing record with no teams is
+	// deliberately shared with everyone.
+	applyDefault: { type: Boolean, default: false },
+})
 const emit = defineEmits(['update:modelValue', 'change'])
 
 const current = computed(() => (props.modelValue || []).map((r) => (typeof r === 'string' ? r : r?.team)).filter(Boolean))
@@ -45,8 +50,9 @@ const teams = createResource({
 	auto: true,
 	cache: 'lms-assignable-teams',
 	onSuccess(data) {
-		// New items start with the person's main team (or their only team).
-		if (!current.value.length && data?.default) set([data.default])
+		// New items start with the person's main team (or their only team). On an edit form an
+		// empty list means "shared with every team" and must be left alone.
+		if (props.applyDefault && !current.value.length && data?.default) set([data.default])
 	},
 })
 

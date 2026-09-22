@@ -378,7 +378,15 @@ def sanitize_user_facing_path(url: str | None) -> str | None:
 	if not url:
 		return None
 	url = str(url).strip()
+	# Browsers read a backslash as a slash, so "/\\evil.com" leaves the site. Treat anything with a
+	# host, a backslash or a control character as off-site.
+	if any(ch in url for ch in "\\\r\n\t") or any(ord(ch) < 32 for ch in url):
+		return None
 	if not url.startswith("/") or url.startswith("//"):
+		return None
+	from urllib.parse import urlparse
+
+	if urlparse(url).netloc:
 		return None
 	if url.startswith(("/api", "/app", "/assets", "/files", "/private", "/desk")):
 		return None

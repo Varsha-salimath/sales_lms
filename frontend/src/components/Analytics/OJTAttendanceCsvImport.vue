@@ -104,7 +104,7 @@ const runImport = async () => {
 		const result = await call('lms.lms.ojt_certification.import_attendance_metrics_csv', {
 			file_content: csvText.value,
 		})
-		toast.success(__('Updated {0} learner rows.', [String(result.updated || 0)]))
+		toast.success(`${__('Updated')} ${result.updated || 0} ${__('learner rows.')}`)
 		show.value = false
 		csvText.value = ''
 		csvFileName.value = ''

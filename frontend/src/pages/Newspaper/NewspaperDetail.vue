@@ -42,7 +42,7 @@
 
 				<div
 					class="prose prose-sm max-w-none rounded-xl border bg-surface-white p-5 text-ink-gray-8"
-					v-html="detail.data.content"
+					v-html="sanitizeHTML(detail.data.content)"
 				/>
 
 				<div class="grid gap-3 rounded-xl border bg-surface-gray-2 p-5 text-sm">
@@ -132,7 +132,7 @@
 							</div>
 							<div
 								class="prose prose-sm mt-2 max-w-none text-ink-gray-7"
-								v-html="comment.content"
+								v-html="sanitizeHTML(comment.content)"
 							/>
 							<div v-if="isAdmin" class="mt-2">
 								<Button variant="outline" size="sm" @click="startReply(comment)">
@@ -155,7 +155,7 @@
 								</div>
 								<div
 									class="prose prose-sm mt-2 max-w-none text-ink-gray-7"
-									v-html="reply.content"
+									v-html="sanitizeHTML(reply.content)"
 								/>
 							</div>
 						</div>
@@ -212,6 +212,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { sessionStore } from '@/stores/session'
 import { usersStore } from '@/stores/user'
+import { sanitizeHTML } from '@/utils'
 
 const props = defineProps({
 	name: {

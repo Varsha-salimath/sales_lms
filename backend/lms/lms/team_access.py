@@ -211,7 +211,7 @@ def _as_list(value):
 	return list(value or [])
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def save_member(user: str, access_role: str, departments=None, primary: str | None = None):
 	"""Create or update a person's access role and teams."""
 	_ensure_admin()
@@ -258,7 +258,7 @@ def save_member(user: str, access_role: str, departments=None, primary: str | No
 	return {"user": user}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def add_reporting_line(member: str, manager: str, line_type: str, from_date: str | None = None, department: str | None = None):
 	_ensure_admin()
 	_ensure_can_edit(member)
@@ -291,7 +291,7 @@ def end_line(name: str, reason: str | None = None):
 	access.clear_cache()
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def add_view_grant(user: str, department: str, can_manage: int = 0, reason: str | None = None):
 	"""Let someone see (and optionally manage) a whole team they are not part of. Super Admin only."""
 	if not access.is_super_admin():
@@ -314,7 +314,7 @@ def add_view_grant(user: str, department: str, can_manage: int = 0, reason: str 
 	return doc.name
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def revoke_view_grant(name: str):
 	if not access.is_super_admin():
 		frappe.throw(_("Only a Super Admin can remove team views."), frappe.PermissionError)
@@ -322,7 +322,7 @@ def revoke_view_grant(name: str):
 	access.clear_cache()
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def create_account(
 	email: str,
 	first_name: str,

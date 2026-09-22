@@ -39,7 +39,7 @@
 				<option value="">{{ __('All courses') }}</option>
 				<option v-for="c in courses" :key="c.name" :value="c.name">{{ c.title }}</option>
 			</select>
-			<button v-for="d in [0, 1, 2, 3, 4, 5]" :key="d" class="vx-chip" :class="{ 'is-on': filters.day === d }" @click="filters.day = d">
+			<button v-for="d in dayChips" :key="d" class="vx-chip" :class="{ 'is-on': filters.day === d }" @click="filters.day = d">
 				{{ d ? `${__('Day')} ${d}` : __('All days') }}
 			</button>
 			<select v-model="filters.status" class="vx-select">
@@ -92,7 +92,7 @@
 
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
-import { call, createResource, debounce } from 'frappe-ui'
+import { call, createResource, debounce, toast } from 'frappe-ui'
 import { AlertTriangle, Mic } from 'lucide-vue-next'
 
 const filters = reactive({ day: 0, status: '', search: '', course: '' })
@@ -111,6 +111,13 @@ const rows = computed(() => results.data?.rows || [])
 const blocked = computed(() => results.data?.blocked || [])
 const courses = computed(() => results.data?.courses || [])
 const multiCourse = computed(() => courses.value.length > 1)
+// Day chips follow the days that actually have results (any day-journey course, not just a 5-day CRT).
+const dayChips = computed(() => {
+	const days = new Set(rows.value.map((r) => r.day).filter(Boolean))
+	blocked.value.forEach((b) => b.day && days.add(b.day))
+	if (filters.day) days.add(filters.day)
+	return [0, ...[...days].sort((a, b) => a - b)]
+})
 
 const key = (b) => `${b.member}-${b.course}-${b.day}`
 const score = (v) => (v == null ? '—' : Math.round(v))
@@ -123,6 +130,8 @@ async function unlock(b) {
 	try {
 		await call('lms.lms.sales_viva.grant_attempts', { member: b.member, course: b.course, day: b.day, reason: 'Unlocked from Voice vivas' })
 		results.reload()
+	} catch (e) {
+		toast.error(e?.messages?.[0] || __('Could not unlock more attempts.'))
 	} finally {
 		busy.value = ''
 	}

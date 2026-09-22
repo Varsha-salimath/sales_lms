@@ -377,7 +377,7 @@ const insertQuiz = (close) => {
 			})
 		},
 		onError(error) {
-			toast.error(__('Error creating quiz: {0}', error.message))
+			toast.error(`${__('Error creating quiz:')} ${error.message}`)
 		},
 	})
 }

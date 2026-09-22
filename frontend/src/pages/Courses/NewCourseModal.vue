@@ -22,7 +22,7 @@
 						:inlineCreate="true"
 						:onCreate="createCategory"
 					/>
-					<TeamSelect v-model="course.teams" />
+					<TeamSelect v-model="course.teams" apply-default />
 					<MultiSelect
 						v-model="course.instructors"
 						doctype="User"

@@ -228,9 +228,7 @@
 			<template #body-content>
 				<p class="text-sm text-ink-gray-7">
 					{{
-						__('Send this newsletter to {0} learners?', [
-							String(recipientCount.data?.count ?? 0),
-						])
+						`${__('Send this newsletter to')} ${recipientCount.data?.count ?? 0} ${__('learners?')}`
 					}}
 				</p>
 			</template>
@@ -402,10 +400,7 @@ const confirmSend = async (close) => {
 		})
 		close()
 		toast.success(
-			__(
-				'Newsletter sent successfully. {0} learners were notified.',
-				[String(result.recipient_count || 0)]
-			)
+			`${__('Newsletter sent successfully.')} ${result.recipient_count || 0} ${__('learners were notified.')}`
 		)
 		router.push({ name: 'Newspaper' })
 	} catch (err) {

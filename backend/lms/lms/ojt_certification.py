@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import csv
 import io
+import os
 import re
 import urllib.request
 from datetime import datetime
@@ -366,7 +367,7 @@ def get_ojt_report_options():
 	}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def save_ojt_certification_report(
 	name: str | None = None,
 	learner: str | None = None,
@@ -514,7 +515,7 @@ def export_ojt_certification_report(
 	}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def sync_ojt_certification_metrics(sheet_url: str | None = None):
 	"""Fetch the Google Sheet and replace stored learner rows. No fake success."""
 	# Syncing replaces everyone's OJT data, and a caller-supplied URL decides where it comes from.
@@ -562,6 +563,10 @@ def seed_ojt_certification_metrics_if_empty():
 	if frappe.db.count(DOCTYPE):
 		return
 	path = frappe.get_app_path("lms", "lms", "data", "ojt_certification_metrics.csv")
+	if not os.path.exists(path):
+		# The snapshot of real employee data is no longer shipped in the repo; a new site starts
+		# empty and fills itself from the Google Sheet on the first sync.
+		return
 	with open(path, encoding="utf-8") as handle:
 		rows = parse_ojt_certification_csv(handle.read())
 	saved = replace_ojt_certification_rows(rows)
