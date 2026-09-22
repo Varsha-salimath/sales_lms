@@ -364,6 +364,7 @@
 								<td v-for="k in ['booked', 'catered']" :key="k" class="text-center tabular-nums">{{ fmt(stats[k]?.avg) }}</td>
 								<td class="text-center">{{ fmtPct(stats.booking_rate?.avg) }}</td>
 								<td v-for="k in TEST_KEYS" :key="k" class="text-center tabular-nums">{{ fmt(stats[k]?.avg) }}</td>
+								<td class="text-center tabular-nums">{{ vivaAvg == null ? '—' : fmtPct(vivaAvg) }}</td>
 								<td class="text-center font-medium">{{ fmtPct(stats.readiness?.avg) }}</td>
 							</tr>
 						</tfoot>
@@ -659,6 +660,12 @@ const columns = [
 	{ key: 'viva_avg', label: __('Avg best'), align: 'text-center' },
 	{ key: 'readiness', label: __('Readiness'), align: 'text-center' },
 ]
+
+// Batch average of the learners' viva scores (only those who have taken one).
+const vivaAvg = computed(() => {
+	const vals = rows.value.map((r) => r.viva_avg).filter((v) => v !== null && v !== undefined)
+	return vals.length ? Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10 : null
+})
 
 const visibleRows = computed(() => {
 	const list = rows.value.filter((r) => !bandFilter.value || r.readiness_band === bandFilter.value)
