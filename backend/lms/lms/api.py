@@ -70,6 +70,8 @@ def get_user_info():
 	from lms.lms import access
 
 	user.is_training_manager = access.is_training_manager(user.name)
+	user.can_preview_as_learner = access.can_preview_as_learner(user.name)
+	user.learner_preview = access.learner_preview(user.name)
 	user.is_student = (
 		not user.is_instructor
 		and not user.is_moderator

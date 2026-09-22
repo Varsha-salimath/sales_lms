@@ -74,7 +74,7 @@
 					</li>
 				</ol>
 
-				<div v-if="crt.viva?.required" class="viva-card mt-6" :class="{ 'is-ready': vivaReady }">
+				<div v-if="crt.viva?.required || crt.viva?.can_try" class="viva-card mt-6" :class="{ 'is-ready': vivaReady }">
 					<div class="viva-icon"><Mic class="h-5 w-5" /></div>
 					<div class="min-w-0 flex-1">
 						<div class="text-sm font-semibold text-[color:var(--il-ink)]">{{ __('Voice viva') }}</div>
@@ -88,7 +88,7 @@
 						:style="vivaReady ? 'background: #0075ff' : 'border-color: #d7e4f7; color: #0075ff'"
 						@click="$router.push({ name: 'SalesViva', params: { crtNumber: String(crt.crt_number) } })"
 					>
-						{{ vivaReady ? __('Start viva') : __('View') }}
+						{{ vivaReady ? (crt.viva?.can_try ? __('Try the viva') : __('Start viva')) : __('View') }}
 					</button>
 				</div>
 
@@ -157,12 +157,15 @@ const stateLabel = (state) =>
 		empty: __('No sessions'),
 	})[state] || state
 
-const vivaReady = computed(() => crt.value?.state === 'viva_pending' && !crt.value?.viva?.blocked)
+const vivaReady = computed(
+	() => (crt.value?.state === 'viva_pending' && !crt.value?.viva?.blocked) || Boolean(crt.value?.viva?.can_try && !crt.value?.viva?.passed)
+)
 
 const vivaLine = computed(() => {
 	const c = crt.value
 	const v = c?.viva || {}
 	if (v.passed) return __('Passed · this day is complete')
+	if (v.can_try) return __('Staff preview · try this day’s viva any time (learners get it after the sessions)')
 	if (v.blocked) return __('All attempts used · your Training Manager can unlock more')
 	if (c?.state === 'viva_pending') return `${__('A 3–4 minute spoken check on today’s content')} · ${v.attempts_left ?? 3} ${__('attempts left')}`
 	return __('Unlocks when all sessions above are done')

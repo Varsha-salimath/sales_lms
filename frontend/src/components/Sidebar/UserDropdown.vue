@@ -71,6 +71,8 @@ import SettingsModal from '@/components/Settings/Settings.vue'
 import defaultLogo from '@/assets/il-logo-white.svg'
 import {
 	ChevronDown,
+	Eye,
+	EyeOff,
 	LayoutGrid,
 	LogIn,
 	LogOut,
@@ -138,6 +140,15 @@ const userDropdownOptions = computed(() => {
 					onClick: () => {
 						toggleTheme()
 					},
+				},
+				{
+					icon: userResource.data?.learner_preview ? EyeOff : Eye,
+					label: userResource.data?.learner_preview ? 'Exit learner view' : 'View as learner',
+					onClick: async () => {
+						await call('lms.lms.access.set_learner_preview', { on: userResource.data?.learner_preview ? 0 : 1 })
+						window.location.href = '/dashboard'
+					},
+					condition: () => Boolean(userResource.data?.can_preview_as_learner),
 				},
 				{
 					icon: LayoutGrid,

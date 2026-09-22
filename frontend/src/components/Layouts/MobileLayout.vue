@@ -1,6 +1,7 @@
 <template>
 	<div class="flex h-full flex-col relative">
 		<div class="h-full pb-10" id="scrollContainer">
+			<LearnerPreviewBanner />
 			<slot />
 		</div>
 
@@ -54,6 +55,7 @@
 	</div>
 </template>
 <script setup>
+import LearnerPreviewBanner from '@/components/LearnerPreviewBanner.vue'
 import { getSidebarLinks } from '@/utils'
 import { useRouter } from 'vue-router'
 import { call } from 'frappe-ui'

@@ -456,6 +456,13 @@ def _is_staff(user: str | None = None) -> bool:
 	return bool(roles & {"System Manager", "Administrator", "Moderator", "Course Creator"})
 
 
+def _journey_staff(user: str) -> bool:
+	"""Staff skip the 'finish the sessions first' rule — unless they are in learner view."""
+	from lms.lms.sales_journey import _is_staff as journey_staff
+
+	return journey_staff(user)
+
+
 def _require_login() -> str:
 	if frappe.session.user == "Guest":
 		frappe.throw(_("Please log in."), frappe.PermissionError)
@@ -589,7 +596,7 @@ def get_viva_state(crt_number: int):
 		reason = "passed"
 	elif state["blocked"]:
 		reason = "blocked"
-	elif not lessons_done and not _is_staff(member):
+	elif not lessons_done and not _journey_staff(member):
 		reason = "lessons_pending"
 	return {
 		"crt_number": day,

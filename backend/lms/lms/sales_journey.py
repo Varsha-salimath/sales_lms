@@ -56,11 +56,13 @@ def _require_login():
 def _is_staff(user: str | None = None) -> bool:
 	"""Instructors, managers and admins: every day open, no viva gate (see access.bypasses_progression)."""
 	user = user or frappe.session.user
+	from lms.lms import access
+
+	if access.learner_preview(user):
+		return False
 	roles = set(frappe.get_roles(user))
 	if roles & {"System Manager", "Administrator", "Moderator", "Course Creator"}:
 		return True
-	from lms.lms import access
-
 	return access.bypasses_progression(user)
 
 
@@ -91,7 +93,7 @@ def _crt_states(member: str) -> list[dict]:
 	from lms.lms import sales_viva
 
 	viva_on = sales_viva.is_required() and not staff
-	viva_passed = sales_viva.passed_days(member) if viva_on else set()
+	viva_passed = sales_viva.passed_days(member) if (viva_on or staff) else set()
 	for idx in range(1, 6):
 		chapter = next((c for c in outline if cint(c.get("idx")) == idx), None)
 		lessons = (chapter or {}).get("lessons") or []
@@ -134,6 +136,8 @@ def _crt_states(member: str) -> list[dict]:
 				"viva": sales_viva.day_viva_state(member, idx) if viva_on and state == "viva_pending" else {
 					"required": viva_on,
 					"passed": idx in viva_passed,
+					# Staff aren't gated but can try any day's viva once it's switched on.
+					"can_try": bool(staff and sales_viva.is_configured()),
 				},
 				"current_lesson": {
 					"name": current_lesson.get("name"),

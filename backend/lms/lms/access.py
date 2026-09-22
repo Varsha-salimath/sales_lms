@@ -93,9 +93,40 @@ def bypasses_progression(user=None) -> bool:
 	"""Instructors, managers (incl. Training Managers) and admins see every day and lesson unlocked;
 	only learners go day by day, session by session."""
 	user = _user(user)
-	if user == "Guest":
+	if user == "Guest" or learner_preview(user):
 		return False
 	return get_tier(user) >= INSTRUCTOR or is_training_manager(user)
+
+
+# "View as learner": staff can switch the learning experience to exactly what a learner gets
+# (locks, Hello ILians, viva gate) to test it. Admin screens and data access are unaffected.
+def _preview_key(user):
+	return f"lms_learner_preview:{user}"
+
+
+def learner_preview(user=None) -> bool:
+	user = _user(user)
+	if user == "Guest":
+		return False
+	return bool(frappe.cache().get_value(_preview_key(user)))
+
+
+def can_preview_as_learner(user=None) -> bool:
+	user = _user(user)
+	roles = set(frappe.get_roles(user))
+	return bool(roles & {"System Manager", "Moderator", "Course Creator"}) or get_tier(user) >= INSTRUCTOR or is_training_manager(user)
+
+
+@frappe.whitelist(methods=["POST"])
+def set_learner_preview(on: int = 1):
+	user = frappe.session.user
+	if not can_preview_as_learner(user):
+		frappe.throw(frappe._("Only staff can switch to learner view."), frappe.PermissionError)
+	if frappe.utils.cint(on):
+		frappe.cache().set_value(_preview_key(user), 1, expires_in_sec=12 * 3600)
+	else:
+		frappe.cache().delete_value(_preview_key(user))
+	return {"learner_preview": learner_preview(user)}
 
 
 # ---------------------------------------------------------------------------
