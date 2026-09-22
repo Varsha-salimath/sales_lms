@@ -87,7 +87,7 @@
 
 			<!-- OJT locked notice (IL gold "Stuck on a problem?" card) -->
 			<section
-				v-if="home.data.ojt?.locked && !home.data.is_staff"
+				v-if="home.data.ojt?.enabled && home.data.ojt?.locked && !home.data.is_staff"
 				class="mt-6 flex items-start gap-4 rounded-3xl bg-[color:var(--il-secondary-95)] p-5 shadow-[0_1px_12px_rgba(0,0,0,0.08)]"
 			>
 				<span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[color:var(--il-secondary-50)] text-[color:var(--il-ink)]">
@@ -142,7 +142,9 @@ const crtsDone = computed(() => crts.value.length > 0 && crts.value.every((c) =>
 const currentIndex = computed(() => crts.value.findIndex((c) => c.state !== 'completed'))
 const evalStatus = computed(() => home.data?.evaluation?.status)
 const evalDone = computed(() => crtsDone.value && evalStatus.value === 'Completed')
-const ojtOpen = computed(() => evalDone.value && Boolean(home.data?.ojt?.eligible))
+// OJT ("Go live") is switched off until it's built end to end (site_config sales_ojt_enabled).
+const ojtEnabled = computed(() => Boolean(home.data?.ojt?.enabled))
+const ojtOpen = computed(() => ojtEnabled.value && evalDone.value && Boolean(home.data?.ojt?.eligible))
 
 const sessions = (c) => (c.lessons_total ? `${c.lessons_done} ${__('of')} ${c.lessons_total} ${__('sessions')}` : __('Content coming soon'))
 
@@ -196,17 +198,19 @@ const steps = computed(() => {
 		clickable: evalKind !== 'locked',
 		open: goEval,
 	})
-	const ojtKind = ojtOpen.value ? 'current' : staff.value ? 'next' : 'locked'
-	list.push({
-		key: 'ojt',
-		icon: PhoneCall,
-		title: __('Go live · OJT'),
-		detail: ojtOpen.value ? __('On-the-job calls with real leads') : __('Real calls with real leads, with your trainer'),
-		kind: ojtKind,
-		status: { current: __('Open'), next: __('After review'), locked: __('Locked') }[ojtKind],
-		clickable: ojtKind !== 'locked',
-		open: () => router.push({ name: 'SalesOJT' }),
-	})
+	if (ojtEnabled.value) {
+		const ojtKind = ojtOpen.value ? 'current' : staff.value ? 'next' : 'locked'
+		list.push({
+			key: 'ojt',
+			icon: PhoneCall,
+			title: __('Go live · OJT'),
+			detail: ojtOpen.value ? __('On-the-job calls with real leads') : __('Real calls with real leads, with your trainer'),
+			kind: ojtKind,
+			status: { current: __('Open'), next: __('After review'), locked: __('Locked') }[ojtKind],
+			clickable: ojtKind !== 'locked',
+			open: () => router.push({ name: 'SalesOJT' }),
+		})
+	}
 	return [...helloStep, ...list]
 })
 

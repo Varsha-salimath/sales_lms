@@ -163,10 +163,23 @@ def _compute_evaluation(member: str, crts: list[dict]) -> dict:
 	}
 
 
+def ojt_enabled() -> bool:
+	"""OJT (the 'Go live' step) is still being built: off unless site_config sales_ojt_enabled = 1."""
+	return cint(frappe.conf.get("sales_ojt_enabled", 0)) == 1
+
+
+def _ensure_ojt_enabled():
+	if not ojt_enabled():
+		frappe.throw(_("OJT isn't available yet."))
+
+
 def _ojt_eligibility(crts: list[dict], evaluation, member: str | None = None) -> dict:
 	member = member or frappe.session.user
+	if not ojt_enabled():
+		return {"enabled": False, "eligible": False, "locked": False, "reason": ""}
 	if _is_staff(member):
 		return {
+			"enabled": True,
 			"eligible": True,
 			"locked": False,
 			"reason": "Staff preview — OJT is unlocked for admin access.",
@@ -178,6 +191,7 @@ def _ojt_eligibility(crts: list[dict], evaluation, member: str | None = None) ->
 	if not evaluation or evaluation.status != "Completed":
 		missing.append("Complete the Sales training evaluation after CRT 5.")
 	return {
+		"enabled": True,
 		"eligible": not missing,
 		"locked": bool(missing),
 		"reason": " ".join(missing)
@@ -196,7 +210,7 @@ def _certificate_eligibility(member: str, crts: list[dict], evaluation) -> dict:
 		missing.append("Finish CRT 1–5.")
 	if not evaluation or evaluation.status != "Completed":
 		missing.append("Complete training evaluation.")
-	if not finished_ojt:
+	if not finished_ojt and ojt_enabled():
 		missing.append("Complete at least one OJT simulation.")
 	existing = frappe.db.get_value(
 		"LMS Certificate", {"member": member, "course": COURSE_SLUG}, "name"
@@ -242,13 +256,14 @@ def _session_milestones(crts: list[dict]) -> list[dict]:
 				"detail": "CRT classroom training is complete. Review your Sales rating.",
 			}
 		)
-		items.append(
-			{
-				"kind": "ojt",
-				"title": "OJT unlock",
-				"detail": "Live sales simulation is the next stage after evaluation.",
-			}
-		)
+		if ojt_enabled():
+			items.append(
+				{
+					"kind": "ojt",
+					"title": "OJT unlock",
+					"detail": "Live sales simulation is the next stage after evaluation.",
+				}
+			)
 	else:
 		left = next((c for c in crts if c["state"] != "completed"), None)
 		if left:
@@ -343,6 +358,7 @@ def get_evaluation():
 		"reason": "" if staff else ("Complete CRT 1–5 to unlock your Sales training evaluation." if locked else ""),
 		"crts_complete": staff or not locked,
 		"evaluation": None,
+		"ojt_enabled": ojt_enabled(),
 	}
 	if doc:
 		payload["evaluation"] = {
@@ -394,6 +410,7 @@ def complete_evaluation():
 @frappe.whitelist()
 def get_ojt_state():
 	_require_login()
+	_ensure_ojt_enabled()
 	member = frappe.session.user
 	_ensure_enrolled(member)
 	seed_ojt_scenarios()
@@ -423,6 +440,7 @@ def get_ojt_state():
 @frappe.whitelist()
 def start_ojt(scenario: str):
 	_require_login()
+	_ensure_ojt_enabled()
 	member = frappe.session.user
 	_ensure_enrolled(member)
 	crts = _crt_states(member)

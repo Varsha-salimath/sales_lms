@@ -99,6 +99,7 @@
 					</div>
 
 					<button
+						v-if="page.data?.ojt_enabled"
 						type="button"
 						class="mt-8 rounded-full px-5 py-2.5 text-sm font-semibold text-white"
 						style="background: #0075ff"
