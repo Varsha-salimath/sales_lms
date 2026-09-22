@@ -25,6 +25,7 @@
   "summary",
   "strengths",
   "improvements",
+  "recording",
   "watch_outs",
   "section_turns",
   "turns",
@@ -157,6 +158,13 @@
    "fieldname": "improvements",
    "fieldtype": "Small Text",
    "label": "To improve"
+  },
+  {
+   "fieldname": "recording",
+   "label": "Recording",
+   "fieldtype": "Attach",
+   "read_only": 1,
+   "description": "Audio of the call (learner and Asha), kept as a record of what was actually said."
   },
   {
    "fieldname": "watch_outs",

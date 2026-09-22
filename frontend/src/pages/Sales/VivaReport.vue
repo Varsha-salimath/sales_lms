@@ -30,6 +30,16 @@
 
 				<div v-if="r.status === 'Scoring'" class="vr-note mt-4">{{ __('This viva is still being scored — this page updates itself.') }}</div>
 
+				<section v-if="r.recording" class="vr-card mt-4">
+					<div class="vr-metric-head">
+						<span>{{ __('Recording of the call') }}</span>
+					</div>
+					<audio class="vr-audio mt-2" controls preload="none" :src="recordingUrl" />
+					<p class="vr-muted mt-2">
+						{{ __('What was actually said, both voices. Scores are a machine’s reading of it — the audio is the record.') }}
+					</p>
+				</section>
+
 				<!-- Knowledge / Fluency -->
 				<div class="vr-grid mt-5">
 					<div class="vr-card">
@@ -154,6 +164,10 @@ const report = createResource({
 	auto: true,
 })
 const r = computed(() => report.data)
+// Served through the API so only the learner, their manager and admins can play it.
+const recordingUrl = computed(
+	() => `/api/method/lms.lms.sales_viva.get_recording?attempt=${encodeURIComponent(route.params.attempt)}`
+)
 
 // Scoring happens after the call ends, so poll until the result lands instead of asking the
 // learner to refresh.
@@ -234,6 +248,10 @@ async function unlock() {
 	font-size: 14px;
 	font-weight: 600;
 	color: #0062cc;
+}
+.vr-audio {
+	width: 100%;
+	height: 36px;
 }
 .vr-muted {
 	font-size: 13px;

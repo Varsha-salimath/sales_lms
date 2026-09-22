@@ -86,6 +86,7 @@
 							<template v-else-if="micHeard">{{ __('We can hear you. You’re ready.') }}</template>
 							<template v-else>{{ __('Listening… say something.') }}</template>
 						</p>
+						<p class="viva-muted mt-3">{{ __('Your viva is recorded. You and your Training Manager can play it back afterwards.') }}</p>
 						<p v-if="startError" class="viva-start-error">{{ startError }}</p>
 						<div class="viva-actions">
 							<button v-if="micState !== 'on'" class="viva-btn is-ghost" @click="testMic">{{ __('Test mic') }}</button>

@@ -1214,6 +1214,7 @@ def get_viva_report(attempt: str):
 		"strengths": [s for s in (doc.strengths or "").split("\n") if s],
 		"improvements": [s for s in (doc.improvements or "").split("\n") if s],
 		"flags": [s for s in (doc.watch_outs or "").split("\n") if s],
+		"recording": bool(doc.get("recording")),
 		"pass_mark": PASS_MARK,
 		"is_own": doc.member == user,
 		"can_unlock": _can_unlock(doc.member, user) and state["blocked"],
@@ -1272,7 +1273,7 @@ def get_viva_results(crt_number=None, status: str | None = None, search: str | N
 	rows = frappe.get_all(
 		"Sales Viva Attempt",
 		filters,
-		["name", "member", "member_name", "course", "crt_number", "attempt_no", "status", "overall_score", "knowledge_score", "fluency_score", "verdict", "watch_outs", "started_at"],
+		["name", "member", "member_name", "course", "crt_number", "attempt_no", "status", "overall_score", "knowledge_score", "fluency_score", "verdict", "watch_outs", "started_at", "recording"],
 		order_by="started_at desc",
 		limit=500,
 	)
@@ -1284,6 +1285,7 @@ def get_viva_results(crt_number=None, status: str | None = None, search: str | N
 		r.course = r.course or COURSE_SLUG
 		r.course_title = titles.get(r.course) or course_title(r.course)
 		r.flag_count = len([f for f in (r.watch_outs or "").split("\n") if f])
+		r.recording = bool(r.recording)  # a flag, never the private file path
 	blocked = []
 	for member, crs, day in {(r.member, r.course, r.crt_number) for r in rows if r.status == "Not Passed"}:
 		st = day_viva_state(member, crs, day)
@@ -1364,3 +1366,68 @@ def repair_legacy_records():
 			"""update `tabSales Viva Attempt` set watch_outs = flags
 			where ifnull(watch_outs, '') = '' and ifnull(flags, '') != ''"""
 		)
+
+
+# ---------------------------------------------------------------------------
+# Recording — what was actually said
+# ---------------------------------------------------------------------------
+
+RECORDING_MAX_BYTES = 25 * 1024 * 1024
+RECORDING_TYPES = {"audio/webm": ".webm", "audio/ogg": ".ogg", "audio/mp4": ".m4a", "audio/mpeg": ".mp3"}
+
+
+@frappe.whitelist(methods=["POST"])
+def save_recording(attempt: str):
+	"""Store the call audio against an attempt.
+
+	The scoring model can be wrong; the recording is the record of what was actually said, so a
+	Training Manager can listen for themselves. Only the learner's own browser uploads it, once.
+	"""
+	user = _require_login()
+	doc = frappe.get_doc("Sales Viva Attempt", attempt)
+	if doc.member != user:
+		frappe.throw(_("Only the learner's own viva can be uploaded."), frappe.PermissionError)
+	if doc.get("recording"):
+		return {"saved": True, "already": True}
+	uploaded = (frappe.request.files or {}).get("file") if frappe.request else None
+	if not uploaded:
+		frappe.throw(_("No audio was received."))
+	content = uploaded.stream.read()
+	if not content:
+		frappe.throw(_("The recording was empty."))
+	if len(content) > RECORDING_MAX_BYTES:
+		frappe.throw(_("That recording is too long to store."))
+	extension = RECORDING_TYPES.get((uploaded.mimetype or "").split(";")[0].strip(), ".webm")
+	file_doc = frappe.get_doc(
+		{
+			"doctype": "File",
+			"file_name": f"viva-{doc.name}{extension}",
+			"attached_to_doctype": "Sales Viva Attempt",
+			"attached_to_name": doc.name,
+			"attached_to_field": "recording",
+			"is_private": 1,
+			"content": content,
+		}
+	).insert(ignore_permissions=True)
+	doc.db_set("recording", file_doc.file_url, update_modified=False)
+	return {"saved": True, "seconds": cint(doc.duration_s)}
+
+
+@frappe.whitelist()
+def get_recording(attempt: str):
+	"""Serve the audio to the learner, their manager or an admin — never as a public URL."""
+	user = _require_login()
+	doc = frappe.get_doc("Sales Viva Attempt", attempt)
+	if not _can_view(doc.member, user):
+		frappe.throw(_("You can't listen to this viva."), frappe.PermissionError)
+	url = doc.get("recording")
+	if not url:
+		frappe.throw(_("This viva has no recording."), frappe.DoesNotExistError)
+	name = frappe.db.get_value("File", {"file_url": url, "attached_to_name": doc.name}, "name")
+	if not name:
+		frappe.throw(_("This recording is no longer stored."), frappe.DoesNotExistError)
+	file_doc = frappe.get_doc("File", name)
+	frappe.local.response.filename = file_doc.file_name
+	frappe.local.response.filecontent = file_doc.get_content()
+	frappe.local.response.type = "download"
+	frappe.local.response.display_content_as = "inline"

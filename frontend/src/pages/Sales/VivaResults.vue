@@ -82,6 +82,7 @@
 					<span><span class="vx-pill" :class="r.status === 'Passed' ? 'is-good' : r.status === 'Not Passed' ? 'is-bad' : ''">{{ label(r.status) }}</span></span>
 					<span class="vx-hide-sm">
 						<span v-if="r.flag_count" class="vx-flag"><AlertTriangle class="h-3.5 w-3.5" />{{ r.flag_count }}</span>
+						<span v-if="r.recording" class="vx-rec" :title="__('Recording available')"><Volume2 class="h-3.5 w-3.5" /></span>
 						<span v-else class="vx-muted">—</span>
 					</span>
 				</button>
@@ -93,7 +94,7 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
 import { call, createResource, debounce, toast } from 'frappe-ui'
-import { AlertTriangle, Mic } from 'lucide-vue-next'
+import { AlertTriangle, Mic, Volume2 } from 'lucide-vue-next'
 
 const filters = reactive({ day: 0, status: '', search: '', course: '' })
 const busy = ref('')
@@ -318,6 +319,12 @@ button.vx-row:hover {
 .vx-pill.is-bad {
 	background: #fef0f0;
 	color: #b42323;
+}
+.vx-rec {
+	display: inline-flex;
+	align-items: center;
+	margin-left: 6px;
+	color: #0062cc;
 }
 .vx-flag {
 	display: inline-flex;

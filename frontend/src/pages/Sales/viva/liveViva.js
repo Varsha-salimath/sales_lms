@@ -128,8 +128,11 @@ export function createLiveViva({ attempt, wsUrl, setup, timeLimitS, onChange }) 
 	// ---------- playback ----------
 	function playCtx() {
 		if (!s.playCtx) {
+			// Share the mic's context once it exists: one graph means the recording can carry both
+			// Asha's voice and the learner's. playPcm resamples, so its rate doesn't matter.
 			const Ctor = window.AudioContext || window.webkitAudioContext
-			s.playCtx = new Ctor({ sampleRate: PCM_OUT })
+			s.playCtx = s.micCtx || new Ctor({ sampleRate: PCM_OUT })
+			s.ownsPlayCtx = !s.micCtx
 			s.playAt = s.playCtx.currentTime
 		}
 		if (s.playCtx.state === 'suspended') s.playCtx.resume()
@@ -148,6 +151,7 @@ export function createLiveViva({ attempt, wsUrl, setup, timeLimitS, onChange }) 
 		const src = ctx.createBufferSource()
 		src.buffer = buf
 		src.connect(ctx.destination)
+		if (s.recDest && ctx === s.micCtx) src.connect(s.recDest)
 		const at = Math.max(s.playAt, ctx.currentTime)
 		src.start(at)
 		s.playAt = at + buf.duration
@@ -229,12 +233,64 @@ export function createLiveViva({ attempt, wsUrl, setup, timeLimitS, onChange }) 
 		s.phase = 'thinking'
 		emit()
 	}
+	// ---------- recording ----------
+	// The call is kept as audio so a Training Manager can hear what actually happened, whatever the
+	// model scored. Both sides are mixed into one track: the learner's mic and Asha's replies.
+	function startRecording(ctx) {
+		if (typeof MediaRecorder === 'undefined') return
+		try {
+			s.recDest = ctx.createMediaStreamDestination()
+			s.micSrc.connect(s.recDest)
+			const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus']
+			const mimeType = types.find((t) => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t))
+			s.recorder = new MediaRecorder(s.recDest.stream, mimeType ? { mimeType, audioBitsPerSecond: 32000 } : undefined)
+			s.recChunks = []
+			s.recorder.ondataavailable = (ev) => ev.data && ev.data.size && s.recChunks.push(ev.data)
+			s.recorder.start(2000)
+		} catch (e) {
+			// Recording is a nice-to-have; a browser that refuses it must not stop the viva.
+			s.recorder = null
+			s.recDest = null
+		}
+	}
+
+	function stopRecording() {
+		return new Promise((resolve) => {
+			if (!s.recorder || s.recorder.state === 'inactive') return resolve(null)
+			s.recorder.onstop = () => {
+				const type = s.recorder.mimeType || 'audio/webm'
+				resolve(s.recChunks.length ? new Blob(s.recChunks, { type }) : null)
+			}
+			try {
+				s.recorder.stop()
+			} catch (e) {
+				resolve(null)
+			}
+		})
+	}
+
+	async function uploadRecording(blob) {
+		if (!blob || blob.size < 1024) return
+		const form = new FormData()
+		form.append('file', blob, `viva-${attempt}.webm`)
+		try {
+			await fetch(`/api/method/lms.lms.sales_viva.save_recording?attempt=${encodeURIComponent(attempt)}`, {
+				method: 'POST',
+				body: form,
+				headers: window.csrf_token ? { 'X-Frappe-CSRF-Token': window.csrf_token } : {},
+			})
+		} catch (e) {
+			// The report is still useful without the audio.
+		}
+	}
+
 	function startMicStream() {
 		const Ctor = window.AudioContext || window.webkitAudioContext
 		const ctx = new Ctor()
 		s.micCtx = ctx
 		if (ctx.state === 'suspended') ctx.resume()
 		s.micSrc = ctx.createMediaStreamSource(s.micStream)
+		startRecording(ctx)
 		const node = ctx.createScriptProcessor(4096, 1, 1)
 		s.micNode = node
 		let pending = []
@@ -522,7 +578,7 @@ export function createLiveViva({ attempt, wsUrl, setup, timeLimitS, onChange }) 
 		} catch (e) {}
 		if (s.micStream) s.micStream.getTracks().forEach((t) => t.stop())
 		try {
-			s.playCtx && s.playCtx.close()
+			if (s.playCtx && s.ownsPlayCtx) s.playCtx.close()
 		} catch (e) {}
 		s.playCtx = null
 		if (s.ws) {
@@ -538,7 +594,11 @@ export function createLiveViva({ attempt, wsUrl, setup, timeLimitS, onChange }) 
 		s.ended = true
 		s.phase = 'ending'
 		emit()
+		// Close the recording before cleanup tears the audio graph down, then hand it over while
+		// the attempt is being scored.
+		const audio = await stopRecording()
 		cleanup()
+		uploadRecording(audio)
 		try {
 			const report = await call('lms.lms.sales_viva.finish_attempt', { attempt, reason })
 			s.phase = 'done'
@@ -553,7 +613,10 @@ export function createLiveViva({ attempt, wsUrl, setup, timeLimitS, onChange }) 
 		s.phase = 'error'
 		emit()
 		if (!s.finishing) {
-			cleanup()
+			stopRecording().then((audio) => {
+				cleanup()
+				uploadRecording(audio)
+			})
 			call('lms.lms.sales_viva.finish_attempt', { attempt, reason: 'error' }).catch(() => {})
 		}
 	}
