@@ -197,6 +197,8 @@ def get_newspapers():
 		ignore_permissions=True,
 	)
 
+	if not _is_newspaper_manager():
+		records = [row for row in records if _is_addressed_to(row.name, row.target_type, frappe.session.user)]
 	for row in records:
 		row["content_preview"] = _strip_content_html(row.pop("content", "") or "")[:180]
 		row["published_by_name"] = frappe.db.get_value("User", row.published_by, "full_name")
@@ -208,6 +210,20 @@ def get_newspapers():
 			row["target_label"] = _get_batch_labels_for_newspaper(row.name)
 
 	return records
+
+
+def _is_addressed_to(name: str, target_type: str, user: str) -> bool:
+	"""A newsletter is for everyone, for the learner's batches, or for named people."""
+	if target_type == "All Learners":
+		return True
+	if target_type == "Selected Members":
+		return bool(frappe.db.exists("Sales Newspaper Member", {"parent": name, "user": user}))
+	batches = frappe.get_all("Sales Newspaper Batch", {"parent": name}, pluck="batch")
+	if not batches:
+		return False
+	return bool(
+		frappe.db.exists("LMS Batch Enrollment", {"member": user, "batch": ["in", batches]})
+	)
 
 
 def _get_member_labels_for_newspaper(name: str) -> str:
@@ -261,7 +277,10 @@ def get_newspaper(name: str):
 	row = rows[0] if rows else None
 	if not row:
 		frappe.throw(_("Newsletter not found."), frappe.DoesNotExistError)
-	if not _is_newspaper_manager() and row.status not in ("Sending", "Sent"):
+	manager = _is_newspaper_manager()
+	if not manager and (
+		row.status not in ("Sending", "Sent") or not _is_addressed_to(row.name, row.target_type, frappe.session.user)
+	):
 		frappe.throw(_("Newsletter not found."), frappe.PermissionError)
 	batches = frappe.get_all(
 		"Sales Newspaper Batch",
@@ -290,7 +309,8 @@ def get_newspaper(name: str):
 		"target_type": doc.target_type,
 		"batches": [{"batch": b.batch, "batch_title": b.batch_title} for b in doc.batches],
 		"members": [
-			{"user": m.user, "user_name": m.user_name, "user_email": m.user_email}
+			# Recipients' email addresses are for whoever sends the newsletter, not its readers.
+			{"user": m.user, "user_name": m.user_name, "user_email": m.user_email if manager else None}
 			for m in doc.members
 		],
 		"recipient_count": doc.recipient_count,

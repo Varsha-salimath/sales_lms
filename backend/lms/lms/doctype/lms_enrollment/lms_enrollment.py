@@ -116,6 +116,13 @@ class LMSEnrollment(Document):
 			as_dict=True,
 		)
 
+		# A published course still belongs to a team. Without this check a learner could enroll
+		# themselves in another team's course through the REST API and then see all of its content.
+		from lms.lms.content_scope import can_access
+
+		if not is_admin() and not can_access("LMS Course", self.course, self.member):
+			frappe.throw(_("This course is not available to you."), frappe.PermissionError)
+
 		if course_details.disable_self_learning and not is_admin():
 			frappe.throw(
 				_(

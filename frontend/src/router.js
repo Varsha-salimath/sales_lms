@@ -523,6 +523,11 @@ router.beforeEach(async (to, from, next) => {
 			return
 		}
 		const u = userResource.data
+		// Team & access is Admin-only on the server, so instructors and evaluators would land on a
+		// permission error instead of a page.
+		if (to.name === 'TeamAccess' && !['Admin', 'Super Admin'].includes(u?.access_tier)) {
+			return next({ name: 'StudentDashboard' })
+		}
 		const staff =
 			u?.is_moderator ||
 			u?.is_instructor ||

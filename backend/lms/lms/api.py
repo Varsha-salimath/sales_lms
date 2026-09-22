@@ -359,13 +359,16 @@ def _ensure_assessment_reset_access(member: str):
 
 
 def _training_manager_member_scope():
-	"""None if full analytics access; else set of User names a TM may view/act on."""
+	"""None if the caller may see every learner; else the set of User names they may view/act on."""
+	from lms.lms import access
+
 	try:
 		_ensure_analytics_access()
-		return None
+		# Having an analytics role is not the same as seeing the whole organisation: instructors and
+		# team admins see the learners in their own teams (Super Admins get EVERYONE, i.e. None).
+		return access.get_visible_members()
 	except frappe.PermissionError:
 		pass
-	from lms.lms import access
 
 	tree = access.training_manager_tree(frappe.session.user)
 	if not tree:

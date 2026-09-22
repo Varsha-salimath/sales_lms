@@ -811,8 +811,29 @@ def _learner_filters(
 		)
 	elif stage == "not_started":
 		clauses.append("ifnull(attendance_days, 0) = 0")
+	scope = _visible_emails()
+	if scope is not None:
+		if not scope:
+			clauses.append("1 = 0")
+		else:
+			clauses.append("lower(email) in %(scope_emails)s")
+			values["scope_emails"] = tuple(sorted(scope))
 	where = f"where {' and '.join(clauses)}" if clauses else ""
 	return where, values
+
+
+def _visible_emails() -> set[str] | None:
+	"""Emails of the learners the caller may see, or None for no restriction (Super Admins)."""
+	members = access.get_visible_members()
+	if members is access.EVERYONE:
+		return None
+	emails = set()
+	for user in members:
+		emails.add((user or "").lower())
+		mail = frappe.db.get_value("User", user, "email")
+		if mail:
+			emails.add(mail.lower())
+	return emails
 
 
 def _funnel_from_counts(total, started, mock_completed, audit_completed, product_completed):

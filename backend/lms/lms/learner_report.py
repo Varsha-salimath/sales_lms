@@ -21,8 +21,15 @@ OJT_DEPARTMENT = "Retail Sales"
 
 
 def _ensure_report_access():
-	"""Training Managers and above (and trainers) may open learner reports."""
-	if frappe.session.user == "Guest" or access.get_tier() < access.INSTRUCTOR:
+	"""Training Managers and above (and trainers) may open learner reports.
+
+	A Training Manager can be an ordinary user with people reporting to them, so the tier check
+	alone turned them away from the reports the sidebar offers them. `_scoped` then limits the rows
+	to their own people.
+	"""
+	if frappe.session.user == "Guest":
+		frappe.throw(_("You do not have access to learner reports."), frappe.PermissionError)
+	if access.get_tier() < access.INSTRUCTOR and not access.is_training_manager():
 		frappe.throw(_("You do not have access to learner reports."), frappe.PermissionError)
 
 

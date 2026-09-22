@@ -586,7 +586,10 @@ const getSidebarItems = (forMobile = false) => {
 					to: 'TeamAccess',
 					activeFor: ['TeamAccess'],
 					condition: () => {
-						return !forMobile && userResource?.data && isAdmin()
+						// Creating accounts and moving people between teams is an Admin job; the API
+						// refuses instructors and evaluators, so don't offer them the page.
+						const tier = userResource?.data?.access_tier
+						return !forMobile && ['Admin', 'Super Admin'].includes(tier)
 					},
 				},
 				{

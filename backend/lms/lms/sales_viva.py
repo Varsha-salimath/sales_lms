@@ -1126,21 +1126,23 @@ def finish_attempt(attempt: str, reason: str = "finished"):
 
 def _can_view(member: str, user: str | None = None) -> bool:
 	user = user or frappe.session.user
-	if user == member or _is_staff(user):
-		return True
 	from lms.lms import access
 
+	if user == member or access.is_super_admin(user):
+		return True
+	# A viva holds the learner's answers and the trainer's notes: staff see the people in their own
+	# teams or reporting tree, not everyone with the same role.
 	return access.can_view_member(member, user) or member in access.training_manager_tree(user)
 
 
 def _can_unlock(member: str, user: str | None = None) -> bool:
 	user = user or frappe.session.user
-	if user == member:
-		return False
-	if _is_staff(user):
-		return True
 	from lms.lms import access
 
+	if user == member:
+		return False
+	if access.is_super_admin(user):
+		return True
 	return access.can_manage_member(member, user) or member in access.training_manager_tree(user)
 
 
@@ -1224,7 +1226,8 @@ def get_viva_results(crt_number=None, status: str | None = None, search: str | N
 		for c in frappe.get_all("LMS Course", {"day_viva": 1}, ["name", "title"], order_by="title")
 	]
 	empty = {"rows": [], "blocked": [], "configured": is_configured(), "courses": viva_courses}
-	scope = None if _is_staff(user) else access.get_visible_members(user)
+	# Super Admins see every result; everyone else sees their own teams and reporting tree.
+	scope = None if access.is_super_admin(user) else access.get_visible_members(user)
 	if scope is not None:
 		members = set(scope) | set(access.training_manager_tree(user))
 		if not members:
