@@ -46,11 +46,11 @@ KEY_ENV_NAMES = ("GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_GENAI_API_KEY")
 
 STEMS_PER_VIVA = 5
 MAX_SESSION_PROBES = 2
-MIN_ANSWER_WORDS = 8
+MIN_ANSWER_WORDS = 5
 ATTEMPTS_PER_DAY = 3
 PASS_MARK = 60
 READY_MARK = 80
-TIME_LIMIT_S = 300  # 3–4 minutes of talking plus a buffer; the browser ends the call here
+TIME_LIMIT_S = 240  # a 3–4 minute conversation; the browser ends the call here
 STALE_AFTER_S = 15 * 60  # an attempt left "In Progress" this long was abandoned
 HTTP_TIMEOUT_S = 45
 MAX_TEXT_CHARS = 2500
@@ -433,10 +433,13 @@ def _asha_system(course: str, day: int) -> str:
 		"You are Asha, a friendly but firm Infinity Learn training examiner taking a short spoken viva "
 		f"at the end of Day {day} ({day_title(course, day)}) of {course_title(course)}. This is an exam, not tutoring.\n"
 		"Speak short, natural Indian English. Hinglish answers are fine.\n"
+		"Pace: this is a brisk, natural conversation — like a real call with a parent, not a written exam. "
+		"Someone who knows the material answers fluently; you do not give extra thinking time.\n"
 		"Turn-taking:\n"
-		"- A pause is NOT the end of an answer. Learners think out loud; let them finish.\n"
+		"- A brief pause mid-sentence is normal. Never say 'take your time'.\n"
 		"- Stay on the current question until commit_answer returns allow_next_stem true.\n"
-		"- If a tool says awaiting_answer or incomplete, say 'Go on' or 'Take your time' and wait.\n"
+		"- If a tool says awaiting_answer or incomplete, prompt once in two or three words ('Go on?', 'And?') and wait briefly.\n"
+		"- If told the learner did not answer in time, say 'Okay, let's move on' and call commit_answer with complete true and transcript 'No answer'.\n"
 		"- Call commit_answer only after a complete thought or 'I don't know'.\n"
 		"- Call get_next_stem at the start and only after allow_next_stem is true.\n"
 		"Rules:\n"
@@ -729,7 +732,7 @@ def _word_count(text: str) -> int:
 
 def _is_idk(text: str) -> bool:
 	t = (text or "").lower().replace("’", "'")
-	return bool(re.search(r"\b(i don't know|i dont know|no idea|not sure|skip this|pata nahi)\b", t))
+	return bool(re.search(r"\b(i don't know|i dont know|no idea|not sure|skip this|pata nahi|no answer)\b", t))
 
 
 def _clean_metrics(raw: Any) -> dict[str, Any]:
@@ -805,7 +808,7 @@ def _commit_answer(state, paper, args, metrics) -> dict[str, Any]:
 	if not _is_idk(heard) and _word_count(heard) < MIN_ANSWER_WORDS:
 		return _payload_for_current(state, paper, "incomplete", "Only a fragment so far. Say 'Go on' and wait.")
 	_record(state, paper, transcript, metrics)
-	thin = _is_idk(heard) or _word_count(heard) < 25
+	thin = _is_idk(heard) or _word_count(heard) < 20
 	if thin and not state.get("probe_used") and state.get("probes", 0) < MAX_SESSION_PROBES and not _is_idk(heard):
 		state.update(probe_active=True, probe_used=True, probes=state.get("probes", 0) + 1, answered=False, asked_at=time.time())
 		payload = _payload_for_current(state, paper, "", "Ask this follow-up once, then wait for a complete answer.")
@@ -983,6 +986,7 @@ def _fallback_knowledge(q: dict[str, Any], answer: str) -> float:
 def _finalize(doc, state: dict[str, Any], reason: str = "finished"):
 	paper = _paper(doc)
 	turns = sorted(state.get("turns") or [], key=lambda t: t["idx"])
+	doc.flags.ignore_version = True  # a version diff of the paper/live-state JSON isn't useful (and broke saving)
 	doc.status = "Scoring"
 	doc.ended_at = now_datetime()
 	doc.duration_s = int((get_datetime(doc.ended_at) - get_datetime(doc.started_at)).total_seconds())

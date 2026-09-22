@@ -10,14 +10,17 @@ import { call } from 'frappe-ui'
 
 const PCM_IN = 16000
 const PCM_OUT = 24000
+// Conversational pace: an answer ends after ~1.6 s of silence, and nobody gets long thinking time.
 const VAD = {
 	speechRms: 0.022,
 	bargeRms: 0.038,
 	bargeMs: 280,
-	minSpeechMs: 1800,
-	endSilenceMs: 3200,
+	minSpeechMs: 1000,
+	endSilenceMs: 1600,
 	maxAnswerMs: 45000,
 }
+const NUDGE_AFTER_MS = 6000 // no answer yet: Asha prompts once
+const MOVE_ON_AFTER_MS = 12000 // still nothing: recorded as no answer, next question
 const PAUSE_MS = 2000
 
 export function createLiveViva({ attempt, wsUrl, setup, timeLimitS, onChange }) {
@@ -67,6 +70,8 @@ export function createLiveViva({ attempt, wsUrl, setup, timeLimitS, onChange }) 
 			silentRun: 0,
 			transcript: '',
 			awaiting: false, // a question is open and we are waiting for the learner
+			nudged: false,
+			movedOn: false,
 		}
 	}
 
@@ -387,8 +392,9 @@ export function createLiveViva({ attempt, wsUrl, setup, timeLimitS, onChange }) 
 		if (sc.turnComplete) {
 			s.ashaSpeaking = false
 			// The question "ends" when her audio has actually finished playing, not when the text arrived.
+			// A nudge doesn't restart the clock: think time runs from the end of the question itself.
 			const endAt = Date.now() + queuedMs()
-			if (s.m.awaiting && !s.m.firstSpeechAt) s.m.askEndAt = endAt
+			if (s.m.awaiting && !s.m.firstSpeechAt && !s.m.askEndAt) s.m.askEndAt = endAt
 			if (s.ended) {
 				setTimeout(finish, queuedMs() + 600)
 				return
@@ -428,7 +434,27 @@ export function createLiveViva({ attempt, wsUrl, setup, timeLimitS, onChange }) 
 		})
 	}
 
+	// Silence before answering: prompt once, then move on. Timing is still recorded as think time.
+	function checkSilence() {
+		const m = s.m
+		if (!m.awaiting || !m.askEndAt || m.firstSpeechAt || s.inActivity || s.ended || queuedMs() > 60) return
+		const waited = Date.now() - m.askEndAt
+		const say = (text) =>
+			send({ clientContent: { turns: [{ role: 'user', parts: [{ text }] }], turnComplete: true } })
+		if (waited >= MOVE_ON_AFTER_MS && !m.movedOn) {
+			m.movedOn = true
+			m.transcript = 'No answer'
+			say(
+				"(System: the learner did not answer within 12 seconds.) Say 'Okay, let's move on' and call commit_answer with complete true and transcript 'No answer'."
+			)
+		} else if (waited >= NUDGE_AFTER_MS && !m.nudged) {
+			m.nudged = true
+			say("(System: the learner hasn't started answering.) Prompt them in three or four words, e.g. 'Any thoughts?', then stop.")
+		}
+	}
+
 	function tick() {
+		checkSilence()
 		s.secondsLeft = Math.max(0, s.secondsLeft - 1)
 		if (s.secondsLeft === 0 && !s.timeUpSent) {
 			s.timeUpSent = true
