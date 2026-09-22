@@ -19,6 +19,12 @@ def should_enforce_sequential_locking(course: str, member: str = None) -> bool:
 	if member == "Guest":
 		return False
 	roles = set(frappe.get_roles(member))
+	if frappe.db.get_value("LMS Course", course, "learners_only"):
+		# A course taken by managers as learners (e.g. managers' training): only admins and this
+		# course's own instructors skip the order; everyone enrolled goes session by session.
+		if roles & {"System Manager", "Administrator", "Moderator"} or is_instructor(course):
+			return False
+		return bool(frappe.db.exists("LMS Enrollment", {"course": course, "member": member}))
 	if roles & {"System Manager", "Administrator", "Moderator", "Course Creator"}:
 		return False
 	from lms.lms import access
@@ -151,7 +157,9 @@ def viva_blocking_day(course: str, lesson: str, member: str = None) -> int:
 		return 0
 	member = member or frappe.session.user
 	key = ("viva_passed_days", member)
-	cache = frappe.local.__dict__.setdefault("_lms_viva_cache", {})
+	from lms.lms.access import _cache
+
+	cache = _cache()  # per-request cache shared with the access module
 	if key not in cache:
 		cache[key] = sales_viva.passed_days(member)
 	day = _lesson_day(course, lesson)

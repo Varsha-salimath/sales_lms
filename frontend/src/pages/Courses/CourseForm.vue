@@ -150,6 +150,13 @@
 										__('Allow users to enroll in this course on their own.')
 									"
 								/>
+								<Switch
+									size="sm"
+									v-model="courseResource.doc.learners_only"
+									:label="__('Everyone takes this as a learner')"
+									:description="__('For courses meant for managers: enrolled managers unlock sessions one by one too. Only admins and this course’s instructors see everything.')"
+									@change="makeFormDirty()"
+								/>
 							</div>
 						</div>
 					</div>
@@ -446,6 +453,7 @@ const updateCourseData = () => {
 		'featured',
 		'enable_certification',
 		'paid_certificate',
+		'learners_only',
 	]
 	for (let idx in checkboxes) {
 		let key = checkboxes[idx]
