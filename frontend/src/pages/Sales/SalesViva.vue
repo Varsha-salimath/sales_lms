@@ -1,7 +1,7 @@
 <template>
 	<div class="viva-page">
 		<div class="viva-wrap">
-			<button class="viva-back" @click="leave">← {{ __('Day') }} {{ day }}</button>
+			<button class="viva-back" @click="leave">← {{ __('Day') }} {{ dayNumber }}</button>
 
 			<div v-if="info.loading && !info.data" class="viva-muted mt-10">{{ __('Loading…') }}</div>
 			<div v-else-if="info.error" class="viva-card viva-error mt-6">
@@ -12,7 +12,9 @@
 			<template v-else-if="info.data && stage === 'intro'">
 				<section class="viva-hero">
 					<div class="viva-hero-text">
-						<p class="viva-eyebrow">{{ __('Day') }} {{ day }} · {{ __('Voice viva') }}</p>
+						<p class="viva-eyebrow">
+							{{ __('Day') }} {{ dayNumber }} · {{ __('Voice viva') }}<template v-if="courseName !== 'sales-crt'"> · {{ info.data.course_title }}</template>
+						</p>
 						<h1>{{ info.data.title }}</h1>
 						<p class="viva-hero-sub">
 							{{ `${__('A short spoken check with Asha, your AI examiner.')} ${info.data.questions} ${__('questions')} · ${__('about 3–4 minutes')}.` }}
@@ -201,12 +203,20 @@ import { createLiveViva } from './viva/liveViva'
 
 const route = useRoute()
 const router = useRouter()
-const day = computed(() => Number(route.params.crtNumber))
+// /courses/<course>/days/<n>-<title>/viva
+const courseName = computed(() => route.params.courseName || 'sales-crt')
+const dayParam = computed(() => String(route.params.day || route.params.crtNumber || '1'))
+const dayNumber = computed(() => info.data?.day || parseInt(dayParam.value) || 1)
 
 const info = createResource({
 	url: 'lms.lms.sales_viva.get_viva_state',
-	makeParams: () => ({ crt_number: day.value }),
+	makeParams: () => ({ course: courseName.value, day: dayParam.value }),
 	auto: true,
+	onSuccess(data) {
+		if (data?.slug && route.params.day !== data.slug && stage.value === 'intro') {
+			router.replace({ name: 'DayViva', params: { courseName: courseName.value, day: data.slug }, query: route.query })
+		}
+	},
 })
 
 const stage = ref('intro')
@@ -255,7 +265,7 @@ async function begin() {
 	startError.value = ''
 	stopMicTest()
 	try {
-		const session = await call('lms.lms.sales_viva.start_attempt', { crt_number: day.value })
+		const session = await call('lms.lms.sales_viva.start_attempt', { course: courseName.value, day: dayParam.value })
 		engine = createLiveViva({
 			attempt: session.attempt,
 			wsUrl: session.ws_url,
@@ -299,7 +309,7 @@ function openReport(name, replace = false) {
 function leave() {
 	if (stage.value === 'live' && !window.confirm(__('Leave the viva? It will end and count as an attempt.'))) return
 	if (stage.value === 'live') engine?.stop()
-	router.push({ name: 'SalesCRT', params: { crtNumber: String(day.value) } })
+	router.push({ name: 'DayDetail', params: { courseName: courseName.value, day: info.data?.slug || dayParam.value } })
 }
 
 // Local dev only (stripped from production builds): /crt/N/viva?preview=call shows the call screen

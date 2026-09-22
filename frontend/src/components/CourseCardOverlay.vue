@@ -28,6 +28,18 @@
 						</Button>
 					</router-link>
 				</div>
+				<router-link
+					v-if="course.data.day_journey && (course.data.membership || isAdmin)"
+					:to="{ name: 'CourseDays', params: { courseName: course.data.name } }"
+					class="block mb-2"
+				>
+					<Button variant="solid" size="md" class="w-full">
+						<template #prefix>
+							<CalendarDays class="size-4 stroke-1.5" />
+						</template>
+						<span>{{ __('Open day-by-day journey') }}</span>
+					</Button>
+				</router-link>
 				<div v-if="course.data.membership" class="space-y-2 mb-8">
 					<router-link :to="continueRoute">
 						<Button variant="solid" size="md" class="w-full">
@@ -163,17 +175,7 @@
 	</div>
 </template>
 <script setup>
-import {
-	BookOpen,
-	BookText,
-	CreditCard,
-	GraduationCap,
-	Pencil,
-	Settings2,
-	Star,
-	TrendingUp,
-	Users,
-} from 'lucide-vue-next'
+import { BookOpen, BookText, CreditCard, GraduationCap, Pencil, Settings2, Star, TrendingUp, Users, CalendarDays } from 'lucide-vue-next'
 import { computed, inject, ref } from 'vue'
 import { Badge, Button, call, createResource, toast } from 'frappe-ui'
 import { formatAmount } from '@/utils/'

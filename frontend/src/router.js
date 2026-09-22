@@ -28,10 +28,26 @@ const routes = [
 		name: 'SalesSchedule',
 		redirect: { name: 'StudentDashboard' },
 	},
+	// Day-by-day courses: /courses/<course>/days/<n>-<title>. Old /crt/N links redirect here.
+	{
+		path: '/courses/:courseName/days',
+		name: 'CourseDays',
+		component: () => import('@/pages/Sales/CourseDays.vue'),
+	},
+	{
+		path: '/courses/:courseName/days/:day',
+		name: 'DayDetail',
+		component: () => import('@/pages/Sales/DayDetail.vue'),
+	},
+	{
+		path: '/courses/:courseName/days/:day/viva',
+		name: 'DayViva',
+		component: () => import('@/pages/Sales/SalesViva.vue'),
+	},
 	{
 		path: '/crt/:crtNumber/viva',
 		name: 'SalesViva',
-		component: () => import('@/pages/Sales/SalesViva.vue'),
+		redirect: (to) => ({ name: 'DayViva', params: { courseName: 'sales-crt', day: to.params.crtNumber }, query: to.query }),
 	},
 	{
 		path: '/viva/:attempt',
@@ -46,8 +62,7 @@ const routes = [
 	{
 		path: '/crt/:crtNumber',
 		name: 'SalesCRT',
-		component: () => import('@/pages/Sales/SalesCRTDetail.vue'),
-		props: true,
+		redirect: (to) => ({ name: 'DayDetail', params: { courseName: 'sales-crt', day: to.params.crtNumber } }),
 	},
 	{
 		path: '/evaluation',

@@ -433,17 +433,17 @@ def _ensure_chapter(course: str, day_number: int, day_label: str) -> str:
 	if not existing and day_label:
 		existing = frappe.db.get_value("Course Chapter", {"course": course, "title": day_label}, "name")
 	if existing:
-		chapter = frappe.get_doc("Course Chapter", existing)
-		chapter.title = title
-		chapter.save(ignore_permissions=True)
-		_ensure_chapter_reference(course, chapter.name, day_number)
-		return chapter.name
+		# Keep an existing day's name (admins rename days); only link it to its position.
+		_ensure_chapter_reference(course, existing, day_number)
+		return existing
+
+	from lms.lms.day_journey import CRT_DAY_TITLES
 
 	chapter = frappe.get_doc(
 		{
 			"doctype": "Course Chapter",
 			"course": course,
-			"title": title,
+			"title": CRT_DAY_TITLES.get(day_number, title),
 		}
 	)
 	chapter.insert(ignore_permissions=True)

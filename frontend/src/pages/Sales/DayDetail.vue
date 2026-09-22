@@ -1,54 +1,45 @@
 <template>
 	<div class="min-h-screen pb-16" style="background: var(--il-paper)">
 		<div class="mx-auto max-w-4xl px-5 pt-8">
-			<button class="text-sm font-semibold" style="color: #0075ff" @click="$router.push({ name: 'StudentDashboard' })">
-				← {{ __('Home') }}
+			<button class="text-sm font-semibold" style="color: #0075ff" @click="back">
+				← {{ isCrt ? __('Home') : detail.data?.course_title || __('Course') }}
 			</button>
 
-			<div v-if="detail.loading" class="mt-10 text-sm text-[color:var(--il-muted)]">
-				{{ __('Loading CRT…') }}
+			<div v-if="detail.loading && !detail.data" class="mt-10 text-sm text-[color:var(--il-muted)]">
+				{{ __('Loading…') }}
 			</div>
 			<div v-else-if="detail.error" class="mt-10 text-sm text-[color:var(--genius-red)]">
-				{{ detail.error.messages?.[0] || __('This CRT could not be loaded.') }}
+				{{ detail.error.messages?.[0] || __('This day could not be loaded.') }}
 			</div>
-			<div v-else-if="crt" class="mt-6">
+			<div v-else-if="day" class="mt-6">
 				<p class="text-xs font-semibold uppercase tracking-[0.2em]" style="color: #0075ff">
-					{{ __('Classroom readiness') }}
+					{{ __('Day') }} {{ day.day }} {{ __('of') }} {{ journey.length }} · {{ detail.data.course_title }}
 				</p>
 				<div class="mt-2 flex flex-wrap items-end justify-between gap-3">
-					<h1 class="text-3xl font-semibold text-[color:var(--il-ink)]">{{ crt.title }}</h1>
+					<h1 class="text-3xl font-semibold text-[color:var(--il-ink)]">{{ day.title }}</h1>
 					<span class="rounded-full px-3 py-1 text-xs font-semibold" :class="badgeClass">
-						{{ stateLabel(crt.state) }}
+						{{ stateLabel(day.state) }}
 					</span>
 				</div>
 				<p class="mt-2 text-sm text-[color:var(--il-muted)]">
-					{{ crt.lessons_done }}/{{ crt.lessons_total }} {{ __('sessions complete') }} ·
-					{{ crt.progress }}%
+					{{ day.lessons_done }}/{{ day.lessons_total }} {{ __('sessions complete') }} · {{ day.progress }}%
 				</p>
 
-				<div
-					v-if="crt.state === 'locked'"
-					class="sales-card mt-6 p-6 text-sm text-[color:var(--il-ink)]"
-				>
-					{{ __('Complete the previous CRT before this one unlocks.') }}
+				<div v-if="day.state === 'locked'" class="sales-card mt-6 p-6 text-sm text-[color:var(--il-ink)]">
+					{{ __('Finish the previous day before this one unlocks.') }}
 				</div>
-				<div
-					v-else-if="!crt.lessons_total"
-					class="sales-card mt-6 p-6 text-sm text-[color:var(--il-muted)]"
-				>
-					{{ __('No sessions have been imported for this CRT yet.') }}
+				<div v-else-if="!day.lessons_total" class="sales-card mt-6 p-6 text-sm text-[color:var(--il-muted)]">
+					{{ __('No sessions have been added to this day yet.') }}
 				</div>
 				<ol v-else class="mt-6 space-y-3">
 					<li
-						v-for="lesson in crt.lessons"
+						v-for="lesson in day.lessons"
 						:key="lesson.name"
 						class="sales-card flex flex-wrap items-center justify-between gap-3 p-4 sm:px-6"
 					>
 						<div>
 							<div class="text-sm font-semibold text-[color:var(--il-ink)]">{{ lesson.title }}</div>
-							<div class="text-xs text-[color:var(--il-muted)]">
-								{{ sessionMeta(lesson) }}
-							</div>
+							<div class="text-xs text-[color:var(--il-muted)]">{{ sessionMeta(lesson) }}</div>
 						</div>
 						<button
 							v-if="!lesson.locked && !lesson.complete"
@@ -68,48 +59,64 @@
 						>
 							{{ __('Review') }}
 						</button>
-						<span v-else class="text-xs font-semibold text-[color:var(--il-muted)]">
-							{{ __('Locked') }}
-						</span>
+						<span v-else class="text-xs font-semibold text-[color:var(--il-muted)]">{{ __('Locked') }}</span>
 					</li>
 				</ol>
 
-				<div v-if="crt.viva?.required || crt.viva?.can_try" class="viva-card mt-6" :class="{ 'is-ready': vivaReady }">
+				<div v-if="day.viva?.required || day.viva?.can_try" class="viva-card mt-6" :class="{ 'is-ready': vivaReady }">
 					<div class="viva-icon"><Mic class="h-5 w-5" /></div>
 					<div class="min-w-0 flex-1">
 						<div class="text-sm font-semibold text-[color:var(--il-ink)]">{{ __('Voice viva') }}</div>
 						<div class="text-xs text-[color:var(--il-muted)]">{{ vivaLine }}</div>
 					</div>
 					<button
-						v-if="crt.viva.passed || vivaReady || crt.viva.history?.length"
+						v-if="day.viva.passed || vivaReady || day.viva.history?.length"
 						type="button"
 						class="rounded-full px-4 py-2 text-xs font-semibold"
 						:class="vivaReady ? 'text-white' : 'border'"
 						:style="vivaReady ? 'background: #0075ff' : 'border-color: #d7e4f7; color: #0075ff'"
-						@click="$router.push({ name: 'SalesViva', params: { crtNumber: String(crt.crt_number) } })"
+						@click="openViva"
 					>
-						{{ vivaReady ? (crt.viva?.can_try ? __('Try the viva') : __('Start viva')) : __('View') }}
+						{{ vivaReady ? (day.viva.can_try ? __('Try the viva') : __('Start viva')) : __('View') }}
 					</button>
 				</div>
 
 				<div class="mt-8 flex flex-wrap gap-3">
 					<button
-						v-if="crt.crt_number < 5"
+						v-if="prevDay"
 						type="button"
 						class="rounded-full border px-4 py-2 text-sm font-semibold"
 						style="border-color: #d7e4f7"
-						@click="$router.push({ name: 'SalesCRT', params: { crtNumber: String(crt.crt_number + 1) } })"
+						@click="goDay(prevDay)"
 					>
-						{{ __('Next CRT') }}
+						← {{ __('Day') }} {{ prevDay.day }}
 					</button>
 					<button
-						v-else
+						v-if="nextDay"
+						type="button"
+						class="rounded-full border px-4 py-2 text-sm font-semibold"
+						style="border-color: #d7e4f7"
+						@click="goDay(nextDay)"
+					>
+						{{ __('Day') }} {{ nextDay.day }} →
+					</button>
+					<button
+						v-else-if="detail.data.next_step === 'evaluation'"
 						type="button"
 						class="rounded-full px-4 py-2 text-sm font-semibold text-white"
 						style="background: #0075ff"
 						@click="$router.push({ name: 'SalesEvaluation' })"
 					>
 						{{ __('Training evaluation') }}
+					</button>
+					<button
+						v-else
+						type="button"
+						class="rounded-full px-4 py-2 text-sm font-semibold text-white"
+						style="background: #0075ff"
+						@click="$router.push({ name: 'CourseDays', params: { courseName } })"
+					>
+						{{ __('All days') }}
 					</button>
 				</div>
 			</div>
@@ -125,28 +132,39 @@ import { Mic } from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
+const courseName = computed(() => route.params.courseName)
+const isCrt = computed(() => courseName.value === 'sales-crt')
 
 const detail = createResource({
-	url: 'lms.lms.sales_journey.get_crt_detail',
-	makeParams: () => ({ crt_number: route.params.crtNumber }),
+	url: 'lms.lms.day_journey.get_day_detail',
+	makeParams: () => ({ course: courseName.value, day: route.params.day }),
 	auto: true,
+	onSuccess(data) {
+		// Canonical address: /courses/<course>/days/<n>-<title-slug>
+		if (data?.day?.slug && route.params.day !== data.day.slug) {
+			router.replace({ name: 'DayDetail', params: { courseName: courseName.value, day: data.day.slug } })
+		}
+	},
 })
-
 watch(
-	() => route.params.crtNumber,
-	() => detail.reload()
+	() => [route.params.courseName, parseInt(route.params.day)],
+	(next, prev) => {
+		if (!prev || next[0] !== prev[0] || next[1] !== prev[1]) detail.reload()
+	}
 )
 
-const crt = computed(() => detail.data?.crt)
+const day = computed(() => detail.data?.day)
+const journey = computed(() => detail.data?.journey || [])
+const prevDay = computed(() => journey.value.find((d) => d.day === (day.value?.day || 0) - 1))
+const nextDay = computed(() => journey.value.find((d) => d.day === (day.value?.day || 0) + 1))
 
 const badgeClass = computed(() => {
-	const state = crt.value?.state
+	const state = day.value?.state
 	if (state === 'completed') return 'bg-green-50 text-green-700'
 	if (state === 'viva_pending') return 'bg-amber-50 text-amber-700'
 	if (state === 'in_progress' || state === 'available') return 'bg-[#e8f2ff] text-[#005fe0]'
 	return 'bg-slate-100 text-slate-500'
 })
-
 const stateLabel = (state) =>
 	({
 		completed: __('Completed'),
@@ -158,16 +176,15 @@ const stateLabel = (state) =>
 	})[state] || state
 
 const vivaReady = computed(
-	() => (crt.value?.state === 'viva_pending' && !crt.value?.viva?.blocked) || Boolean(crt.value?.viva?.can_try && !crt.value?.viva?.passed)
+	() => (day.value?.state === 'viva_pending' && !day.value?.viva?.blocked) || Boolean(day.value?.viva?.can_try && !day.value?.viva?.passed)
 )
-
 const vivaLine = computed(() => {
-	const c = crt.value
-	const v = c?.viva || {}
+	const d = day.value
+	const v = d?.viva || {}
 	if (v.passed) return __('Passed · this day is complete')
 	if (v.can_try) return __('Staff preview · try this day’s viva any time (learners get it after the sessions)')
 	if (v.blocked) return __('All attempts used · your Training Manager can unlock more')
-	if (c?.state === 'viva_pending') return `${__('A 3–4 minute spoken check on today’s content')} · ${v.attempts_left ?? 3} ${__('attempts left')}`
+	if (d?.state === 'viva_pending') return `${__('A 3–4 minute spoken check on today’s content')} · ${v.attempts_left ?? 3} ${__('attempts left')}`
 	return __('Unlocks when all sessions above are done')
 })
 
@@ -177,16 +194,14 @@ const sessionMeta = (lesson) => {
 	return [row.time_label, row.stakeholder].filter(Boolean).join(' · ')
 }
 
+const goDay = (d) => router.push({ name: 'DayDetail', params: { courseName: courseName.value, day: d.slug } })
+const openViva = () => router.push({ name: 'DayViva', params: { courseName: courseName.value, day: day.value.slug } })
+const back = () =>
+	isCrt.value ? router.push({ name: 'StudentDashboard' }) : router.push({ name: 'CourseDays', params: { courseName: courseName.value } })
+
 const openLesson = (lesson) => {
 	const [chapterNumber, lessonNumber] = String(lesson.number).split('-')
-	router.push({
-		name: 'Lesson',
-		params: {
-			courseName: detail.data.course,
-			chapterNumber,
-			lessonNumber,
-		},
-	})
+	router.push({ name: 'Lesson', params: { courseName: courseName.value, chapterNumber, lessonNumber } })
 }
 </script>
 

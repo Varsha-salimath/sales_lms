@@ -1,7 +1,7 @@
 <template>
 	<div class="vr-page">
 		<div class="vr-wrap">
-			<button class="vr-back" @click="back">← {{ r?.is_own ? `${__('Day')} ${r.crt_number}` : __('Viva results') }}</button>
+			<button class="vr-back" @click="back">← {{ r?.is_own ? `${__('Day')} ${r.day}` : __('Viva results') }}</button>
 
 			<div v-if="report.loading && !r" class="vr-muted mt-10">{{ __('Loading report…') }}</div>
 			<div v-else-if="report.error" class="vr-card mt-6" style="color: #b42323">
@@ -13,8 +13,8 @@
 				<section class="vr-hero">
 					<div class="vr-hero-text">
 						<p class="vr-eyebrow">
-							{{ r.is_own ? '' : `${r.member_name} · ` }}{{ __('Day') }} {{ r.crt_number }} · {{ __('Voice viva') }} · {{ __('Attempt') }}
-							{{ r.attempt_no }}
+							{{ r.is_own ? '' : `${r.member_name} · ` }}{{ r.course !== 'sales-crt' ? `${r.course_title} · ` : '' }}{{ __('Day') }} {{ r.day }} · {{ __('Voice viva') }} ·
+							{{ __('Attempt') }} {{ r.attempt_no }}
 						</p>
 						<h1>{{ r.title }}</h1>
 						<p class="vr-hero-sub">{{ formatDate(r.started_at) }} · {{ duration(r.duration_s) }}</p>
@@ -114,10 +114,10 @@
 				<!-- Actions -->
 				<div class="vr-actions">
 					<template v-if="r.is_own">
-						<button v-if="r.status === 'Passed' && r.crt_number < 5" class="vr-btn" @click="$router.push({ name: 'SalesCRT', params: { crtNumber: String(r.crt_number + 1) } })">
-							{{ __('Continue to Day') }} {{ r.crt_number + 1 }}
+						<button v-if="r.status === 'Passed' && r.day < r.days_total" class="vr-btn" @click="$router.push({ name: 'DayDetail', params: { courseName: r.course, day: String(r.day + 1) } })">
+							{{ __('Continue to Day') }} {{ r.day + 1 }}
 						</button>
-						<button v-else-if="r.status === 'Passed'" class="vr-btn" @click="$router.push({ name: 'StudentDashboard' })">{{ __('Back to home') }}</button>
+						<button v-else-if="r.status === 'Passed'" class="vr-btn" @click="finished">{{ __('Back to your journey') }}</button>
 						<button v-else-if="r.day_state.attempts_left > 0 && !r.day_state.passed" class="vr-btn" @click="retry">
 							{{ __('Try again') }} · {{ r.day_state.attempts_left }} {{ __('left') }}
 						</button>
@@ -182,16 +182,20 @@ const bandStyle = (v) => {
 }
 
 function back() {
-	if (r.value?.is_own) router.push({ name: 'SalesViva', params: { crtNumber: String(r.value.crt_number) } })
+	if (r.value?.is_own) router.push({ name: 'DayViva', params: { courseName: r.value.course, day: r.value.slug } })
 	else router.push({ name: 'VivaResults' })
 }
 function retry() {
-	router.push({ name: 'SalesViva', params: { crtNumber: String(r.value.crt_number) } })
+	router.push({ name: 'DayViva', params: { courseName: r.value.course, day: r.value.slug } })
+}
+function finished() {
+	if (r.value.course === 'sales-crt') router.push({ name: 'StudentDashboard' })
+	else router.push({ name: 'CourseDays', params: { courseName: r.value.course } })
 }
 async function unlock() {
 	unlocking.value = true
 	try {
-		await call('lms.lms.sales_viva.grant_attempts', { member: r.value.member, crt_number: r.value.crt_number, reason: 'Unlocked from viva report' })
+		await call('lms.lms.sales_viva.grant_attempts', { member: r.value.member, course: r.value.course, day: r.value.day, reason: 'Unlocked from viva report' })
 		unlocked.value = true
 		report.reload()
 	} finally {

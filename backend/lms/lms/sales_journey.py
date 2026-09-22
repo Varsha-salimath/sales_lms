@@ -82,84 +82,10 @@ def _ensure_enrolled(member: str) -> str:
 
 
 def _crt_states(member: str) -> list[dict]:
-	staff = _is_staff(member)
-	outline = get_course_outline(COURSE_SLUG, progress=True) or []
-	crts = []
-	# Day 1 opens only after the Hello ILians joining form is in.
-	from lms.lms.hello_ilians import is_required as hello_ilians_required
+	"""Sales CRT days for `member` (the generic day-by-day logic lives in day_journey)."""
+	from lms.lms.day_journey import day_states
 
-	prev_complete = staff or not hello_ilians_required(member)
-	# Each day ends with a voice viva; until it is passed the day is "viva_pending" and the next stays locked.
-	from lms.lms import sales_viva
-
-	viva_on = sales_viva.is_required() and not staff
-	viva_passed = sales_viva.passed_days(member) if (viva_on or staff) else set()
-	for idx in range(1, 6):
-		chapter = next((c for c in outline if cint(c.get("idx")) == idx), None)
-		lessons = (chapter or {}).get("lessons") or []
-		total = len(lessons)
-		done = sum(1 for les in lessons if les.get("is_complete") or les.get("progress") == "Complete")
-		if not chapter or total == 0:
-			state = "locked" if not staff and not prev_complete else "empty"
-			progress = 0
-		elif not prev_complete and not staff:
-			state = "locked"
-			progress = 0
-		elif done >= total and viva_on and idx not in viva_passed:
-			state = "viva_pending"
-			progress = 95
-		elif done >= total:
-			state = "completed"
-			progress = 100
-		elif done > 0:
-			state = "in_progress"
-			progress = round((done / total) * 100)
-		else:
-			state = "available"
-			progress = 0
-		current_lesson = None
-		for les in lessons:
-			if not (les.get("is_complete") or les.get("progress") == "Complete"):
-				current_lesson = les
-				break
-		if not current_lesson and lessons:
-			current_lesson = lessons[-1]
-		crts.append(
-			{
-				"crt_number": idx,
-				"title": (chapter or {}).get("title") or f"CRT {idx}",
-				"chapter": (chapter or {}).get("name"),
-				"state": state,
-				"progress": progress,
-				"lessons_total": total,
-				"lessons_done": done,
-				"viva": sales_viva.day_viva_state(member, idx) if viva_on and state == "viva_pending" else {
-					"required": viva_on,
-					"passed": idx in viva_passed,
-					# Staff aren't gated but can try any day's viva once it's switched on.
-					"can_try": bool(staff and sales_viva.is_configured()),
-				},
-				"current_lesson": {
-					"name": current_lesson.get("name"),
-					"title": current_lesson.get("title"),
-					"number": current_lesson.get("number"),
-				}
-				if current_lesson
-				else None,
-				"lessons": [
-					{
-						"name": les.get("name"),
-						"title": les.get("title"),
-						"number": les.get("number"),
-						"complete": bool(les.get("is_complete") or les.get("progress") == "Complete"),
-						"locked": False if staff else bool(les.get("locked")),
-					}
-					for les in lessons
-				],
-			}
-		)
-		prev_complete = state == "completed"
-	return crts
+	return day_states(member, COURSE_SLUG)
 
 
 def _all_crts_complete(crts: list[dict]) -> bool:
@@ -395,32 +321,12 @@ def _hello_ilians_state(member, staff):
 
 @frappe.whitelist()
 def get_crt_detail(crt_number: int):
+	"""Kept for older screens; the day page uses day_journey.get_day_detail."""
 	_require_login()
-	member = frappe.session.user
-	_ensure_enrolled(member)
-	crt_number = cint(crt_number)
-	crts = _crt_states(member)
-	crt = next((c for c in crts if c["crt_number"] == crt_number), None)
-	if not crt:
-		frappe.throw(_("CRT {0} was not found.").format(crt_number))
-	sessions = []
-	if frappe.db.exists("DocType", "Sales CRT Session"):
-		sessions = frappe.get_all(
-			"Sales CRT Session",
-			filters={"course": COURSE_SLUG, "day_number": crt_number},
-			fields=[
-				"session_key",
-				"topic",
-				"time_label",
-				"stakeholder",
-				"description",
-				"session_type",
-				"lesson",
-				"day_label",
-			],
-			order_by="session_index asc",
-		)
-	return {"crt": crt, "journey": crts, "sessions": sessions, "course": COURSE_SLUG}
+	_ensure_enrolled(frappe.session.user)
+	from lms.lms.day_journey import get_day_detail
+
+	return get_day_detail(COURSE_SLUG, crt_number)
 
 
 @frappe.whitelist()

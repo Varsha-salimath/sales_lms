@@ -3,7 +3,7 @@
 		<header class="vx-head">
 			<div>
 				<h1>{{ __('Voice vivas') }}</h1>
-				<p>{{ __('Every CRT day ends with a spoken viva. Open any attempt for answers, timing and watch-outs.') }}</p>
+				<p>{{ __('Day-by-day courses end each day with a spoken viva. Open any attempt for answers, timing and watch-outs.') }}</p>
 			</div>
 		</header>
 
@@ -24,7 +24,7 @@
 					<span class="vx-avatar">{{ initials(b.member_name) }}</span>
 					<div class="flex-1 min-w-0">
 						<div class="vx-name">{{ b.member_name }}</div>
-						<div class="vx-muted">{{ __('Day') }} {{ b.crt_number }} · {{ b.attempts_used }} {{ __('attempts') }} · {{ __('best') }} {{ score(b.best_score) }}%</div>
+						<div class="vx-muted">{{ multiCourse ? `${b.course_title} · ` : '' }}{{ __('Day') }} {{ b.day }} · {{ b.attempts_used }} {{ __('attempts') }} · {{ __('best') }} {{ score(b.best_score) }}%</div>
 					</div>
 					<button v-if="b.can_unlock" class="vx-btn" :disabled="busy === key(b)" @click="unlock(b)">
 						{{ busy === key(b) ? __('Unlocking…') : __('Unlock 3 more') }}
@@ -35,6 +35,10 @@
 
 		<!-- Filters -->
 		<div class="vx-filters">
+			<select v-if="multiCourse" v-model="filters.course" class="vx-select">
+				<option value="">{{ __('All courses') }}</option>
+				<option v-for="c in courses" :key="c.name" :value="c.name">{{ c.title }}</option>
+			</select>
 			<button v-for="d in [0, 1, 2, 3, 4, 5]" :key="d" class="vx-chip" :class="{ 'is-on': filters.day === d }" @click="filters.day = d">
 				{{ d ? `${__('Day')} ${d}` : __('All days') }}
 			</button>
@@ -68,7 +72,7 @@
 						<span class="vx-avatar">{{ initials(r.member_name) }}</span>
 						<span class="min-w-0">
 							<span class="vx-name">{{ r.member_name }}</span>
-							<span class="vx-muted">{{ __('Attempt') }} {{ r.attempt_no }} · {{ formatDate(r.started_at) }}</span>
+							<span class="vx-muted">{{ multiCourse ? `${r.course_title} · ` : '' }}{{ __('Attempt') }} {{ r.attempt_no }} · {{ formatDate(r.started_at) }}</span>
 						</span>
 					</span>
 					<span>{{ r.crt_number }}</span>
@@ -91,22 +95,24 @@ import { computed, reactive, ref, watch } from 'vue'
 import { call, createResource, debounce } from 'frappe-ui'
 import { AlertTriangle, Mic } from 'lucide-vue-next'
 
-const filters = reactive({ day: 0, status: '', search: '' })
+const filters = reactive({ day: 0, status: '', search: '', course: '' })
 const busy = ref('')
 
 const results = createResource({
 	url: 'lms.lms.sales_viva.get_viva_results',
-	makeParams: () => ({ crt_number: filters.day || null, status: filters.status || null, search: filters.search || null }),
+	makeParams: () => ({ course: filters.course || null, crt_number: filters.day || null, status: filters.status || null, search: filters.search || null }),
 	auto: true,
 })
 const reload = debounce(() => results.reload(), 300)
-watch(() => [filters.day, filters.status], () => results.reload())
+watch(() => [filters.day, filters.status, filters.course], () => results.reload())
 watch(() => filters.search, reload)
 
 const rows = computed(() => results.data?.rows || [])
 const blocked = computed(() => results.data?.blocked || [])
+const courses = computed(() => results.data?.courses || [])
+const multiCourse = computed(() => courses.value.length > 1)
 
-const key = (b) => `${b.member}-${b.crt_number}`
+const key = (b) => `${b.member}-${b.course}-${b.day}`
 const score = (v) => (v == null ? '—' : Math.round(v))
 const initials = (name) => (name || '?').split(' ').filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('')
 const label = (s) => ({ Passed: __('Passed'), 'Not Passed': __('Not yet'), Scoring: __('Scoring') })[s] || s
@@ -115,7 +121,7 @@ const formatDate = (d) => (d ? new Date(String(d).replace(' ', 'T')).toLocaleDat
 async function unlock(b) {
 	busy.value = key(b)
 	try {
-		await call('lms.lms.sales_viva.grant_attempts', { member: b.member, crt_number: b.crt_number, reason: 'Unlocked from Voice vivas' })
+		await call('lms.lms.sales_viva.grant_attempts', { member: b.member, course: b.course, day: b.day, reason: 'Unlocked from Voice vivas' })
 		results.reload()
 	} finally {
 		busy.value = ''

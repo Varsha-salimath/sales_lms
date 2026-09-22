@@ -27,6 +27,8 @@
   "featured",
   "disable_self_learning",
   "learners_only",
+  "day_journey",
+  "day_viva",
   "section_break_18",
   "short_introduction",
   "column_break_viqw",
@@ -106,6 +108,21 @@
    "default": "0",
    "label": "Everyone takes this as a learner",
    "description": "Managers and Training Managers who are enrolled go session by session like any learner. Only admins and this course's instructors see it all unlocked."
+  },
+  {
+   "fieldname": "day_journey",
+   "fieldtype": "Check",
+   "default": "0",
+   "label": "Day-by-day journey",
+   "description": "Each chapter is a Day. Learners unlock Day N+1 only after finishing Day N; days get their own pages (/courses/<course>/days/1-…)."
+  },
+  {
+   "fieldname": "day_viva",
+   "fieldtype": "Check",
+   "default": "0",
+   "depends_on": "day_journey",
+   "label": "End each day with a voice viva",
+   "description": "A 3–4 minute spoken check with Asha on the day's content. The day is complete only after passing (3 attempts; Training Managers can unlock more)."
   },
   {
    "fieldname": "image",

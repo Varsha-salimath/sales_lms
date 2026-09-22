@@ -105,6 +105,7 @@ after_migrate = [
 	"lms.install.after_sync",
 	"lms.lms.org.seed_departments",
 	"lms.lms.content_scope.tag_existing_content",
+	"lms.lms.day_journey.setup_crt_journey",
 	"lms.sqlite.build_index_in_background",
 ]
 

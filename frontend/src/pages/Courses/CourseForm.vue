@@ -152,6 +152,21 @@
 								/>
 								<Switch
 									size="sm"
+									v-model="courseResource.doc.day_journey"
+									:label="__('Day-by-day journey')"
+									:description="__('Each chapter is a Day with its own page. Learners unlock the next day only after finishing the current one.')"
+									@change="makeFormDirty()"
+								/>
+								<Switch
+									v-if="courseResource.doc.day_journey"
+									size="sm"
+									v-model="courseResource.doc.day_viva"
+									:label="__('End each day with a voice viva')"
+									:description="__('A 3–4 minute spoken check with Asha on the day’s content. The day is complete only after passing.')"
+									@change="makeFormDirty()"
+								/>
+								<Switch
+									size="sm"
 									v-model="courseResource.doc.learners_only"
 									:label="__('Everyone takes this as a learner')"
 									:description="__('For courses meant for managers: enrolled managers unlock sessions one by one too. Only admins and this course’s instructors see everything.')"
@@ -454,6 +469,8 @@ const updateCourseData = () => {
 		'enable_certification',
 		'paid_certificate',
 		'learners_only',
+		'day_journey',
+		'day_viva',
 	]
 	for (let idx in checkboxes) {
 		let key = checkboxes[idx]

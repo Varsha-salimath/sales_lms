@@ -956,6 +956,8 @@ def get_course_fields():
 		"lessons",
 		"enrollments",
 		"rating",
+		"day_journey",
+		"day_viva",
 	]
 
 

@@ -146,20 +146,8 @@ const ojtOpen = computed(() => evalDone.value && Boolean(home.data?.ojt?.eligibl
 
 const sessions = (c) => (c.lessons_total ? `${c.lessons_done} ${__('of')} ${c.lessons_total} ${__('sessions')}` : __('Content coming soon'))
 
-// Day topics from the CRT schedule, used when the chapter title is just "CRT n".
-const DAY_TOPICS = {
-	1: __('Welcome to Infinity Learn'),
-	2: __('CBSE Foundation & Math Champ'),
-	3: __('Test Prep: JEE & NEET'),
-	4: __('LeadSquared & your leads'),
-	5: __('Mock calls & demo'),
-}
-
-// Learners think in days: "Day 1 · Topic". Chapter titles may start with "CRT n"; strip it.
-const crtTitle = (c) => {
-	const topic = String(c.title || '').replace(new RegExp(`^\\s*CRT\\s*${c.crt_number}\\s*[:·\\-–]?\\s*`, 'i'), '')
-	return `${__('Day')} ${c.crt_number} · ${topic || DAY_TOPICS[c.crt_number] || ''}`.replace(/ · $/, '')
-}
+// Day names come from the course's chapters (admins rename them in the course outline).
+const crtTitle = (c) => `${__('Day')} ${c.day || c.crt_number} · ${c.title}`
 
 const steps = computed(() => {
 	const hello = home.data?.hello_ilians
@@ -260,12 +248,13 @@ const primaryAction = computed(() => {
 	return null
 })
 
-const openViva = (crt) => router.push({ name: 'SalesViva', params: { crtNumber: String(crt.crt_number) } })
+const course = computed(() => home.data?.course || 'sales-crt')
+const openViva = (crt) => router.push({ name: 'DayViva', params: { courseName: course.value, day: crt.slug || String(crt.crt_number) } })
 
 const openCrt = (crt) => {
 	if (!home.data?.is_staff && (crt.state === 'locked' || crt.state === 'empty')) return
 	if (crt.state === 'viva_pending') return openViva(crt)
-	router.push({ name: 'SalesCRT', params: { crtNumber: String(crt.crt_number) } })
+	router.push({ name: 'DayDetail', params: { courseName: course.value, day: crt.slug || String(crt.crt_number) } })
 }
 
 const goEval = () => router.push({ name: 'SalesEvaluation' })

@@ -1,7 +1,7 @@
 # Copyright (c) 2026, InfinityLearn and contributors
 # For license information, please see license.txt
 
-"""CRT voice viva — the last step of every CRT day.
+"""Voice viva — the last step of every day in a day-by-day course (Sales CRT first).
 
 Asha (Gemini Live native audio) asks ~5 questions generated fresh from that day's content.
 The browser streams the mic straight to Gemini with a short-lived token minted here, so the
@@ -57,15 +57,6 @@ MAX_TEXT_CHARS = 2500
 PACK_CHARS = 14000
 PAUSE_MS = 2000  # silences longer than this inside an answer count as pauses
 
-DAY_TOPICS = {
-	1: "Welcome to Infinity Learn: company, belief, roles, website and app, target exams",
-	2: "CBSE Foundation and Math Champ products, call flow and script, demo booking",
-	3: "Test Prep (JEE & NEET) foundation, illustration, demo conduction",
-	4: "LeadSquared (LSQ) usage, student portal, live demo",
-	5: "Review of the whole week: products, call flow, LSQ and demo, before live calling",
-}
-
-
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
@@ -99,9 +90,11 @@ def is_configured() -> bool:
 	return bool(_gemini_key())
 
 
-def is_required() -> bool:
-	"""The viva gates day completion only when it can actually be taken (key set, not switched off)."""
-	return is_configured() and cint(frappe.conf.get("crt_viva_required", 1)) == 1
+def is_required(course: str = COURSE_SLUG) -> bool:
+	"""The viva gates a course's days when the course asks for it and it can actually be taken."""
+	if not is_configured() or cint(frappe.conf.get("crt_viva_required", 1)) != 1:
+		return False
+	return bool(frappe.db.get_value("LMS Course", course, "day_viva"))
 
 
 def _assert_key() -> str:
@@ -212,20 +205,45 @@ def _editorjs_text(content: str) -> str:
 	return "\n".join(x for x in out if x)
 
 
-def _day_chapter(day: int) -> str | None:
-	return frappe.db.get_value("Chapter Reference", {"parent": COURSE_SLUG, "idx": day}, "chapter")
+def _day_chapter(course: str, day: int) -> str | None:
+	return frappe.db.get_value("Chapter Reference", {"parent": course, "idx": day}, "chapter")
 
 
-def day_title(day: int) -> str:
-	chapter = _day_chapter(day)
+def day_title(course: str, day: int) -> str:
+	from lms.lms.day_journey import clean_title
+
+	chapter = _day_chapter(course, day)
 	title = frappe.db.get_value("Course Chapter", chapter, "title") if chapter else ""
-	topic = re.sub(rf"^\s*CRT\s*{day}\s*[:·\-–]?\s*", "", title or "", flags=re.I)
-	return topic or DAY_TOPICS.get(day, "")
+	return clean_title(day, title) or _("Day {0}").format(day)
 
 
-def _quiz_facts(day: int, limit: int = 40) -> list[str]:
+def course_title(course: str) -> str:
+	return frappe.db.get_value("LMS Course", course, "title") or course
+
+
+def _day_lessons(course: str, day: int) -> list[str]:
+	chapter = _day_chapter(course, day)
+	return frappe.get_all("Lesson Reference", {"parent": chapter}, pluck="lesson", order_by="idx") if chapter else []
+
+
+def _day_quizzes(course: str, day: int) -> list[str]:
+	"""Quizzes embedded in the day's lessons (works for any course)."""
+	quizzes = []
+	for lesson in _day_lessons(course, day):
+		try:
+			blocks = json.loads(frappe.db.get_value("Course Lesson", lesson, "content") or "{}").get("blocks") or []
+		except ValueError:
+			continue
+		for b in blocks:
+			quiz = (b.get("data") or {}).get("quiz") if b.get("type") == "quiz" else None
+			if quiz and quiz not in quizzes and frappe.db.exists("LMS Quiz", quiz):
+				quizzes.append(quiz)
+	return quizzes
+
+
+def _quiz_facts(course: str, day: int, limit: int = 40) -> list[str]:
 	facts = []
-	for quiz in frappe.get_all("LMS Quiz", {"name": ["like", f"crt-{day}-%"]}, pluck="name"):
+	for quiz in _day_quizzes(course, day):
 		for row in frappe.get_all("LMS Quiz Question", {"parent": quiz}, ["question"], order_by="idx"):
 			q = frappe.db.get_value(
 				"LMS Question",
@@ -241,33 +259,38 @@ def _quiz_facts(day: int, limit: int = 40) -> list[str]:
 	return facts[:limit]
 
 
-def _day_pack(day: int) -> str:
-	"""Plain-text knowledge pack for one CRT day (lessons, sessions, quiz facts), cached for an hour."""
-	key = f"crt_viva_pack:{day}"
+def _day_count(course: str) -> int:
+	return frappe.db.count("Chapter Reference", {"parent": course})
+
+
+def _day_pack(course: str, day: int) -> str:
+	"""Plain-text knowledge pack for one day (lessons, quiz facts, CRT session outlines), cached for an hour."""
+	key = f"viva_pack:{course}:{day}"
 	cached = frappe.cache().get_value(key)
 	if cached:
 		return cached
-	parts = [f"CRT Day {day}: {day_title(day)}"]
-	sessions = frappe.get_all(
-		"Sales CRT Session",
-		{"course": COURSE_SLUG, "day_number": day, "session_type": ["in", ["session", "activity", "assessment", "calling"]]},
-		["topic", "description"],
-		order_by="session_index",
-	)
-	if sessions:
-		parts.append("SESSIONS:\n" + "\n".join(f"- {s.topic}: {_strip_html(s.description)}" for s in sessions))
-	chapter = _day_chapter(day)
-	for lesson in frappe.get_all("Lesson Reference", {"parent": chapter}, pluck="lesson", order_by="idx") if chapter else []:
+	parts = [f"{course_title(course)} — Day {day}: {day_title(course, day)}"]
+	if course == COURSE_SLUG and frappe.db.exists("DocType", "Sales CRT Session"):
+		sessions = frappe.get_all(
+			"Sales CRT Session",
+			{"course": course, "day_number": day, "session_type": ["in", ["session", "activity", "assessment", "calling"]]},
+			["topic", "description"],
+			order_by="session_index",
+		)
+		if sessions:
+			parts.append("SESSIONS:\n" + "\n".join(f"- {s.topic}: {_strip_html(s.description)}" for s in sessions))
+	for lesson in _day_lessons(course, day):
 		row = frappe.db.get_value("Course Lesson", lesson, ["title", "content", "body"], as_dict=True) or {}
 		text = _editorjs_text(row.get("content")) or _strip_html(row.get("body"))
 		if text:
 			parts.append(f"LESSON {row.get('title')}:\n{text}")
-	facts = _quiz_facts(day)
-	if day == 5:  # Day 5 is live calling practice: review the week instead
-		for earlier in range(1, 5):
-			facts += _quiz_facts(earlier, limit=8)
+	facts = _quiz_facts(course, day)
+	if len(facts) < 5 and day > 1:
+		# A thin day (e.g. live-calling practice) is examined on what came before it.
+		for earlier in range(1, day):
+			facts += _quiz_facts(course, earlier, limit=8)
 	if facts:
-		parts.append("FACTS (from the day's quizzes, correct answers):\n" + "\n".join(facts))
+		parts.append("FACTS (from the quizzes, correct answers):\n" + "\n".join(facts))
 	pack = "\n\n".join(parts)[:PACK_CHARS]
 	frappe.cache().set_value(key, pack, expires_in_sec=3600)
 	return pack
@@ -295,9 +318,9 @@ PAPER_SCHEMA = {
 }
 
 
-def _previous_stems(member: str, day: int) -> list[str]:
+def _previous_stems(member: str, course: str, day: int) -> list[str]:
 	stems = []
-	for raw in frappe.get_all("Sales Viva Attempt", {"member": member, "crt_number": day}, pluck="paper_json"):
+	for raw in frappe.get_all("Sales Viva Attempt", {"member": member, "course": course, "crt_number": day}, pluck="paper_json"):
 		try:
 			stems += [q.get("stem") for q in json.loads(raw or "[]") if q.get("stem")]
 		except ValueError:
@@ -305,9 +328,9 @@ def _previous_stems(member: str, day: int) -> list[str]:
 	return stems[-15:]
 
 
-def _generate_paper(member: str, day: int) -> list[dict[str, Any]]:
-	pack = _day_pack(day)
-	avoid = _previous_stems(member, day)
+def _generate_paper(member: str, course: str, day: int) -> list[dict[str, Any]]:
+	pack = _day_pack(course, day)
+	avoid = _previous_stems(member, course, day)
 	system = (
 		"You write oral viva questions for new Infinity Learn sales associates (academic counsellors) "
 		"at the end of a classroom training day. Questions are SPOKEN aloud by an examiner, so each stem is one "
@@ -329,18 +352,22 @@ def _generate_paper(member: str, day: int) -> list[dict[str, Any]]:
 		frappe.log_error(title="CRT viva: question generation failed", message=frappe.get_traceback())
 		paper = []
 	if len(paper) < STEMS_PER_VIVA:
-		paper += _fallback_paper(day, STEMS_PER_VIVA - len(paper), [q["stem"] for q in paper] + avoid)
+		paper += _fallback_paper(course, day, STEMS_PER_VIVA - len(paper), [q["stem"] for q in paper] + avoid)
 	for i, q in enumerate(paper, start=1):
 		q["id"] = f"q{i}"
 		q["key_points"] = [str(p) for p in (q.get("key_points") or [])][:6]
 	return paper
 
 
-def _fallback_paper(day: int, count: int, avoid: list[str]) -> list[dict[str, Any]]:
+def _fallback_paper(course: str, day: int, count: int, avoid: list[str]) -> list[dict[str, Any]]:
 	"""If the text model is unavailable, turn the day's quiz facts into spoken questions."""
 	import random
 
-	facts = _quiz_facts(day, limit=60) or _quiz_facts(1, limit=60)
+	facts = _quiz_facts(course, day, limit=60)
+	for earlier in range(1, day):
+		if len(facts) >= 10:
+			break
+		facts += _quiz_facts(course, earlier, limit=20)
 	random.shuffle(facts)
 	out = []
 	for fact in facts:
@@ -401,10 +428,10 @@ LIVE_TOOLS = [
 ]
 
 
-def _asha_system(day: int) -> str:
+def _asha_system(course: str, day: int) -> str:
 	return (
 		"You are Asha, a friendly but firm Infinity Learn training examiner taking a short spoken viva "
-		f"at the end of CRT Day {day} ({day_title(day)}). This is an exam, not tutoring.\n"
+		f"at the end of Day {day} ({day_title(course, day)}) of {course_title(course)}. This is an exam, not tutoring.\n"
 		"Speak short, natural Indian English. Hinglish answers are fine.\n"
 		"Turn-taking:\n"
 		"- A pause is NOT the end of an answer. Learners think out loud; let them finish.\n"
@@ -423,7 +450,7 @@ def _asha_system(day: int) -> str:
 	)
 
 
-def _live_setup(day: int) -> dict[str, Any]:
+def _live_setup(course: str, day: int) -> dict[str, Any]:
 	return {
 		"model": f"models/{live_model()}",
 		"generationConfig": {
@@ -434,15 +461,16 @@ def _live_setup(day: int) -> dict[str, Any]:
 				"languageCode": "en-IN",
 			},
 		},
-		"systemInstruction": {"parts": [{"text": _asha_system(day)}]},
+		"systemInstruction": {"parts": [{"text": _asha_system(course, day)}]},
 		"tools": LIVE_TOOLS,
 		"realtimeInputConfig": {
 			"automaticActivityDetection": {"disabled": True},
 			"activityHandling": "START_OF_ACTIVITY_INTERRUPTS",
 			"turnCoverage": "TURN_INCLUDES_ONLY_ACTIVITY",
 		},
-		"inputAudioTranscription": {"languageCode": "en-IN"},
-		"outputAudioTranscription": {"languageCode": "en-IN"},
+		# Transcription language follows speechConfig.languageCode; the API rejects a per-field code.
+		"inputAudioTranscription": {},
+		"outputAudioTranscription": {},
 	}
 
 
@@ -469,8 +497,8 @@ def _require_login() -> str:
 	return frappe.session.user
 
 
-def _attempts(member: str, day: int | None = None) -> list[dict]:
-	filters = {"member": member}
+def _attempts(member: str, course: str, day: int | None = None) -> list[dict]:
+	filters = {"member": member, "course": course}
 	if day:
 		filters["crt_number"] = day
 	return frappe.get_all(
@@ -485,8 +513,11 @@ def _counts_as_attempt(row) -> bool:
 	return row.status in ("Passed", "Not Passed", "Scoring")
 
 
-def attempts_allowed(member: str, day: int) -> int:
-	extra = sum(cint(x) for x in frappe.get_all("Sales Viva Unlock", {"member": member, "crt_number": day}, pluck="extra_attempts"))
+def attempts_allowed(member: str, course: str, day: int) -> int:
+	extra = sum(
+		cint(x)
+		for x in frappe.get_all("Sales Viva Unlock", {"member": member, "course": course, "crt_number": day}, pluck="extra_attempts")
+	)
 	return ATTEMPTS_PER_DAY + extra
 
 
@@ -506,17 +537,17 @@ def _expire_stale(member: str):
 			doc.save(ignore_permissions=True)
 
 
-def day_viva_state(member: str, day: int) -> dict[str, Any]:
+def day_viva_state(member: str, course: str, day: int) -> dict[str, Any]:
 	"""Viva summary for one day, used by the journey and the viva page."""
-	rows = _attempts(member, day)
+	rows = _attempts(member, course, day)
 	used = sum(1 for r in rows if _counts_as_attempt(r))
-	allowed = attempts_allowed(member, day)
+	allowed = attempts_allowed(member, course, day)
 	passed = next((r for r in rows if r.status == "Passed"), None)
 	scored = [r for r in rows if r.status in ("Passed", "Not Passed")]
 	best = max(scored, key=lambda r: flt(r.overall_score), default=None)
 	in_progress = next((r for r in reversed(rows) if r.status == "In Progress"), None)
 	return {
-		"required": is_required(),
+		"required": is_required(course),
 		"configured": is_configured(),
 		"passed": bool(passed),
 		"passed_attempt": passed.name if passed else None,
@@ -542,10 +573,12 @@ def day_viva_state(member: str, day: int) -> dict[str, Any]:
 	}
 
 
-def passed_days(member: str) -> set[int]:
+def passed_days(member: str, course: str = COURSE_SLUG) -> set[int]:
 	return {
 		cint(d)
-		for d in frappe.get_all("Sales Viva Attempt", {"member": member, "status": "Passed"}, pluck="crt_number", distinct=True)
+		for d in frappe.get_all(
+			"Sales Viva Attempt", {"member": member, "course": course, "status": "Passed"}, pluck="crt_number", distinct=True
+		)
 	}
 
 
@@ -576,34 +609,52 @@ def _own_attempt(attempt: str):
 	return doc
 
 
+def _course_day(course=None, day=None, crt_number=None) -> tuple[str, int]:
+	"""Accept (course, day) or the older crt_number-only call (Sales CRT)."""
+	from lms.lms.day_journey import parse_day
+
+	course = course or COURSE_SLUG
+	number = parse_day(day if day is not None else crt_number)
+	if not frappe.db.exists("LMS Course", course) or number < 1 or number > _day_count(course):
+		frappe.throw(_("Unknown day."))
+	return course, number
+
+
 @frappe.whitelist()
-def get_viva_state(crt_number: int):
+def get_viva_state(crt_number=None, course: str | None = None, day=None):
 	"""What the viva page needs before starting: day, attempts, history, whether lessons are done."""
 	member = _require_login()
-	day = cint(crt_number)
-	if day not in range(1, 6):
-		frappe.throw(_("Unknown CRT day."))
-	_expire_stale(member)
-	from lms.lms.sales_journey import _crt_states
+	course, day = _course_day(course, day, crt_number)
+	from lms.lms.content_scope import can_access
+	from lms.lms.day_journey import day_slug, day_states, progression_applies
 
-	crt = next((c for c in _crt_states(member) if c["crt_number"] == day), {})
-	state = day_viva_state(member, day)
-	lessons_done = bool(crt) and crt.get("lessons_total", 0) > 0 and crt.get("lessons_done", 0) >= crt.get("lessons_total", 0)
+	if not can_access("LMS Course", course, member):
+		frappe.throw(_("You don't have access to this course."), frappe.PermissionError)
+	_expire_stale(member)
+	row = next((d for d in day_states(member, course) if d["day"] == day), {})
+	state = day_viva_state(member, course, day)
+	lessons_done = bool(row) and row.get("lessons_total", 0) > 0 and row.get("lessons_done", 0) >= row.get("lessons_total", 0)
 	reason = None
-	if not state["configured"]:
+	if not state["configured"] or not frappe.db.get_value("LMS Course", course, "day_viva"):
 		reason = "not_configured"
 	elif state["passed"]:
 		reason = "passed"
 	elif state["blocked"]:
 		reason = "blocked"
-	elif not lessons_done and not _journey_staff(member):
+	elif not lessons_done and progression_applies(course, member):
 		reason = "lessons_pending"
+	title = day_title(course, day)
 	return {
+		"course": course,
+		"course_title": course_title(course),
+		"day": day,
 		"crt_number": day,
-		"title": day_title(day),
+		"slug": day_slug(day, title),
+		"title": title,
+		"days_total": _day_count(course),
 		"lessons_done": lessons_done,
-		"lessons_total": crt.get("lessons_total", 0),
-		"lessons_completed": crt.get("lessons_done", 0),
+		"lessons_total": row.get("lessons_total", 0),
+		"lessons_completed": row.get("lessons_done", 0),
 		"can_start": reason is None,
 		"reason": reason,
 		"questions": STEMS_PER_VIVA,
@@ -614,14 +665,14 @@ def get_viva_state(crt_number: int):
 
 
 @frappe.whitelist(methods=["POST"])
-def start_attempt(crt_number: int):
+def start_attempt(crt_number=None, course: str | None = None, day=None):
 	"""Generate a fresh paper, open an attempt and mint a Gemini Live token for it."""
 	member = _require_login()
-	day = cint(crt_number)
-	info = get_viva_state(day)
+	course, day = _course_day(course, day, crt_number)
+	info = get_viva_state(course=course, day=day)
 	if not info["can_start"]:
 		messages = {
-			"not_configured": _("The voice viva is not switched on yet."),
+			"not_configured": _("The voice viva is not switched on for this course."),
 			"passed": _("You have already passed this day's viva."),
 			"blocked": _("You have used all your attempts. Your Training Manager can unlock more."),
 			"lessons_pending": _("Finish all of this day's sessions first."),
@@ -636,18 +687,18 @@ def start_attempt(crt_number: int):
 			_finalize(old, old_state, reason="left")
 		else:
 			old.db_set({"status": "Abandoned", "ended_at": now_datetime()})
-	info = get_viva_state(day)
+	info = get_viva_state(course=course, day=day)
 	if not info["can_start"]:
 		frappe.throw(_("You have used all your attempts. Your Training Manager can unlock more."))
 
-	setup = _live_setup(day)
+	setup = _live_setup(course, day)
 	token = _mint_live_token(setup)  # before generating the paper: fail fast if Live is misconfigured
-	paper = _generate_paper(member, day)
+	paper = _generate_paper(member, course, day)
 	doc = frappe.get_doc(
 		{
 			"doctype": "Sales Viva Attempt",
 			"member": member,
-			"course": COURSE_SLUG,
+			"course": course,
 			"crt_number": day,
 			"attempt_no": info["attempts_used"] + 1,
 			"status": "In Progress",
@@ -668,7 +719,7 @@ def start_attempt(crt_number: int):
 		"setup": setup,  # holds no questions: those arrive one at a time via get_next_stem
 		"time_limit_s": TIME_LIMIT_S,
 		"questions": len(paper),
-		"title": day_title(day),
+		"title": info["title"],
 	}
 
 
@@ -1051,13 +1102,20 @@ def get_viva_report(attempt: str):
 	doc = frappe.get_doc("Sales Viva Attempt", attempt)
 	if not _can_view(doc.member, user):
 		frappe.throw(_("You can't see this viva."), frappe.PermissionError)
-	state = day_viva_state(doc.member, doc.crt_number)
+	course = doc.course or COURSE_SLUG
+	state = day_viva_state(doc.member, course, doc.crt_number)
+	from lms.lms.day_journey import day_slug
 	return {
 		"name": doc.name,
 		"member": doc.member,
 		"member_name": doc.member_name or frappe.db.get_value("User", doc.member, "full_name"),
 		"crt_number": doc.crt_number,
-		"title": day_title(doc.crt_number),
+		"day": doc.crt_number,
+		"course": course,
+		"course_title": course_title(course),
+		"days_total": _day_count(course),
+		"title": day_title(course, doc.crt_number),
+		"slug": day_slug(doc.crt_number, day_title(course, doc.crt_number)),
 		"attempt_no": doc.attempt_no,
 		"status": doc.status,
 		"started_at": doc.started_at,
@@ -1101,64 +1159,91 @@ def get_viva_report(attempt: str):
 
 
 @frappe.whitelist()
-def get_viva_results(crt_number: int | None = None, status: str | None = None, search: str | None = None):
+def get_viva_results(crt_number=None, status: str | None = None, search: str | None = None, course: str | None = None):
 	"""Attempts of everyone the current user can see (staff: all; managers: their people)."""
 	user = _require_login()
 	from lms.lms import access
 
 	filters: dict[str, Any] = {"status": ["in", ["Passed", "Not Passed", "Scoring"]]}
+	if course:
+		filters["course"] = course
 	if cint(crt_number):
 		filters["crt_number"] = cint(crt_number)
 	if status in ("Passed", "Not Passed"):
 		filters["status"] = status
+	viva_courses = [
+		{"name": c.name, "title": c.title}
+		for c in frappe.get_all("LMS Course", {"day_viva": 1}, ["name", "title"], order_by="title")
+	]
+	empty = {"rows": [], "blocked": [], "configured": is_configured(), "courses": viva_courses}
 	scope = None if _is_staff(user) else access.get_visible_members(user)
 	if scope is not None:
 		members = set(scope) | set(access.training_manager_tree(user))
 		if not members:
-			return {"rows": [], "blocked": [], "configured": is_configured()}
+			return empty
 		filters["member"] = ["in", sorted(members)]
 	rows = frappe.get_all(
 		"Sales Viva Attempt",
 		filters,
-		["name", "member", "member_name", "crt_number", "attempt_no", "status", "overall_score", "knowledge_score", "fluency_score", "verdict", "flags", "started_at"],
+		["name", "member", "member_name", "course", "crt_number", "attempt_no", "status", "overall_score", "knowledge_score", "fluency_score", "verdict", "flags", "started_at"],
 		order_by="started_at desc",
 		limit=500,
 	)
 	if search:
-		s = search.lower()
-		rows = [r for r in rows if s in (r.member_name or "").lower() or s in r.member.lower()]
+		needle = search.lower()
+		rows = [r for r in rows if needle in (r.member_name or "").lower() or needle in r.member.lower()]
+	titles = {c["name"]: c["title"] for c in viva_courses}
 	for r in rows:
+		r.course = r.course or COURSE_SLUG
+		r.course_title = titles.get(r.course) or course_title(r.course)
 		r.flag_count = len([f for f in (r.flags or "").split("\n") if f])
 	blocked = []
-	for member, day in {(r.member, r.crt_number) for r in rows if r.status == "Not Passed"}:
-		st = day_viva_state(member, day)
+	for member, crs, day in {(r.member, r.course, r.crt_number) for r in rows if r.status == "Not Passed"}:
+		st = day_viva_state(member, crs, day)
 		if st["blocked"]:
-			blocked.append({"member": member, "member_name": next(r.member_name for r in rows if r.member == member), "crt_number": day, "attempts_used": st["attempts_used"], "best_score": st["best_score"], "can_unlock": _can_unlock(member, user)})
-	return {"rows": rows, "blocked": sorted(blocked, key=lambda b: (b["member_name"] or "", b["crt_number"])), "configured": is_configured()}
+			blocked.append(
+				{
+					"member": member,
+					"member_name": next(r.member_name for r in rows if r.member == member),
+					"course": crs,
+					"course_title": titles.get(crs) or course_title(crs),
+					"crt_number": day,
+					"day": day,
+					"attempts_used": st["attempts_used"],
+					"best_score": st["best_score"],
+					"can_unlock": _can_unlock(member, user),
+				}
+			)
+	return {
+		**empty,
+		"rows": rows,
+		"blocked": sorted(blocked, key=lambda b: (b["member_name"] or "", b["course"], b["day"])),
+	}
 
 
 @frappe.whitelist(methods=["POST"])
-def grant_attempts(member: str, crt_number: int, reason: str = ""):
+def grant_attempts(member: str, crt_number=None, reason: str = "", course: str | None = None, day=None):
 	"""Training Manager (or staff) gives a learner three more attempts after they used theirs."""
 	user = _require_login()
+	course, day = _course_day(course, day, crt_number)
 	if not _can_unlock(member, user):
 		frappe.throw(_("Only this learner's Training Manager or an admin can unlock attempts."), frappe.PermissionError)
-	day = cint(crt_number)
 	frappe.get_doc(
 		{
 			"doctype": "Sales Viva Unlock",
 			"member": member,
+			"course": course,
 			"crt_number": day,
 			"extra_attempts": ATTEMPTS_PER_DAY,
 			"granted_by": user,
 			"reason": (reason or "")[:500],
 		}
 	).insert(ignore_permissions=True)
-	return day_viva_state(member, day)
+	return day_viva_state(member, course, day)
 
 
 @frappe.whitelist()
 def viva_status():
 	"""Whether the voice viva is switched on (never exposes the key)."""
 	_require_login()
-	return {"configured": is_configured(), "required": is_required(), "model": live_model()}
+	return {"configured": is_configured(), "model": live_model()}

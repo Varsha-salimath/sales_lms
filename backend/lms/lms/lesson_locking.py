@@ -152,18 +152,19 @@ def _lesson_day(course: str, lesson: str) -> int:
 
 
 def viva_blocking_day(course: str, lesson: str, member: str = None) -> int:
-	"""CRT: the earlier day whose voice viva must be passed before `lesson` opens (0 if none)."""
+	"""Day-by-day courses with a viva: the earlier day whose viva must be passed before `lesson` opens (0 if none)."""
 	from lms.lms import sales_viva
-
-	if course != sales_viva.COURSE_SLUG or not sales_viva.is_required():
-		return 0
-	member = member or frappe.session.user
-	key = ("viva_passed_days", member)
 	from lms.lms.access import _cache
 
 	cache = _cache()  # per-request cache shared with the access module
+	if ("viva_on", course) not in cache:
+		cache[("viva_on", course)] = sales_viva.is_required(course)
+	if not cache[("viva_on", course)]:
+		return 0
+	member = member or frappe.session.user
+	key = ("viva_passed_days", member, course)
 	if key not in cache:
-		cache[key] = sales_viva.passed_days(member)
+		cache[key] = sales_viva.passed_days(member, course)
 	day = _lesson_day(course, lesson)
 	for earlier in range(1, day):
 		if earlier not in cache[key]:
@@ -177,7 +178,10 @@ def get_locked_lesson_redirect(course: str, member: str = None) -> dict:
 		return {}
 	blocking = viva_blocking_day(course, current, member)
 	if blocking:
-		return {"lesson_locked": 1, "viva_required": blocking}
+		from lms.lms.day_journey import day_slug
+		from lms.lms.sales_viva import day_title
+
+		return {"lesson_locked": 1, "viva_required": blocking, "viva_course": course, "viva_day": day_slug(blocking, day_title(course, blocking))}
 	numbers = get_lesson_route_numbers(current)
 	return {
 		"lesson_locked": 1,

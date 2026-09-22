@@ -95,7 +95,7 @@
 					<Button
 						v-if="lesson.data.viva_required"
 						variant="solid"
-						@click="router.push({ name: 'SalesViva', params: { crtNumber: String(lesson.data.viva_required) } })"
+						@click="router.push({ name: 'DayViva', params: { courseName: lesson.data.viva_course || props.courseName, day: lesson.data.viva_day || String(lesson.data.viva_required) } })"
 					>
 						{{ __('Take the voice viva') }}
 					</Button>
