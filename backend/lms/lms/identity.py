@@ -76,18 +76,30 @@ def assign_code(doc, method=None):
 
 
 def _can_view(user: str, viewer: str) -> bool:
-	return viewer == user or access.is_admin(viewer) or access.can_view_member(user, viewer)
+	return viewer == user or access.is_super_admin(viewer) or access.can_view_member(user, viewer)
 
 
 def _can_edit(user: str, editor: str) -> bool:
-	"""Admins (within their teams; Super Admins anywhere). Nobody edits their own identity."""
+	"""Super Admins anywhere; team admins only for learners placed in one of their teams.
+
+	Changing someone's login email hands their account to whoever controls the new address, so a
+	team admin may never touch staff accounts or people not (yet) in their own teams.
+	"""
 	if editor == user or not access.is_admin(editor):
 		return False
 	if access.is_super_admin(editor):
 		return True
-	from lms.lms.team_access import _can_edit_member
+	if access.get_tier(user) >= access.ADMIN or set(frappe.get_roles(user)) & {"System Manager", "Moderator"}:
+		return False
+	from lms.lms.team_access import _my_teams
 
-	return _can_edit_member(user)
+	teams = _my_teams()
+	if teams is None:
+		return False  # an admin not placed in any team can't be scoped: only Super Admins act
+	current = set(
+		frappe.get_all("LMS Member Department", {"parenttype": "LMS Member", "parent": user}, pluck="department")
+	)
+	return bool(current & teams)
 
 
 def _log(user, field, old, new, reason):
