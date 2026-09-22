@@ -1455,3 +1455,7 @@ def get_recording(attempt: str):
 	frappe.local.response.filecontent = file_doc.get_content()
 	frappe.local.response.type = "download"
 	frappe.local.response.display_content_as = "inline"
+	# .webm is guessed as video/webm, which some browsers refuse inside an <audio> element.
+	extension = "." + file_doc.file_name.rsplit(".", 1)[-1].lower()
+	content_types = {v: k for k, v in RECORDING_TYPES.items()}
+	frappe.local.response.content_type = content_types.get(extension, "audio/webm")
