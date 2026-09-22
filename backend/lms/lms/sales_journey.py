@@ -89,7 +89,11 @@ def _crt_states(member: str) -> list[dict]:
 
 
 def _all_crts_complete(crts: list[dict]) -> bool:
-	return all(row["state"] == "completed" and row["lessons_total"] > 0 for row in crts)
+	# A day with no lessons yet can't be completed, so it counts as done rather than holding the
+	# whole journey (and the evaluation after it) shut.
+	return all(row["state"] in ("completed", "empty") for row in crts) and any(
+		row["lessons_total"] > 0 for row in crts
+	)
 
 
 def _evaluation_doc(member: str):

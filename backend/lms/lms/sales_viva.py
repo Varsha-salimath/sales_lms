@@ -47,6 +47,8 @@ KEY_ENV_NAMES = ("GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_GENAI_API_KEY")
 STEMS_PER_VIVA = 5
 MAX_SESSION_PROBES = 2
 MIN_ANSWER_WORDS = 5
+# Below this many questions the day has no usable content: refuse to start rather than score a 0.
+MIN_STEMS_TO_START = 3
 ATTEMPTS_PER_DAY = 3
 PASS_MARK = 60
 READY_MARK = 80
@@ -527,6 +529,16 @@ def attempts_allowed(member: str, course: str, day: int) -> int:
 def _expire_stale(member: str):
 	"""Close attempts left open (tab closed, network lost): score what was answered, else abandon."""
 	cutoff = now_datetime() - timedelta(seconds=STALE_AFTER_S)
+	# "Scoring" is written before the grading call. If that call never returned (a restart, a save
+	# error), the attempt would sit in Scoring for ever while still counting as one of three tries.
+	for name in frappe.get_all(
+		"Sales Viva Attempt", {"member": member, "status": "Scoring", "modified": ["<", cutoff]}, pluck="name"
+	):
+		doc = frappe.get_doc("Sales Viva Attempt", name)
+		try:
+			_finalize(doc, _state(doc), reason="recovered")
+		except Exception:
+			frappe.log_error(f"Viva rescore failed for {name}", "sales_viva")
 	for name in frappe.get_all(
 		"Sales Viva Attempt", {"member": member, "status": "In Progress", "started_at": ["<", cutoff]}, pluck="name"
 	):
@@ -644,6 +656,10 @@ def get_viva_state(crt_number=None, course: str | None = None, day=None):
 		reason = "passed"
 	elif state["blocked"]:
 		reason = "blocked"
+	elif progression_applies(course, member) and row.get("state") == "locked":
+		# Days open in order. Someone who finished the sessions before the viva existed could
+		# otherwise open a later day's viva directly by URL.
+		reason = "day_locked"
 	elif not lessons_done and progression_applies(course, member):
 		reason = "lessons_pending"
 	title = day_title(course, day)
@@ -679,6 +695,7 @@ def start_attempt(crt_number=None, course: str | None = None, day=None):
 			"passed": _("You have already passed this day's viva."),
 			"blocked": _("You have used all your attempts. Your Training Manager can unlock more."),
 			"lessons_pending": _("Finish all of this day's sessions first."),
+			"day_locked": _("Finish the earlier days first."),
 		}
 		frappe.throw(messages.get(info["reason"], _("You can't start the viva right now.")))
 	# Only one live attempt at a time. An open attempt that already has answers is scored (and counts),
@@ -697,6 +714,12 @@ def start_attempt(crt_number=None, course: str | None = None, day=None):
 	setup = _live_setup(course, day)
 	token = _mint_live_token(setup)  # before generating the paper: fail fast if Live is misconfigured
 	paper = _generate_paper(member, course, day)
+	if len(paper) < MIN_STEMS_TO_START:
+		# No usable questions for this day: fail before opening an attempt, so a content gap can't
+		# score the learner 0 and eat one of their three tries.
+		frappe.throw(
+			_("This day's viva has no questions yet. Tell your Training Manager — your attempts are untouched.")
+		)
 	doc = frappe.get_doc(
 		{
 			"doctype": "Sales Viva Attempt",
@@ -798,14 +821,29 @@ def _record(state, paper, transcript: str, metrics: dict[str, Any]):
 def _commit_answer(state, paper, args, metrics) -> dict[str, Any]:
 	if state.get("current") is None:
 		return {"error": "no_current_stem", "allow_next_stem": False, "instruction": "Call get_next_stem first."}
+	if state.get("answered") and not state.get("probe_active"):
+		# Asha committed this answer already (a repeated or cancelled tool call). Recording it twice
+		# would append a phantom follow-up to the turn.
+		return {
+			"ok": True,
+			"error": "already_recorded",
+			"allow_next_stem": True,
+			"instruction": "This answer is already recorded. Call get_next_stem.",
+		}
 	complete = args.get("complete")
 	if isinstance(complete, str):
 		complete = complete.strip().lower() in ("1", "true", "yes")
 	transcript = str(args.get("transcript") or "").strip()
 	heard = transcript if _word_count(transcript) >= _word_count(metrics.get("transcript")) else metrics.get("transcript")
+	nudges = cint(state.get("nudges", 0))
 	if not complete or not heard:
+		state["nudges"] = nudges + 1
 		return _payload_for_current(state, paper, "incomplete", "Not finished. Say 'Go on' and wait. Do not change question.")
-	if not _is_idk(heard) and _word_count(heard) < MIN_ANSWER_WORDS:
+	# A short answer is nudged once. If the learner says the same short thing again, take it: some
+	# correct answers really are three words ("Learn Practice Doubt Test"), and looping on them
+	# used to trap the learner until the clock ran out.
+	if not _is_idk(heard) and _word_count(heard) < MIN_ANSWER_WORDS and nudges < 1:
+		state["nudges"] = nudges + 1
 		return _payload_for_current(state, paper, "incomplete", "Only a fragment so far. Say 'Go on' and wait.")
 	_record(state, paper, transcript, metrics)
 	thin = _is_idk(heard) or _word_count(heard) < 20
@@ -830,7 +868,7 @@ def _next_stem(state, paper) -> dict[str, Any]:
 	for idx, q in enumerate(paper):
 		if idx not in state["asked"]:
 			state["asked"].append(idx)
-			state.update(current=idx, answered=False, probe_active=False, probe_used=False, asked_at=time.time())
+			state.update(current=idx, answered=False, probe_active=False, probe_used=False, nudges=0, asked_at=time.time())
 			return {
 				"question": q["stem"],
 				"question_number": len(state["asked"]),
@@ -984,6 +1022,13 @@ def _fallback_knowledge(q: dict[str, Any], answer: str) -> float:
 
 
 def _finalize(doc, state: dict[str, Any], reason: str = "finished"):
+	# Claim the attempt in one statement: two tabs finishing at once, or a stale sweep landing
+	# alongside "End viva", would otherwise both score it and the loser would fail to save.
+	if doc.status == "In Progress":
+		if frappe.db.get_value("Sales Viva Attempt", doc.name, "status", for_update=True) != "In Progress":
+			return  # someone else is already scoring it
+		frappe.db.set_value("Sales Viva Attempt", doc.name, "status", "Scoring", update_modified=False)
+		doc.reload()
 	paper = _paper(doc)
 	turns = sorted(state.get("turns") or [], key=lambda t: t["idx"])
 	doc.status = "Scoring"
@@ -1250,3 +1295,25 @@ def viva_status():
 	"""Whether the voice viva is switched on (never exposes the key)."""
 	_require_login()
 	return {"configured": is_configured(), "model": live_model()}
+
+
+def repair_legacy_records():
+	"""after_migrate: fix rows written before the course field and the watch_outs rename existed.
+
+	Unlocks granted before vivas became multi-course have no course, so `attempts_allowed` (which
+	filters by course) ignored them and those learners were blocked again. Attempts written before
+	the `flags` field was renamed kept their watch-outs in the old column.
+	"""
+	if frappe.db.exists("DocType", "Sales Viva Unlock") and frappe.db.has_column("Sales Viva Unlock", "course"):
+		orphaned = frappe.get_all("Sales Viva Unlock", filters={"course": ["in", ["", None]]}, pluck="name")
+		for name in orphaned:
+			frappe.db.set_value("Sales Viva Unlock", name, "course", COURSE_SLUG, update_modified=False)
+		if orphaned:
+			print(f"sales_viva: restored the course on {len(orphaned)} unlock(s)")
+	if frappe.db.has_column("Sales Viva Attempt", "flags") and frappe.db.has_column(
+		"Sales Viva Attempt", "watch_outs"
+	):
+		frappe.db.sql(
+			"""update `tabSales Viva Attempt` set watch_outs = flags
+			where ifnull(watch_outs, '') = '' and ifnull(flags, '') != ''"""
+		)

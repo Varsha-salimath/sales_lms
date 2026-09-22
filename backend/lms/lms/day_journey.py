@@ -138,7 +138,7 @@ def day_states(member: str, course: str) -> list[dict]:
 						"title": les.get("title"),
 						"number": les.get("number"),
 						"complete": bool(les.get("is_complete") or les.get("progress") == "Complete"),
-						"locked": bool(les.get("locked")) if gated else False,
+						"locked": bool(les.get("is_locked")) if gated else False,
 					}
 					for les in lessons
 				],
@@ -220,8 +220,11 @@ def setup_crt_journey():
 	"""after_migrate: Sales CRT is a day-by-day course with a viva, and its days have real names."""
 	if not frappe.db.exists("LMS Course", CRT_COURSE) or not frappe.db.has_column("LMS Course", "day_journey"):
 		return
-	if not frappe.db.get_value("LMS Course", CRT_COURSE, "day_journey"):
+	# Seed the flags once. After that they belong to whoever edits the course: a deploy must not
+	# switch the journey or the viva back on for a course where an admin turned them off.
+	if not frappe.db.get_default("crt_journey_seeded"):
 		frappe.db.set_value("LMS Course", CRT_COURSE, {"day_journey": 1, "day_viva": 1}, update_modified=False)
+		frappe.db.set_default("crt_journey_seeded", "1")
 	for ref in frappe.get_all("Chapter Reference", {"parent": CRT_COURSE}, ["chapter", "idx"]):
 		title = frappe.db.get_value("Course Chapter", ref.chapter, "title") or ""
 		if re.fullmatch(rf"\s*CRT\s*{cint(ref.idx)}\s*", title) and cint(ref.idx) in CRT_DAY_TITLES:

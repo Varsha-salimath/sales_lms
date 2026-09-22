@@ -153,7 +153,9 @@
 						class="viva-btn is-ghost"
 						@pointerdown.prevent="engine.holdStart()"
 						@pointerup.prevent="engine.holdEnd()"
+						@pointercancel="live.holdMode && engine.holdEnd()"
 						@pointerleave="live.holdMode && engine.holdEnd()"
+						style="touch-action: none"
 					>
 						<Mic class="h-4 w-4" />{{ live.holdMode ? __('Release to send') : __('Hold to talk') }}
 					</button>
@@ -280,7 +282,7 @@ async function begin() {
 		live.questions = session.questions
 		live.secondsLeft = session.time_limit_s
 		stage.value = 'live'
-		await engine.start((report) => openReport(report.name, true))
+		await engine.start((report) => leaving || openReport(report.name, true))
 	} catch (e) {
 		startError.value = e?.messages?.[0] || e?.message || __('Could not start the viva.')
 		if (e?.name === 'NotAllowedError') micState.value = 'denied'
@@ -290,6 +292,9 @@ async function begin() {
 		starting.value = false
 	}
 }
+
+// Set once the learner has navigated away: the scoring callback must not route them back.
+let leaving = false
 
 function confirmEnd() {
 	if (window.confirm(__('End the viva now? Unanswered questions score zero and this counts as an attempt.'))) engine?.stop()
@@ -308,7 +313,13 @@ function openReport(name, replace = false) {
 
 function leave() {
 	if (stage.value === 'live' && !window.confirm(__('Leave the viva? It will end and count as an attempt.'))) return
-	if (stage.value === 'live') engine?.stop()
+	if (stage.value === 'live') {
+		// Stopping scores the attempt, and scoring used to navigate to the report — pulling the
+		// learner off whatever page they had just opened. Once they have chosen to leave, the
+		// report callback stays quiet.
+		leaving = true
+		engine?.stop()
+	}
 	router.push({ name: 'DayDetail', params: { courseName: courseName.value, day: info.data?.slug || dayParam.value } })
 }
 
@@ -339,7 +350,10 @@ if (import.meta.env.DEV && route.query.preview === 'call') {
 onBeforeUnmount(() => {
 	clearInterval(previewTimer)
 	stopMicTest()
+	leaving = true
 	if (engine && stage.value === 'live') engine.stop()
+	// Any other stage (an error before or during connect) still has to release the microphone.
+	else engine?.destroy()
 })
 
 // ---------- labels ----------

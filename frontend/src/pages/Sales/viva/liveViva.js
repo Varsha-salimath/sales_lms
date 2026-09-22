@@ -201,6 +201,21 @@ export function createLiveViva({ attempt, wsUrl, setup, timeLimitS, onChange }) 
 		s.phase = 'listening'
 		emit()
 	}
+	function cancelActivity() {
+		// A noise, not an answer: close the activity with Gemini but undo what it did to the metrics,
+		// so the think-time clock and the nudge timer carry on as if it never happened.
+		if (!s.inActivity) return
+		s.inActivity = false
+		s.holdMode = false
+		const m = s.m
+		if (m.awaiting && m.firstSpeechAt === s.activityStartedAt) {
+			m.firstSpeechAt = 0
+			m.think_ms = 0
+		}
+		send({ realtimeInput: { activityEnd: {} } })
+		s.phase = 'listening'
+		emit()
+	}
 	function endActivity() {
 		if (!s.inActivity) return
 		s.inActivity = false
@@ -258,6 +273,16 @@ export function createLiveViva({ attempt, wsUrl, setup, timeLimitS, onChange }) 
 			const ds = downsample(input, ctx.sampleRate, PCM_IN)
 			pending.push(ds)
 			pendingLen += ds.length
+			// A cough, a chair scrape or Asha's own voice through the speakers can open a turn with
+			// almost no speech in it. Without this the turn only ended at maxAnswerMs — up to 45
+			// seconds of silence with "Listening" on screen and no nudge, because firstSpeechAt was
+			// already set. Drop the turn instead and let the nudge timer take over again.
+			if (!s.holdMode && s.silenceMs >= VAD.endSilenceMs && s.speechMs < VAD.minSpeechMs) {
+				cancelActivity()
+				pending = []
+				pendingLen = 0
+				return
+			}
 			const shouldEnd =
 				!s.holdMode &&
 				((s.silenceMs >= VAD.endSilenceMs && s.speechMs >= VAD.minSpeechMs) || held >= VAD.maxAnswerMs)
@@ -287,15 +312,22 @@ export function createLiveViva({ attempt, wsUrl, setup, timeLimitS, onChange }) 
 	}
 
 	// ---------- tab switches ----------
+	let lastSwitchAt = 0
+	function countSwitch() {
+		// One tab switch fires blur (while the tab is still visible) and then visibilitychange.
+		// Counting both doubled the score penalty, so ignore a second signal within a second.
+		const now = Date.now()
+		if (now - lastSwitchAt < 1000) return
+		lastSwitchAt = now
+		s.m.tab_switches += 1
+		emit()
+	}
 	function onVisibility() {
-		if (document.hidden && s.m.awaiting && !s.ended) {
-			s.m.tab_switches += 1
-			emit()
-		}
+		if (document.hidden && s.m.awaiting && !s.ended) countSwitch()
 	}
 	function onBlur() {
 		// Window focus lost without the tab hiding (e.g. another app over the browser).
-		if (!document.hidden && s.m.awaiting && !s.ended) s.m.tab_switches += 1
+		if (!document.hidden && s.m.awaiting && !s.ended) countSwitch()
 	}
 
 	// ---------- tools ----------
@@ -335,8 +367,15 @@ export function createLiveViva({ attempt, wsUrl, setup, timeLimitS, onChange }) 
 				s.m = freshMetrics()
 				s.m.awaiting = Boolean(result.use_probe)
 			}
-			if (name === 'finish_viva' && result.ok) s.ended = true
-			if (msg && msg.done) s.ended = true
+			if ((name === 'finish_viva' && result.ok) || (msg && msg.done)) {
+				s.ended = true
+				// Scoring normally starts on Asha's next turnComplete. If that never arrives (her
+				// closing line was interrupted, or the socket went quiet), the learner would sit on
+				// "Listening" with a dead mic until the timer ran out, so close it ourselves.
+				setTimeout(() => {
+					if (!s.finishing) finish()
+				}, 8000)
+			}
 			emit()
 			return { id: fc.id, name, response: { result } }
 		} catch (e) {
@@ -482,6 +521,10 @@ export function createLiveViva({ attempt, wsUrl, setup, timeLimitS, onChange }) 
 			s.micCtx && s.micCtx.close()
 		} catch (e) {}
 		if (s.micStream) s.micStream.getTracks().forEach((t) => t.stop())
+		try {
+			s.playCtx && s.playCtx.close()
+		} catch (e) {}
+		s.playCtx = null
 		if (s.ws) {
 			s.ws.onclose = null
 			try {
@@ -519,7 +562,14 @@ export function createLiveViva({ attempt, wsUrl, setup, timeLimitS, onChange }) 
 		async start(done) {
 			onDone = done
 			await openMic()
-			await connect()
+			try {
+				await connect()
+			} catch (e) {
+				// The mic is already open at this point: without this the browser kept recording
+				// (and the recording light stayed on) until the page was reloaded.
+				cleanup()
+				throw e
+			}
 			document.addEventListener('visibilitychange', onVisibility)
 			window.addEventListener('blur', onBlur)
 			s.timer = setInterval(tick, 1000)
@@ -543,6 +593,12 @@ export function createLiveViva({ attempt, wsUrl, setup, timeLimitS, onChange }) 
 		repeat() {
 			if (s.repeatsLeft <= 0 || s.inActivity) return
 			s.repeatsLeft -= 1
+			// Restart the waiting clock. Without this the nudge and the 12-second "no answer" were
+			// measured from the original question, so asking for a repeat could record "No answer"
+			// the moment the repeat finished playing.
+			s.m.askEndAt = 0
+			s.m.nudged = false
+			s.m.movedOn = false
 			send({ clientContent: { turns: [{ role: 'user', parts: [{ text: 'Please repeat the current question once.' }] }], turnComplete: true } })
 			emit()
 		},

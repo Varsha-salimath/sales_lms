@@ -166,10 +166,23 @@ def viva_blocking_day(course: str, lesson: str, member: str = None) -> int:
 	if key not in cache:
 		cache[key] = sales_viva.passed_days(member, course)
 	day = _lesson_day(course, lesson)
+	empty_key = ("viva_empty_days", course)
+	if empty_key not in cache:
+		cache[empty_key] = _days_without_lessons(course)
 	for earlier in range(1, day):
-		if earlier not in cache[key]:
+		# A day with no lessons can never have a viva, so requiring one would block every later day
+		# for good.
+		if earlier not in cache[key] and earlier not in cache[empty_key]:
 			return earlier
 	return 0
+
+
+def _days_without_lessons(course: str) -> set[int]:
+	empty = set()
+	for ref in frappe.get_all("Chapter Reference", {"parent": course}, ["chapter", "idx"]):
+		if not frappe.db.exists("Lesson Reference", {"parent": ref.chapter}):
+			empty.add(frappe.utils.cint(ref.idx))
+	return empty
 
 
 def get_locked_lesson_redirect(course: str, member: str = None) -> dict:

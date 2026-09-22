@@ -107,6 +107,7 @@ after_migrate = [
 	"lms.lms.content_scope.tag_existing_content",
 	"lms.lms.day_journey.setup_crt_journey",
 	"lms.lms.identity.setup",
+	"lms.lms.sales_viva.repair_legacy_records",
 	"lms.sqlite.build_index_in_background",
 ]
 
