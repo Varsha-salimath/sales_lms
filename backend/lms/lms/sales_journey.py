@@ -66,9 +66,21 @@ def _is_staff(user: str | None = None) -> bool:
 	return access.bypasses_progression(user)
 
 
-def _own(member: str):
-	if member != frappe.session.user and not _is_staff():
-		frappe.throw(_("You can only access your own training records."), frappe.PermissionError)
+def _own(member: str, write: bool = False):
+	"""Read: the learner, or staff who may see them. Write: the learner only.
+
+	Sending a turn into somebody else's simulation, or force-finishing it, changes their score, so
+	no amount of staff access makes that someone else's to do.
+	"""
+	from lms.lms import access
+
+	if member == frappe.session.user:
+		return
+	if write:
+		frappe.throw(_("Only the learner can continue their own simulation."), frappe.PermissionError)
+	if access.is_super_admin() or access.can_view_member(member):
+		return
+	frappe.throw(_("You can only access your own training records."), frappe.PermissionError)
 
 
 def _ensure_enrolled(member: str) -> str:
@@ -529,7 +541,7 @@ def get_ojt_attempt(attempt: str):
 def send_ojt_turn(attempt: str, message: str):
 	_require_login()
 	doc = frappe.get_doc("Sales OJT Attempt", attempt)
-	_own(doc.member)
+	_own(doc.member, write=True)
 	if doc.status == "Completed":
 		frappe.throw(_("This simulation is already complete."))
 	text = (message or "").strip()
@@ -547,7 +559,7 @@ def send_ojt_turn(attempt: str, message: str):
 def finish_ojt(attempt: str):
 	_require_login()
 	doc = frappe.get_doc("Sales OJT Attempt", attempt)
-	_own(doc.member)
+	_own(doc.member, write=True)
 	if doc.status != "Completed":
 		_persist_ojt_score(doc)
 	return get_ojt_attempt(doc.name)

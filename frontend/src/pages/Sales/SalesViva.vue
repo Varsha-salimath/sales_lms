@@ -259,6 +259,9 @@ function stopMicTest() {
 	micTest.stream.getTracks().forEach((t) => t.stop())
 	micTest.ctx.close()
 	micTest = null
+	micLevel.value = 0
+	// Back to "idle" so "Test mic" is offered again; a refused mic stays refused.
+	if (micState.value === 'on') micState.value = 'idle'
 }
 
 // ---------- the call ----------

@@ -127,6 +127,8 @@ const overall = computed(() => Math.round(home.data?.overall_progress || 0))
 
 const greeting = computed(() => {
 	const hour = new Date().getHours()
+	// Past midnight is not morning: anyone here at 1am gets a plain hello.
+	if (hour < 5) return __('Hello')
 	if (hour < 12) return __('Good morning')
 	if (hour < 17) return __('Good afternoon')
 	return __('Good evening')

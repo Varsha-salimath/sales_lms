@@ -299,6 +299,8 @@ const firstName = computed(() => {
 
 const greeting = computed(() => {
 	const hour = dayjs().hour()
+	// Past midnight is not morning: anyone here at 1am gets a plain hello.
+	if (hour < 5) return __('Hello')
 	if (hour < 12) return __('Good morning')
 	if (hour < 17) return __('Good afternoon')
 	return __('Good evening')

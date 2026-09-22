@@ -503,15 +503,14 @@ def _require_login() -> str:
 
 
 def _attempts(member: str, course: str, day: int | None = None) -> list[dict]:
-	filters = {"member": member, "course": course}
-	if day:
-		filters["crt_number"] = day
-	return frappe.get_all(
+	rows = frappe.get_all(
 		"Sales Viva Attempt",
-		filters,
-		["name", "crt_number", "attempt_no", "status", "overall_score", "knowledge_score", "fluency_score", "verdict", "started_at", "ended_at", "watch_outs"],
+		{"member": member, "course": course},
+		["name", "crt_number", "chapter", "course", "attempt_no", "status", "overall_score", "knowledge_score", "fluency_score", "verdict", "started_at", "ended_at", "watch_outs"],
 		order_by="creation asc",
 	)
+	# Match on where the day sits today, not on the number stored when the attempt was taken.
+	return [r for r in rows if _resolve_day(r) == cint(day)] if day else rows
 
 
 def _counts_as_attempt(row) -> bool:
@@ -519,10 +518,12 @@ def _counts_as_attempt(row) -> bool:
 
 
 def attempts_allowed(member: str, course: str, day: int) -> int:
-	extra = sum(
-		cint(x)
-		for x in frappe.get_all("Sales Viva Unlock", {"member": member, "course": course, "crt_number": day}, pluck="extra_attempts")
+	rows = frappe.get_all(
+		"Sales Viva Unlock",
+		{"member": member, "course": course},
+		["extra_attempts", "crt_number", "chapter", "course"],
 	)
+	extra = sum(cint(r.extra_attempts) for r in rows if _resolve_day(r) == cint(day))
 	return ATTEMPTS_PER_DAY + extra
 
 
@@ -588,13 +589,34 @@ def day_viva_state(member: str, course: str, day: int) -> dict[str, Any]:
 	}
 
 
+def day_chapter(course: str, day: int) -> str | None:
+	"""The chapter behind a day number right now."""
+	return frappe.db.get_value("Chapter Reference", {"parent": course, "idx": cint(day)}, "chapter")
+
+
+def _resolve_day(row) -> int:
+	"""A record's day today: from its chapter if it has one, else the number it was written with.
+
+	Day numbers are chapter positions, so deleting or reordering a day used to move everyone's
+	passes and unlocks onto a different day.
+	"""
+	chapter = row.get("chapter") if isinstance(row, dict) else getattr(row, "chapter", None)
+	number = cint(row.get("crt_number") if isinstance(row, dict) else getattr(row, "crt_number", 0))
+	if chapter:
+		course = row.get("course") if isinstance(row, dict) else getattr(row, "course", None)
+		idx = frappe.db.get_value("Chapter Reference", {"parent": course, "chapter": chapter}, "idx")
+		if idx:
+			return cint(idx)
+	return number
+
+
 def passed_days(member: str, course: str = COURSE_SLUG) -> set[int]:
-	return {
-		cint(d)
-		for d in frappe.get_all(
-			"Sales Viva Attempt", {"member": member, "course": course, "status": "Passed"}, pluck="crt_number", distinct=True
-		)
-	}
+	rows = frappe.get_all(
+		"Sales Viva Attempt",
+		{"member": member, "course": course, "status": "Passed"},
+		["crt_number", "chapter", "course"],
+	)
+	return {_resolve_day(r) for r in rows}
 
 
 def _state(doc) -> dict[str, Any]:
@@ -726,6 +748,7 @@ def start_attempt(crt_number=None, course: str | None = None, day=None):
 			"member": member,
 			"course": course,
 			"crt_number": day,
+			"chapter": day_chapter(course, day),
 			"attempt_no": info["attempts_used"] + 1,
 			"status": "In Progress",
 			"started_at": now_datetime(),
@@ -754,8 +777,17 @@ def _word_count(text: str) -> int:
 
 
 def _is_idk(text: str) -> bool:
-	t = (text or "").lower().replace("’", "'")
-	return bool(re.search(r"\b(i don't know|i dont know|no idea|not sure|skip this|pata nahi|no answer)\b", t))
+	"""Did the learner pass on the question?
+
+	Only a short utterance counts. "I'm not sure, but the fee is about twelve thousand" is an
+	answer with a hedge in it, and treating it as a pass scored the whole turn zero.
+	"""
+	t = (text or "").lower().replace("’", "'").strip()
+	if not t:
+		return True
+	if not re.search(r"\b(i don't know|i dont know|no idea|not sure|skip this|pata nahi|no answer)\b", t):
+		return False
+	return _word_count(t) <= 8
 
 
 def _clean_metrics(raw: Any) -> dict[str, Any]:
@@ -952,6 +984,9 @@ SCORE_SCHEMA = {
 def _fluency(turn: dict[str, Any]) -> tuple[float, list[str]]:
 	"""Delivery score from timing alone. Hesitation lowers it and is flagged; it never fails anyone by itself."""
 	flags = []
+	if _is_idk(turn.get("answer") or "") or not (turn.get("answer") or "").strip():
+		# Nothing was said: the delivery score can't reward a silence that the learner sat out.
+		return 0.0, [_("No answer given")]
 	think = turn["think_ms"] / 1000
 	if think <= 4:
 		score = 100.0
@@ -1051,7 +1086,8 @@ def _finalize(doc, state: dict[str, Any], reason: str = "finished"):
 
 	doc.set("turns", [])
 	all_flags, knowledge, fluency = [], [], []
-	answered = {t["idx"] for t in turns}
+	# A question the learner passed on ("No answer", "I don't know") is not an answered question.
+	answered = {t["idx"] for t in turns if not _is_idk(t.get("answer") or "") and (t.get("answer") or "").strip()}
 	for i, t in enumerate(turns):
 		q = paper[t["idx"]]
 		g = graded.get(i) or {}
@@ -1285,6 +1321,7 @@ def grant_attempts(member: str, crt_number=None, reason: str = "", course: str |
 			"member": member,
 			"course": course,
 			"crt_number": day,
+			"chapter": day_chapter(course, day),
 			"extra_attempts": ATTEMPTS_PER_DAY,
 			"granted_by": user,
 			"reason": (reason or "")[:500],
@@ -1313,6 +1350,13 @@ def repair_legacy_records():
 			frappe.db.set_value("Sales Viva Unlock", name, "course", COURSE_SLUG, update_modified=False)
 		if orphaned:
 			print(f"sales_viva: restored the course on {len(orphaned)} unlock(s)")
+	for doctype in ("Sales Viva Attempt", "Sales Viva Unlock"):
+		if not frappe.db.has_column(doctype, "chapter"):
+			continue
+		for row in frappe.get_all(doctype, {"chapter": ["in", ["", None]]}, ["name", "course", "crt_number"]):
+			chapter = day_chapter(row.course or COURSE_SLUG, row.crt_number)
+			if chapter:
+				frappe.db.set_value(doctype, row.name, "chapter", chapter, update_modified=False)
 	if frappe.db.has_column("Sales Viva Attempt", "flags") and frappe.db.has_column(
 		"Sales Viva Attempt", "watch_outs"
 	):

@@ -26,7 +26,7 @@ def should_enforce_sequential_locking(course: str, member: str = None) -> bool:
 	if frappe.db.get_value("LMS Course", course, "learners_only"):
 		# A course taken by managers as learners (e.g. managers' training): only admins and this
 		# course's own instructors skip the order; everyone enrolled goes session by session.
-		if roles & {"System Manager", "Administrator", "Moderator"} or is_instructor(course):
+		if roles & {"System Manager", "Administrator", "Moderator"} or is_instructor(course, member):
 			return False
 		return bool(frappe.db.exists("LMS Enrollment", {"course": course, "member": member}))
 	if roles & {"System Manager", "Administrator", "Moderator", "Course Creator"}:
@@ -35,7 +35,7 @@ def should_enforce_sequential_locking(course: str, member: str = None) -> bool:
 		return False
 	if has_moderator_role(member) or has_course_instructor_role(member):
 		return False
-	if can_modify_course(course) or is_instructor(course):
+	if can_modify_course(course, member) or is_instructor(course, member):
 		return False
 	return bool(frappe.db.exists("LMS Enrollment", {"course": course, "member": member}))
 

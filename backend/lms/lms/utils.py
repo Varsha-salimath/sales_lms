@@ -391,10 +391,11 @@ def get_course_progress(course: str, member: str = None):
 	return flt(((completed_lessons / lesson_count) * 100), precision)
 
 
-def is_instructor(course: str) -> bool:
+def is_instructor(course: str, member: str = None) -> bool:
+	member = member or frappe.session.user
 	instructors = get_instructors("LMS Course", course)
 	for instructor in instructors:
-		if instructor.name == frappe.session.user:
+		if instructor.name == member:
 			return True
 	return False
 
@@ -2574,15 +2575,16 @@ def validate_batch_access(batch: str):
 		frappe.throw(_("You do not have access to this batch."))
 
 
-def can_modify_course(course: str) -> bool:
+def can_modify_course(course: str, member: str = None) -> bool:
 	"""Moderator/System Manager: any course. Others: only courses they instruct."""
-	if "System Manager" in frappe.get_roles(frappe.session.user):
+	member = member or frappe.session.user
+	if "System Manager" in frappe.get_roles(member):
 		return True
-	if has_moderator_role():
+	if has_moderator_role(member):
 		return True
 	is_instructor = frappe.db.exists(
 		"Course Instructor",
-		{"instructor": frappe.session.user, "parent": course, "parenttype": "LMS Course"},
+		{"instructor": member, "parent": course, "parenttype": "LMS Course"},
 	)
 	return bool(is_instructor)
 

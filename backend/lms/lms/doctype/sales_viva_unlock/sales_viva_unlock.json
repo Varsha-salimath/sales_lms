@@ -7,6 +7,7 @@
   "member",
   "course",
   "crt_number",
+  "chapter",
   "extra_attempts",
   "granted_by",
   "reason"
@@ -35,6 +36,14 @@
    "label": "Day",
    "reqd": 1,
    "in_list_view": 1
+  },
+  {
+   "fieldname": "chapter",
+   "label": "Chapter",
+   "fieldtype": "Link",
+   "options": "Course Chapter",
+   "read_only": 1,
+   "description": "The day this viva belongs to. Day numbers move when chapters are reordered; this does not."
   },
   {
    "fieldname": "extra_attempts",

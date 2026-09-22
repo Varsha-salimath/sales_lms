@@ -218,6 +218,7 @@ const handleClick = (tab) => {
 				username: userResource.data?.username,
 			},
 		})
+	else if (typeof tab.to === 'string' && /^(https?:|mailto:|tel:|\/)/.test(tab.to)) window.open(tab.to, '_blank')
 	else router.push({ name: tab.to })
 }
 

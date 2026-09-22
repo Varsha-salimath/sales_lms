@@ -28,7 +28,7 @@
 					</div>
 				</section>
 
-				<div v-if="r.status === 'Scoring'" class="vr-note mt-4">{{ __('This viva is still being scored. Refresh in a moment.') }}</div>
+				<div v-if="r.status === 'Scoring'" class="vr-note mt-4">{{ __('This viva is still being scored — this page updates itself.') }}</div>
 
 				<!-- Knowledge / Fluency -->
 				<div class="vr-grid mt-5">
@@ -136,7 +136,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { call, createResource } from 'frappe-ui'
 import { AlertTriangle, ChevronDown, EyeOff, Mic, Pause, Timer } from 'lucide-vue-next'
@@ -154,6 +154,21 @@ const report = createResource({
 	auto: true,
 })
 const r = computed(() => report.data)
+
+// Scoring happens after the call ends, so poll until the result lands instead of asking the
+// learner to refresh.
+let scoringPoll = null
+watch(
+	() => r.value?.status,
+	(status) => {
+		if (status === 'Scoring' && !scoringPoll) scoringPoll = setInterval(() => report.reload(), 5000)
+		else if (status !== 'Scoring' && scoringPoll) {
+			clearInterval(scoringPoll)
+			scoringPoll = null
+		}
+	}
+)
+onBeforeUnmount(() => scoringPoll && clearInterval(scoringPoll))
 
 const score = (v) => (v == null ? '—' : Math.round(v))
 const secs = (ms) => {
