@@ -86,6 +86,20 @@ def get_user_info():
 	user.developer_mode = frappe.conf.developer_mode
 	if user.is_fc_site and user.is_system_manager:
 		user.site_info = current_site_info()
+	if user.learner_preview:
+		# "View as learner": the app sees a plain learner (staff menus and pages hidden). Real roles are
+		# unchanged — the server still enforces them — so Exit is always available.
+		user.update(
+			is_instructor=False,
+			is_moderator=False,
+			is_evaluator=False,
+			is_manager=False,
+			is_training_manager=False,
+			is_system_manager=False,
+			is_student=True,
+			access_tier="User",
+			roles=[r for r in user.roles if r in ("LMS Student", "All", "Guest")],
+		)
 	return user
 
 

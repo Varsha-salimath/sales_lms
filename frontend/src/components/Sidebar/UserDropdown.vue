@@ -215,6 +215,7 @@ const userDropdownOptions = computed(() => {
 })
 
 const canOpenDesk = () => {
+	if (userResource.data?.learner_preview) return false
 	const cookies = new URLSearchParams(document.cookie.split('; ').join('&'))
 	if (cookies.get('system_user') === 'yes') return true
 	const user = userResource.data
