@@ -4,8 +4,8 @@
 |------|--------|
 | Bitbucket repo | `git@bitbucket.org:CodeRepoInfinitylearn/saleslms.git` |
 | Branch | `main` |
-| Prod domain | `saleslms.infinitylearn.com` |
-| Site name (`SITE_NAME`) | `saleslms.infinitylearn.com` |
+| Prod domain | `lms.infinitylearn.com` (was `saleslms.infinitylearn.com` until 22 Sep 2026) |
+| Site name (`SITE_NAME`) | `saleslms.infinitylearn.com` — internal Frappe site folder, kept after the domain move; not the public URL |
 | VM path | `<VM_PATH>` e.g. `/var/www/sales-lms/sales_lms` |
 | Database engine | **MariaDB 11.8.8** (AWS POC — confirmed; `DB_TYPE=mariadb`, port 3306) |
 | Database (`DB_NAME` / `DB_USER`) | `saleslms` / `saleslms_admin` (AWS RDS POC) |
@@ -39,7 +39,7 @@ Prod `.env` minimum:
 COMPOSE_PROFILES=
 APP_PORT=8080
 SITE_NAME=saleslms.infinitylearn.com
-HOST_NAME=https://saleslms.infinitylearn.com
+HOST_NAME=https://lms.infinitylearn.com
 ADMIN_PASSWORD=<strong-secret>
 
 DEVELOPER_MODE=0
@@ -182,8 +182,8 @@ curl -fsSI http://127.0.0.1:8080/lms/dashboard
 ### 6. Public smoke checks (after LB → this VM `:8080`)
 
 ```bash
-curl -fsS https://saleslms.infinitylearn.com/api/method/ping
-curl -fsSI https://saleslms.infinitylearn.com/lms
+curl -fsS https://lms.infinitylearn.com/api/method/ping
+curl -fsSI https://lms.infinitylearn.com/lms
 ```
 
 **FAIL** if response shows `server: uvicorn` or auth-gateway JSON errors.
@@ -207,7 +207,7 @@ docker compose --env-file .env exec -w /home/frappe/frappe-bench backend \
 
 ### 8. App smoke (browser)
 
-1. Open `https://saleslms.infinitylearn.com/lms`
+1. Open `https://lms.infinitylearn.com/lms`
 2. Login: `Administrator` / `ADMIN_PASSWORD`
 3. Desk → Learning workspace loads
 4. Sales CRT course and `/lms/crt` show Day 1 … Day N

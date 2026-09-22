@@ -1,7 +1,7 @@
 # DevOps — Sales LMS production deploy (POC)
 
 VM path: `/var/www/saleslms`  
-Domain: `https://saleslms.infinitylearn.com`  
+Domain: `https://lms.infinitylearn.com` (Frappe site name stays `saleslms.infinitylearn.com`)  
 Port: **8080** (LB → nginx frontend only)
 
 ## 1. Get code
