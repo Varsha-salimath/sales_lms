@@ -89,6 +89,15 @@ def is_manager(user=None) -> bool:
 	return get_tier(user) >= MANAGER
 
 
+def bypasses_progression(user=None) -> bool:
+	"""Instructors, managers (incl. Training Managers) and admins see every day and lesson unlocked;
+	only learners go day by day, session by session."""
+	user = _user(user)
+	if user == "Guest":
+		return False
+	return get_tier(user) >= INSTRUCTOR or is_training_manager(user)
+
+
 # ---------------------------------------------------------------------------
 # Data access (kept small so the graph logic below stays pure and testable)
 # ---------------------------------------------------------------------------

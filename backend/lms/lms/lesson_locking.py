@@ -21,6 +21,10 @@ def should_enforce_sequential_locking(course: str, member: str = None) -> bool:
 	roles = set(frappe.get_roles(member))
 	if roles & {"System Manager", "Administrator", "Moderator", "Course Creator"}:
 		return False
+	from lms.lms import access
+
+	if access.bypasses_progression(member):
+		return False
 	if has_moderator_role(member) or has_course_instructor_role(member):
 		return False
 	if can_modify_course(course) or is_instructor(course):
@@ -73,6 +77,8 @@ def is_lesson_unlocked(course: str, lesson: str, member: str = None) -> bool:
 	completed = get_completed_lessons(course, member)
 	if lesson in completed:
 		return True
+	if viva_blocking_day(course, lesson, member):
+		return False
 
 	idx = ordered.index(lesson)
 	if idx == 0:
@@ -132,10 +138,36 @@ def enrich_lesson_lock_status(course: str, lessons: list, member: str = None) ->
 	return lessons
 
 
+def _lesson_day(course: str, lesson: str) -> int:
+	chapter = frappe.db.get_value("Lesson Reference", {"lesson": lesson}, "parent")
+	return frappe.utils.cint(frappe.db.get_value("Chapter Reference", {"parent": course, "chapter": chapter}, "idx"))
+
+
+def viva_blocking_day(course: str, lesson: str, member: str = None) -> int:
+	"""CRT: the earlier day whose voice viva must be passed before `lesson` opens (0 if none)."""
+	from lms.lms import sales_viva
+
+	if course != sales_viva.COURSE_SLUG or not sales_viva.is_required():
+		return 0
+	member = member or frappe.session.user
+	key = ("viva_passed_days", member)
+	cache = frappe.local.__dict__.setdefault("_lms_viva_cache", {})
+	if key not in cache:
+		cache[key] = sales_viva.passed_days(member)
+	day = _lesson_day(course, lesson)
+	for earlier in range(1, day):
+		if earlier not in cache[key]:
+			return earlier
+	return 0
+
+
 def get_locked_lesson_redirect(course: str, member: str = None) -> dict:
 	current = get_current_lesson(course, member)
 	if not current:
 		return {}
+	blocking = viva_blocking_day(course, current, member)
+	if blocking:
+		return {"lesson_locked": 1, "viva_required": blocking}
 	numbers = get_lesson_route_numbers(current)
 	return {
 		"lesson_locked": 1,

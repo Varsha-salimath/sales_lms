@@ -302,7 +302,32 @@ function leave() {
 	router.push({ name: 'SalesCRT', params: { crtNumber: String(day.value) } })
 }
 
+// Local dev only (stripped from production builds): /crt/N/viva?preview=call shows the call screen
+// with a scripted conversation, so the design can be reviewed without a Gemini connection.
+let previewTimer = null
+if (import.meta.env.DEV && route.query.preview === 'call') {
+	const script = [
+		{ phase: 'asha', questionNumber: 2, ashaText: 'Okay, thank you. Next one: what does LPDT stand for, and how does it help a student?' },
+		{ phase: 'listening', ashaText: 'Okay, thank you. Next one: what does LPDT stand for, and how does it help a student?' },
+		{ phase: 'listening', inActivity: true, level: 0.5, userText: 'Learn, Practice, Doubt-solving and Test. Every chapter goes through these four steps' },
+		{ phase: 'listening', inActivity: true, level: 0.3, userText: 'Learn, Practice, Doubt-solving and Test. Every chapter goes through these four steps so the child does not just watch videos but practises and gets tested.' },
+		{ phase: 'thinking', inActivity: false, level: 0 },
+	]
+	let i = 0
+	stage.value = 'live'
+	Object.assign(live, { questions: 5, secondsLeft: 212, repeatsLeft: 1 })
+	engine = { done() {}, holdStart() {}, holdEnd() {}, repeat() {}, stop() {}, destroy() {} }
+	const step = () => {
+		Object.assign(live, { inActivity: false, level: 0, userText: '' }, script[i % script.length])
+		live.secondsLeft = Math.max(0, live.secondsLeft - 3)
+		i += 1
+	}
+	step()
+	previewTimer = setInterval(step, 3000)
+}
+
 onBeforeUnmount(() => {
+	clearInterval(previewTimer)
 	stopMicTest()
 	if (engine && stage.value === 'live') engine.stop()
 })
@@ -758,6 +783,16 @@ function dotClass(n) {
 	}
 	.viva-controls .viva-btn {
 		flex: 1 1 45%;
+		padding: 0 12px;
+		font-size: 13px;
+		white-space: nowrap;
+	}
+	.viva-qlabel {
+		white-space: nowrap;
+		font-size: 12px;
+	}
+	.viva-progress span {
+		width: 14px;
 	}
 }
 </style>

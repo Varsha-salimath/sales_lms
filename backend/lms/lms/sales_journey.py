@@ -54,9 +54,14 @@ def _require_login():
 
 
 def _is_staff(user: str | None = None) -> bool:
+	"""Instructors, managers and admins: every day open, no viva gate (see access.bypasses_progression)."""
 	user = user or frappe.session.user
 	roles = set(frappe.get_roles(user))
-	return bool(roles & {"System Manager", "Administrator", "Moderator", "Course Creator"})
+	if roles & {"System Manager", "Administrator", "Moderator", "Course Creator"}:
+		return True
+	from lms.lms import access
+
+	return access.bypasses_progression(user)
 
 
 def _own(member: str):

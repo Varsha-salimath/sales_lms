@@ -82,7 +82,10 @@
 							{{ __('This lesson is locked') }}
 						</div>
 					</div>
-					<div class="mt-1 mb-4 text-ink-gray-7">
+					<div v-if="lesson.data.viva_required" class="mt-1 mb-4 text-ink-gray-7">
+						{{ `${__('Pass the Day')} ${lesson.data.viva_required} ${__('voice viva to unlock the next day.')}` }}
+					</div>
+					<div v-else class="mt-1 mb-4 text-ink-gray-7">
 						{{
 							__(
 								'Complete the previous lessons in order to access this one.'
@@ -90,6 +93,14 @@
 						}}
 					</div>
 					<Button
+						v-if="lesson.data.viva_required"
+						variant="solid"
+						@click="router.push({ name: 'SalesViva', params: { crtNumber: String(lesson.data.viva_required) } })"
+					>
+						{{ __('Take the voice viva') }}
+					</Button>
+					<Button
+						v-else
 						variant="solid"
 						@click="goToCurrentLesson()"
 					>
