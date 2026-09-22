@@ -171,12 +171,14 @@ def program_query_conditions(user=None):
 
 
 def has_course_permission(doc, ptype="read", user=None):
-	"""Out-of-team courses are invisible; otherwise normal role permissions apply."""
+	"""Out-of-team courses are invisible; otherwise normal role permissions apply.
+
+	Frappe treats any falsy return (including None) as a denial, so pass-through must be True;
+	controller hooks can only deny, never grant beyond role permissions.
+	"""
 	if ptype == "create" or doc.get("__islocal") or doc.is_new():
-		return None
-	if not can_access("LMS Course", doc.name, user or frappe.session.user):
-		return False
-	return None
+		return True
+	return can_access("LMS Course", doc.name, user or frappe.session.user)
 
 
 # ---------------------------------------------------------------------------

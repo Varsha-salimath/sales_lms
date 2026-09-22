@@ -202,6 +202,20 @@
 {% endblock %}
 
 {% block script %}
+<script>
+	// Frappe's login.js and il-auth.js treat the URL hash as a login screen (#login, #forgot…).
+	// A deep link such as /courses/x#settings keeps its hash through the login redirect and would
+	// crash login.js, so move any other hash into redirect-to and drop it from this URL.
+	(function () {
+		var screens = ["welcome", "login", "email", "steptwo", "signup", "forgot", "login-with-email-link"];
+		var hash = window.location.hash.slice(1);
+		if (!hash || screens.indexOf(hash) > -1) return;
+		var params = new URLSearchParams(window.location.search);
+		var target = params.get("redirect-to");
+		if (target && target.indexOf("#") === -1) params.set("redirect-to", target + "#" + hash);
+		history.replaceState(null, "", window.location.pathname + (params.toString() ? "?" + params : ""));
+	})();
+</script>
 <script>{% include "templates/includes/login/login.js" %}</script>
 {% endblock %}
 
