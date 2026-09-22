@@ -17,6 +17,7 @@ import re
 
 import frappe
 from frappe import _
+from frappe.model.rename_doc import rename_doc
 from frappe.utils import now_datetime
 
 from lms.lms import access
@@ -176,12 +177,12 @@ def change_email(user: str, new_email: str, reason: str = ""):
 
 	# The account ID is the email: rename moves every Link to User (enrollments, progress, quizzes,
 	# vivas, reporting lines, grants…) to the new ID.
-	frappe.rename_doc("User", user, new, force=True, ignore_permissions=True, show_alert=False)
+	rename_doc("User", user, new, force=True, ignore_permissions=True, show_alert=False)
 	frappe.db.set_value("User", new, "email", new)
 	# Records named after the user keep their old name unless renamed too.
 	for doctype in ("LMS Member", "LMS Onboarding Form"):
 		if frappe.db.exists(doctype, user):
-			frappe.rename_doc(doctype, user, new, force=True, ignore_permissions=True, show_alert=False)
+			rename_doc(doctype, user, new, force=True, ignore_permissions=True, show_alert=False)
 	# Places that store the email as plain text.
 	if frappe.db.table_exists("Sales OJT Certification Metric"):
 		for row in frappe.get_all("Sales OJT Certification Metric", {"email": user}, ["name", "batch_start"]):
