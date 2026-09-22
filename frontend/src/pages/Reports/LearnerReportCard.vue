@@ -130,6 +130,33 @@
 			</div>
 
 			<!-- Calling -->
+			<ReportSection
+				v-if="tab === 'viva'"
+				:title="__('Voice viva')"
+				:subtitle="__('Best attempt per day. 70% knowledge, 30% fluency (how quickly and smoothly they answered).')"
+			>
+				<div v-if="!viva.days.length" class="text-sm text-[color:var(--il-muted)]">
+					{{ __('No vivas taken yet.') }}
+				</div>
+				<template v-else>
+					<div class="grid gap-3 sm:grid-cols-3">
+						<div class="rc-kpi"><span>{{ fmtPct(viva.avg) }}</span>{{ __('Average best score') }}</div>
+						<div class="rc-kpi"><span>{{ viva.passed_days }}</span>{{ __('Days passed') }}</div>
+						<div class="rc-kpi"><span>{{ viva.days.reduce((n, d) => n + d.attempts, 0) }}</span>{{ __('Attempts') }}</div>
+					</div>
+					<ul class="rc-viva mt-5">
+						<li v-for="d in viva.days" :key="d.day" @click="d.best_attempt && $router.push({ name: 'VivaReport', params: { attempt: d.best_attempt } })">
+							<span class="rc-viva-day">{{ __('Day') }} {{ d.day }}</span>
+							<span class="min-w-0 flex-1 truncate">{{ d.title }}</span>
+							<span class="rc-viva-meta">{{ d.attempts }} {{ d.attempts === 1 ? __('attempt') : __('attempts') }}</span>
+							<span v-if="d.flags" class="rc-viva-flag">⚠ {{ d.flags }}</span>
+							<span class="rc-viva-pill" :class="d.passed ? 'is-good' : 'is-bad'">{{ d.passed ? __('Passed') : __('Not yet') }}</span>
+							<span class="rc-viva-score" :style="{ background: bandStyle(bandOfPct(d.best)).soft, color: bandStyle(bandOfPct(d.best)).text }">{{ fmtPct(d.best) }}</span>
+						</li>
+					</ul>
+				</template>
+			</ReportSection>
+
 			<ReportSection v-if="tab === 'calling'" :title="__('Calling performance')">
 				<div class="grid gap-3 sm:grid-cols-3">
 					<div class="rc-kpi"><span>{{ fmtPct(learner.connect_rate) }}</span>{{ __('Connect rate') }} <small>{{ __('avg') }} {{ fmtPct(stats.connect_rate?.avg) }}</small></div>
@@ -163,7 +190,7 @@ import { ArrowDownRight, ArrowUpRight, Clock, Minus } from 'lucide-vue-next'
 import ReportSection from './ReportSection.vue'
 import InsightsCard from './InsightsCard.vue'
 import ScoreTrend from './ScoreTrend.vue'
-import { BAND_RULES, bandStyle, fmt, fmtDate, fmtDuration, fmtPct, initials, managerName, median } from './reportUtils'
+import { BAND_RULES, bandOfPct, bandStyle, fmt, fmtDate, fmtDuration, fmtPct, initials, managerName, median } from './reportUtils'
 
 const props = defineProps({ name: { type: String, required: true } })
 
@@ -177,6 +204,7 @@ const learner = computed(() => report.data?.learner)
 const stats = computed(() => report.data?.stats || {})
 const batch = computed(() => report.data?.batch || {})
 const insights = computed(() => report.data?.insights || { strengths: [], gaps: [] })
+const viva = computed(() => report.data?.viva || { days: [], avg: null, passed_days: 0 })
 const metrics = computed(() => report.data?.metrics || [])
 const intentMetrics = computed(() => metrics.value.filter((m) => m.group === 'intent'))
 const testMetrics = computed(() => metrics.value.filter((m) => m.group === 'tests'))
@@ -187,6 +215,7 @@ const tabs = [
 	{ key: 'tests', label: __('Test performance') },
 	{ key: 'intent', label: __('Intent & Skill') },
 	{ key: 'calling', label: __('Calling') },
+	{ key: 'viva', label: __('Voice viva') },
 ]
 
 const insightItems = computed(() => [
@@ -547,5 +576,49 @@ Funnel.props = ['learner', 'stats']
 	.rc-tabs {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
+}
+.rc-viva li {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 12px 6px;
+	font-size: 14px;
+	border-bottom: 1px solid #f2f2f2;
+	cursor: pointer;
+}
+.rc-viva li:hover {
+	background: #f4f9ff;
+}
+.rc-viva-day {
+	font-weight: 600;
+	color: #0062cc;
+	flex: none;
+}
+.rc-viva-meta {
+	font-size: 12px;
+	color: #52565c;
+	flex: none;
+}
+.rc-viva-flag {
+	font-size: 12px;
+	font-weight: 600;
+	color: #8a5a00;
+	flex: none;
+}
+.rc-viva-pill,
+.rc-viva-score {
+	padding: 3px 10px;
+	border-radius: 999px;
+	font-size: 12px;
+	font-weight: 600;
+	flex: none;
+}
+.rc-viva-pill.is-good {
+	background: #d6f4de;
+	color: #04742d;
+}
+.rc-viva-pill.is-bad {
+	background: #fef0f0;
+	color: #b42323;
 }
 </style>

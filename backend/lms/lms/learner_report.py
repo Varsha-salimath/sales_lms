@@ -428,6 +428,52 @@ def _options(field):
 	]
 
 
+def _learner_user(row) -> str:
+	return (row.get("learner") or row.get("email") or "").strip().lower()
+
+
+def viva_summary(users, course: str = "sales-crt") -> dict:
+	"""Voice viva results per user: best score per day, pass state, attempts, watch-outs."""
+	users = sorted({u for u in users if u})
+	if not users or not frappe.db.table_exists("Sales Viva Attempt"):
+		return {}
+	from lms.lms.sales_viva import day_title
+
+	titles = {}
+	out = {}
+	for a in frappe.get_all(
+		"Sales Viva Attempt",
+		{"member": ["in", users], "course": course, "status": ["in", ["Passed", "Not Passed"]]},
+		["name", "member", "crt_number", "status", "overall_score", "knowledge_score", "fluency_score", "flags", "started_at"],
+		order_by="started_at asc",
+	):
+		user = out.setdefault(a.member.lower(), {"days": {}})
+		day = user["days"].setdefault(
+			a.crt_number,
+			{"day": a.crt_number, "attempts": 0, "best": None, "passed": False, "best_attempt": None, "flags": 0},
+		)
+		day["attempts"] += 1
+		day["passed"] = day["passed"] or a.status == "Passed"
+		if day["best"] is None or flt(a.overall_score) > day["best"]:
+			day.update(
+				best=flt(a.overall_score),
+				knowledge=flt(a.knowledge_score),
+				fluency=flt(a.fluency_score),
+				best_attempt=a.name,
+				flags=len([f for f in (a.flags or "").split("\n") if f]),
+			)
+	for user in out.values():
+		days = sorted(user["days"].values(), key=lambda d: d["day"])
+		for d in days:
+			if d["day"] not in titles:
+				titles[d["day"]] = day_title(course, d["day"])
+			d["title"] = titles[d["day"]]
+		user["days"] = days
+		user["avg"] = round(sum(d["best"] for d in days) / len(days), 1) if days else None
+		user["passed_days"] = sum(1 for d in days if d["passed"])
+	return out
+
+
 @frappe.whitelist()
 def get_combined_report(
 	batch_start: str | None = None,
@@ -438,6 +484,11 @@ def get_combined_report(
 ):
 	_ensure_report_access()
 	rows = _scoped(_rows(batch_start, batch_code, location, training_manager, search))
+	vivas = viva_summary([_learner_user(r) for r in rows])
+	for r in rows:
+		v = vivas.get(_learner_user(r)) or {}
+		r.viva_avg = v.get("avg")
+		r.viva_passed_days = v.get("passed_days", 0)
 	stats = cohort_stats(rows)
 	bands = {key: 0 for _m, key, _l in BANDS}
 	for r in rows:
@@ -481,9 +532,11 @@ def get_learner_report(name: str):
 			"User", row.learner, ["full_name", "user_image", "mobile_no", "username"], as_dict=True
 		) or {}
 
+	viva = viva_summary([_learner_user(row)]).get(_learner_user(row)) or {"days": [], "avg": None, "passed_days": 0}
 	return {
 		"learner": row,
 		"profile": profile,
+		"viva": viva,
 		"batch": {"batch_start": row.batch_start, "size": len(cohort), "rank": rank, "ranked": len(ranked)},
 		"stats": stats,
 		"insights": learner_insights(row, stats),

@@ -302,6 +302,7 @@
 								<th colspan="3">{{ __('Intent & Skill') }}</th>
 								<th colspan="6">{{ __('Calling') }}</th>
 								<th colspan="5">{{ __('Tests (out of 20)') }}</th>
+								<th>{{ __('Voice viva') }}</th>
 								<th>{{ __('Overall') }}</th>
 							</tr>
 							<tr>
@@ -339,6 +340,9 @@
 								<td class="text-center tabular-nums">{{ fmtPct(row.booking_rate) }}</td>
 								<td v-for="k in TEST_KEYS" :key="k" class="text-center">
 									<span class="rp-cell" :style="cellStyle(row.scores[k]?.band)">{{ fmt(row[k]) }}</span>
+								</td>
+								<td class="text-center" :title="row.viva_passed_days ? `${row.viva_passed_days} ${__('days passed')}` : ''">
+									<span class="rp-cell" :style="cellStyle(bandOfPct(row.viva_avg))">{{ row.viva_avg == null ? '—' : fmtPct(row.viva_avg) }}</span>
 								</td>
 								<td class="text-center">
 									<span class="rp-cell rp-cell-strong" :style="cellStyle(row.readiness_band)">{{ fmtPct(row.readiness) }}</span>
@@ -652,6 +656,7 @@ const columns = [
 	{ key: 'test_prep', label: __('Test prep'), align: 'text-center' },
 	{ key: 'lsq', label: 'LSQ', align: 'text-center' },
 	{ key: 'math_champ', label: __('Math champ'), align: 'text-center' },
+	{ key: 'viva_avg', label: __('Avg best'), align: 'text-center' },
 	{ key: 'readiness', label: __('Readiness'), align: 'text-center' },
 ]
 
