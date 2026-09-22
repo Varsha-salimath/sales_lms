@@ -26,6 +26,7 @@
   "strengths",
   "improvements",
   "recording",
+  "recording_final",
   "watch_outs",
   "section_turns",
   "turns",
@@ -165,6 +166,14 @@
    "fieldtype": "Attach",
    "read_only": 1,
    "description": "Audio of the call (learner and Asha), kept as a record of what was actually said."
+  },
+  {
+   "fieldname": "recording_final",
+   "label": "Recording complete",
+   "fieldtype": "Check",
+   "default": "0",
+   "read_only": 1,
+   "description": "0 while the call is still running (snapshot), 1 once the finished audio is in."
   },
   {
    "fieldname": "watch_outs",

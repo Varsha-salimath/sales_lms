@@ -1215,6 +1215,8 @@ def get_viva_report(attempt: str):
 		"improvements": [s for s in (doc.improvements or "").split("\n") if s],
 		"flags": [s for s in (doc.watch_outs or "").split("\n") if s],
 		"recording": bool(doc.get("recording")),
+		# A snapshot means the call ended without a clean finish (a hang, a closed tab).
+		"recording_partial": bool(doc.get("recording")) and not cint(doc.get("recording_final")),
 		"pass_mark": PASS_MARK,
 		"is_own": doc.member == user,
 		"can_unlock": _can_unlock(doc.member, user) and state["blocked"],
@@ -1377,18 +1379,21 @@ RECORDING_TYPES = {"audio/webm": ".webm", "audio/ogg": ".ogg", "audio/mp4": ".m4
 
 
 @frappe.whitelist(methods=["POST"])
-def save_recording(attempt: str):
+def save_recording(attempt: str, partial: int | str = 0):
 	"""Store the call audio against an attempt.
 
 	The scoring model can be wrong; the recording is the record of what was actually said, so a
-	Training Manager can listen for themselves. Only the learner's own browser uploads it, once.
+	Training Manager can listen for themselves. The browser sends snapshots while the call runs —
+	if Gemini hangs or the learner closes a frozen tab, what happened up to that point is still
+	kept — and the complete file replaces them at the end.
 	"""
 	user = _require_login()
 	doc = frappe.get_doc("Sales Viva Attempt", attempt)
 	if doc.member != user:
 		frappe.throw(_("Only the learner's own viva can be uploaded."), frappe.PermissionError)
-	if doc.get("recording"):
-		return {"saved": True, "already": True}
+	partial = cint(partial)
+	if cint(doc.get("recording_final")):
+		return {"saved": True, "already": True}  # the finished audio is already in
 	uploaded = (frappe.request.files or {}).get("file") if frappe.request else None
 	if not uploaded:
 		frappe.throw(_("No audio was received."))
@@ -1398,6 +1403,11 @@ def save_recording(attempt: str):
 	if len(content) > RECORDING_MAX_BYTES:
 		frappe.throw(_("That recording is too long to store."))
 	extension = RECORDING_TYPES.get((uploaded.mimetype or "").split(";")[0].strip(), ".webm")
+	# Each upload supersedes the last snapshot of the same call.
+	for old_file in frappe.get_all(
+		"File", {"attached_to_doctype": "Sales Viva Attempt", "attached_to_name": doc.name}, pluck="name"
+	):
+		frappe.delete_doc("File", old_file, ignore_permissions=True, force=True, delete_permanently=True)
 	file_doc = frappe.get_doc(
 		{
 			"doctype": "File",
@@ -1410,7 +1420,8 @@ def save_recording(attempt: str):
 		}
 	).insert(ignore_permissions=True)
 	doc.db_set("recording", file_doc.file_url, update_modified=False)
-	return {"saved": True, "seconds": cint(doc.duration_s)}
+	doc.db_set("recording_final", 0 if partial else 1, update_modified=False)
+	return {"saved": True, "partial": bool(partial), "seconds": cint(doc.duration_s)}
 
 
 @frappe.whitelist()

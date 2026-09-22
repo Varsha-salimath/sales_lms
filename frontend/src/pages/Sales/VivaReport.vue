@@ -38,6 +38,9 @@
 					<p class="vr-muted mt-2">
 						{{ __('What was actually said, both voices. Scores are a machine’s reading of it — the audio is the record.') }}
 					</p>
+					<p v-if="r.recording_partial" class="vr-muted mt-1">
+						{{ __('This call ended without finishing, so the audio stops where it stopped.') }}
+					</p>
 				</section>
 
 				<!-- Knowledge / Fluency -->

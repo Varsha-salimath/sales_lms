@@ -254,6 +254,15 @@ export function createLiveViva({ attempt, wsUrl, setup, timeLimitS, onChange }) 
 		}
 	}
 
+	function saveSoFar() {
+		if (!s.recorder || s.recorder.state !== 'recording' || !s.recChunks.length) return
+		try {
+			s.recorder.requestData()
+		} catch (e) {}
+		const type = s.recorder.mimeType || 'audio/webm'
+		uploadRecording(new Blob(s.recChunks, { type }), true)
+	}
+
 	function stopRecording() {
 		return new Promise((resolve) => {
 			if (!s.recorder || s.recorder.state === 'inactive') return resolve(null)
@@ -269,28 +278,37 @@ export function createLiveViva({ attempt, wsUrl, setup, timeLimitS, onChange }) 
 		})
 	}
 
-	async function uploadRecording(blob) {
+	async function uploadRecording(blob, partial = false) {
 		if (!blob || blob.size < 1024) return
 		const form = new FormData()
 		form.append('file', blob, `viva-${attempt}.webm`)
 		try {
-			await fetch(`/api/method/lms.lms.sales_viva.save_recording?attempt=${encodeURIComponent(attempt)}`, {
-				method: 'POST',
-				body: form,
-				headers: window.csrf_token ? { 'X-Frappe-CSRF-Token': window.csrf_token } : {},
-			})
+			await fetch(
+				`/api/method/lms.lms.sales_viva.save_recording?attempt=${encodeURIComponent(attempt)}&partial=${partial ? 1 : 0}`,
+				{
+					method: 'POST',
+					body: form,
+					headers: window.csrf_token ? { 'X-Frappe-CSRF-Token': window.csrf_token } : {},
+				}
+			)
 		} catch (e) {
 			// The report is still useful without the audio.
 		}
 	}
 
-	function startMicStream() {
+	function ensureAudioGraph() {
+		if (s.micCtx) return s.micCtx
 		const Ctor = window.AudioContext || window.webkitAudioContext
 		const ctx = new Ctor()
 		s.micCtx = ctx
 		if (ctx.state === 'suspended') ctx.resume()
 		s.micSrc = ctx.createMediaStreamSource(s.micStream)
 		startRecording(ctx)
+		return ctx
+	}
+
+	function startMicStream() {
+		const ctx = ensureAudioGraph()
 		const node = ctx.createScriptProcessor(4096, 1, 1)
 		s.micNode = node
 		let pending = []
@@ -563,8 +581,10 @@ export function createLiveViva({ attempt, wsUrl, setup, timeLimitS, onChange }) 
 	let onDone = null
 	function cleanup() {
 		clearInterval(s.timer)
+		clearInterval(s.snapTimer)
 		document.removeEventListener('visibilitychange', onVisibility)
 		window.removeEventListener('blur', onBlur)
+		if (s.onLeavePage) window.removeEventListener('pagehide', s.onLeavePage)
 		stopPlayback()
 		if (s.micNode) {
 			s.micNode.onaudioprocess = null
@@ -625,6 +645,9 @@ export function createLiveViva({ attempt, wsUrl, setup, timeLimitS, onChange }) 
 		async start(done) {
 			onDone = done
 			await openMic()
+			// Record from here, before the connection: if Gemini never answers, the silence and
+			// whatever the learner said while waiting is still on the tape.
+			ensureAudioGraph()
 			try {
 				await connect()
 			} catch (e) {
@@ -636,6 +659,9 @@ export function createLiveViva({ attempt, wsUrl, setup, timeLimitS, onChange }) 
 			document.addEventListener('visibilitychange', onVisibility)
 			window.addEventListener('blur', onBlur)
 			s.timer = setInterval(tick, 1000)
+			s.snapTimer = setInterval(saveSoFar, 45000)
+			s.onLeavePage = () => saveSoFar()
+			window.addEventListener('pagehide', s.onLeavePage)
 			emit()
 		},
 		// "I'm done": end the answer now instead of waiting for the pause.
