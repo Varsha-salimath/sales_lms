@@ -19,7 +19,7 @@ Trainee login, self-service, and biometric/punch/geo attendance are explicitly o
 | Staff identity | Real Frappe Users + Roles, reusing the existing reporting-line/permission-scoping pattern (`access.py`, `permission_query_conditions`) | Explicit steer: reuse what's already built for Training Team/Sales Manager/Finance/Leadership access. |
 | Payroll calculation | **Capture only** — inputs (salary, days, dates) and the vendor's returned invoice amount, side by side, for Finance to reconcile. No pro-rata formula implemented. | Source doc's own open item #6 says the formula is still unknown; vendor calculates and invoices it. Building a formula now would be building on a guess. |
 | Roles | 4 new Frappe Roles: Sales Training Team, Sales Trainee Manager, Sales Training Finance, Sales Training Leadership. Super Admin = existing `System Manager`. | None of these exist today; only `System Manager`, `LMS Manager`, `Course Creator`, `Batch Evaluator`, `LMS Student` do. |
-| CRT-week attendance source | Dual: pull from the existing Zoom-based live-class attendance sync (`lms_live_class.py::get_attendance`/`create_attendance`) when available, else manually marked by Training Team. OJT weeks are always manual. | Explicit steer: reuse existing Zoom sync where it exists; this portal is the single ledger either way. |
+| Attendance ownership | **CRT week (days 1–7):** already tracked via the existing Zoom-based live-class attendance sync (`lms_live_class.py::get_attendance`/`create_attendance`) — reused as-is, no new marking workflow needed. **OJT weeks (days 8–21):** manually marked by the **Sales Trainee Manager**, not Training Team. | Explicit steer, confirmed 2026-09-24: CRT is already tracked and that's sufficient; OJT attendance is the Sales Trainee Manager's job throughout, not a Day-22 handover from Training Team. |
 | Bulk onboarding pattern | Model on `ojt_certification.py`'s CSV/Sheet upsert (dedup by email, dry-run validation, partial-failure-safe upsert-by-row-key), not the CRT curriculum importer | Closer match: per-person rows with dedup, not a curriculum schedule. |
 
 ## 3. Data model (new DocTypes)
@@ -112,7 +112,7 @@ Visibility reuses the existing pattern:
 - `Sales Training Finance` sees payroll-cycle data org-wide (read + validate), not trainee personal fields beyond what's needed for reconciliation.
 - `Sales Training Leadership` is read-only on dashboards/reports.
 
-Day-22 handover (Training Team → Sales Manager owning attendance) is a `date_of_joining`-based check in the `Sales Trainee Attendance` controller's `has_permission`, not a manual reassignment step.
+Both `Sales Training Team` and `Sales Trainee Manager` hold write access on `Sales Trainee Attendance` — there is no coded date-based handover. In practice: Training Team marks/fixes the CRT week when Zoom sync is unavailable; Sales Trainee Manager owns marking for the whole OJT window (days 8–21) and beyond. This is a workflow convention enforced by who staff assign as `assigned_trainer` vs `assigned_sales_manager`, not a permission gate in code.
 
 ## 5. Bulk onboarding
 
@@ -124,8 +124,8 @@ New Vue screen modeled on `SalesImport.vue`, backed by a CSV/Excel parser modele
 ## 6. Attendance
 
 - `Sales Trainee Attendance` is the single ledger for the full 21-day window (CRT week 1 + OJT weeks 2–3).
-- CRT-week rows: where a Zoom-synced live class exists for that trainee/date, auto-populate from the existing `lms_live_class.py::get_attendance`/`create_attendance` sync; otherwise Training Team marks manually.
-- OJT-week rows: always manually marked by Training Team (Day 1–21), handed to Sales Manager from Day 22.
+- CRT-week rows (days 1–7): where a Zoom-synced live class exists for that trainee/date, auto-populate from the existing `lms_live_class.py::get_attendance`/`create_attendance` sync — already tracked, confirmed sufficient as-is. Training Team marks manually only as a fallback when Zoom data is missing.
+- OJT-week rows (days 8–21): manually marked by the **Sales Trainee Manager** — not a Day-22 handover from Training Team.
 - No self-marking, punch-in, biometric, or geo-location — matches doc's explicit exclusion (§7).
 - All corrections (any source) go through `Sales Trainee Audit Log` with a required reason.
 
