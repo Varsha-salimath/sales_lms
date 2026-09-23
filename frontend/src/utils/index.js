@@ -628,6 +628,27 @@ const getSidebarItems = (forMobile = false) => {
 					},
 				},
 				{
+					label: 'Payroll cycles',
+					icon: 'Wallet',
+					to: 'WeeklyPayrollCycle',
+					activeFor: ['WeeklyPayrollCycle'],
+					condition: () => {
+						const roles = userResource?.data?.roles || []
+						return !forMobile && (roles.includes('Sales Training Finance') || roles.includes('Sales Training Team'))
+					},
+				},
+				{
+					label: 'Trainee dashboard',
+					icon: 'LayoutDashboard',
+					to: 'TraineeDashboard',
+					activeFor: ['TraineeDashboard'],
+					condition: () => {
+						const tier = userResource?.data?.access_tier
+						const roles = userResource?.data?.roles || []
+						return !forMobile && (['Admin', 'Super Admin'].includes(tier) || roles.includes('Sales Training Leadership'))
+					},
+				},
+				{
 					label: 'Analytics',
 					icon: 'BarChart2',
 					to: 'AnalyticsDashboard',

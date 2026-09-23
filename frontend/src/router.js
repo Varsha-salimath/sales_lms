@@ -111,6 +111,16 @@ const routes = [
 		component: () => import('@/pages/Sales/TraineeAttendance.vue'),
 	},
 	{
+		path: '/sales-trainees/payroll',
+		name: 'WeeklyPayrollCycle',
+		component: () => import('@/pages/Sales/WeeklyPayrollCycle.vue'),
+	},
+	{
+		path: '/sales-trainees/dashboard',
+		name: 'TraineeDashboard',
+		component: () => import('@/pages/Sales/TraineeDashboard.vue'),
+	},
+	{
 		path: '/crt/session/:sessionKey',
 		name: 'SalesSession',
 		redirect: { name: 'GeniusCourseDetail', params: { courseName: 'sales-crt' } },
@@ -538,6 +548,8 @@ router.beforeEach(async (to, from, next) => {
 		'TraineeCohortList',
 		'TraineeList',
 		'TraineeAttendance',
+		'WeeklyPayrollCycle',
+		'TraineeDashboard',
 		'VivaResults',
 	]
 	if (staffOnlyRoutes.includes(to.name)) {
