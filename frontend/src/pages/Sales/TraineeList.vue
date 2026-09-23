@@ -26,7 +26,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { createListResource } from 'frappe-ui'
 
@@ -40,4 +40,18 @@ const trainees = createListResource({
 	auto: true,
 	pageLength: 100,
 })
+
+// The list resource above is only evaluated once at setup. Because App.vue's
+// <router-view /> has no :key on the route, navigating between query-only
+// variants of this same route (e.g. /sales-trainees?cohort=A -> /sales-trainees)
+// does not remount this component, so the filters must be kept in sync here.
+watch(
+	() => route.query.cohort,
+	(cohort) => {
+		trainees.update({
+			filters: cohort ? { cohort } : {},
+		})
+		trainees.reload()
+	}
+)
 </script>
