@@ -19,6 +19,8 @@ class SalesTraineeAttendance(Document):
 		"""Change status after the fact, always audit-logged. Allowed even after the
 		owning Weekly Payroll Cycle has closed — Finance reconciles from the audit
 		trail rather than being blocked from ever fixing a mistake."""
+		# run_doc_method only checks READ on load; enforce write (role + scope hook) here.
+		self.check_permission("write")
 		if not (reason or "").strip():
 			frappe.throw(_("A reason is required to correct attendance."), frappe.MandatoryError)
 		old_status = self.status

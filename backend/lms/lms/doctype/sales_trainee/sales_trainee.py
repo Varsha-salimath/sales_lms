@@ -33,6 +33,8 @@ class SalesTrainee(Document):
 		"""The intended path for changing training_status/exit fields — always
 		captures a real reason. A raw doc.save() from the desk still gets logged
 		by on_update() above, just with a fallback reason instead of this one."""
+		# run_doc_method only checks READ on load; enforce write (role + scope hook) here.
+		self.check_permission("write")
 		if not (reason or "").strip():
 			frappe.throw(_("A reason is required to change training status."), frappe.MandatoryError)
 

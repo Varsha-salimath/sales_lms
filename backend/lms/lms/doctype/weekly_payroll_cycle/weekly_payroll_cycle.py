@@ -6,6 +6,10 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import now_datetime
 
+# Closing a cycle stamps finance_validated_by, so only someone actually in Finance
+# (or a System Manager) may take that final step.
+CLOSE_ROLES = {"Sales Training Finance", "System Manager"}
+
 STATUS_SEQUENCE = [
 	"Preparing",
 	"Ready to Share",
@@ -19,6 +23,11 @@ STATUS_SEQUENCE = [
 class WeeklyPayrollCycle(Document):
 	@frappe.whitelist()
 	def advance_status(self, new_status):
+		# run_doc_method only checks READ on load, and we save with ignore_permissions,
+		# so write access has to be enforced here.
+		self.check_permission("write")
+		if new_status == "Closed" and set(frappe.get_roles()).isdisjoint(CLOSE_ROLES):
+			frappe.throw(_("Only Sales Training Finance can close a payroll cycle."), frappe.PermissionError)
 		current_index = STATUS_SEQUENCE.index(self.status)
 		try:
 			target_index = STATUS_SEQUENCE.index(new_status)
