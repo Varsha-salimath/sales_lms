@@ -1,0 +1,48 @@
+{
+ "actions": [],
+ "creation": "2026-09-24 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "week_start", "week_end", "cohort", "column_break_1", "status", "shared_on",
+  "section_break_finance", "vendor_invoice_amount", "finance_validated_by", "finance_validated_on", "exceptions_notes",
+  "section_break_inputs", "payroll_inputs"
+ ],
+ "fields": [
+  {"fieldname": "week_start", "fieldtype": "Date", "label": "Week Start", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
+  {"fieldname": "week_end", "fieldtype": "Date", "label": "Week End", "reqd": 1, "in_list_view": 1},
+  {"fieldname": "cohort", "fieldtype": "Link", "label": "Cohort", "options": "Sales Trainee Cohort", "in_standard_filter": 1},
+  {"fieldname": "column_break_1", "fieldtype": "Column Break"},
+  {"fieldname": "status", "fieldtype": "Select", "label": "Status", "default": "Preparing", "in_list_view": 1, "in_standard_filter": 1, "read_only": 1,
+   "options": "Preparing\nReady to Share\nShared with Vendor\nAwaiting Invoice\nFinance Validation\nClosed"},
+  {"fieldname": "shared_on", "fieldtype": "Datetime", "label": "Shared On", "read_only": 1},
+  {"fieldname": "section_break_finance", "fieldtype": "Section Break", "label": "Finance"},
+  {"fieldname": "vendor_invoice_amount", "fieldtype": "Currency", "label": "Vendor Invoice Amount"},
+  {"fieldname": "finance_validated_by", "fieldtype": "Link", "label": "Finance Validated By", "options": "User", "read_only": 1},
+  {"fieldname": "finance_validated_on", "fieldtype": "Datetime", "label": "Finance Validated On", "read_only": 1},
+  {"fieldname": "exceptions_notes", "fieldtype": "Small Text", "label": "Exceptions Notes"},
+  {"fieldname": "section_break_inputs", "fieldtype": "Section Break", "label": "Trainee Inputs"},
+  {"fieldname": "payroll_inputs", "fieldtype": "Table", "label": "Payroll Inputs", "options": "Weekly Payroll Input"}
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-09-24 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "LMS",
+ "name": "Weekly Payroll Cycle",
+ "owner": "Administrator",
+ "permissions": [
+  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1, "print": 1},
+  {"role": "Sales Training Team", "read": 1, "create": 1, "write": 1, "report": 1},
+  {"role": "Sales Trainee Manager", "read": 1, "report": 1},
+  {"role": "Sales Training Finance", "read": 1, "write": 1, "report": 1, "export": 1},
+  {"role": "Sales Training Leadership", "read": 1, "report": 1}
+ ],
+ "sort_field": "week_start",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "week_start",
+ "autoname": "WPC-.YYYY.-.#####",
+ "naming_rule": "Expression (old style)",
+ "track_changes": 1
+}
