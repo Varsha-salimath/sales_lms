@@ -177,6 +177,9 @@ doc_events = {
 	},
 	"LMS Course": {"validate": "lms.lms.content_scope.set_team"},
 	"LMS Batch": {"validate": "lms.lms.content_scope.set_team"},
+	"LMS Live Class Participant": {
+		"after_insert": "lms.lms.trainee_attendance_sync.sync_from_live_class_participant",
+	},
 	"LMS Program": {"validate": "lms.lms.content_scope.set_team"},
 }
 
