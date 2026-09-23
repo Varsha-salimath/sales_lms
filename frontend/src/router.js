@@ -573,7 +573,27 @@ router.beforeEach(async (to, from, next) => {
 			(u?.is_training_manager &&
 				['LearnerReports', 'LearnerReportCard', 'AnalyticsDashboard', 'VivaResults'].includes(to.name)) ||
 			(u?.is_manager && ['LearnerReports', 'LearnerReportCard', 'VivaResults'].includes(to.name))
-		if (!staff) {
+		// Sales Training screens: the 4 Sales Training roles hold none of the flags above, so they
+		// need their own allow-list (per-screen data access is still enforced by the API).
+		const salesTrainingRoutes = [
+			'TraineeImport',
+			'TraineeCohortList',
+			'TraineeList',
+			'TraineeAttendance',
+			'WeeklyPayrollCycle',
+			'TraineeDashboard',
+		]
+		const salesTrainingRoles = [
+			'Sales Training Team',
+			'Sales Trainee Manager',
+			'Sales Training Finance',
+			'Sales Training Leadership',
+		]
+		const isSalesTrainingStaff =
+			salesTrainingRoutes.includes(to.name) &&
+			(['Admin', 'Super Admin'].includes(u?.access_tier) ||
+				(u?.roles || []).some((r) => salesTrainingRoles.includes(r)))
+		if (!staff && !isSalesTrainingStaff) {
 			return next({ name: 'StudentDashboard' })
 		}
 	}
