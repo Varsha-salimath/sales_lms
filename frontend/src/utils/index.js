@@ -604,6 +604,20 @@ const getSidebarItems = (forMobile = false) => {
 					},
 				},
 				{
+					label: 'Trainees',
+					icon: 'Users',
+					to: 'TraineeList',
+					activeFor: ['TraineeList', 'TraineeCohortList'],
+					condition: () => {
+						const tier = userResource?.data?.access_tier
+						const roles = userResource?.data?.roles || []
+						return !forMobile && (
+							['Admin', 'Super Admin'].includes(tier) ||
+							['Sales Training Team', 'Sales Trainee Manager', 'Sales Training Finance', 'Sales Training Leadership'].some((r) => roles.includes(r))
+						)
+					},
+				},
+				{
 					label: 'Analytics',
 					icon: 'BarChart2',
 					to: 'AnalyticsDashboard',
