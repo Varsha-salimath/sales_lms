@@ -45,6 +45,15 @@ class TestSalesTraineeAttendance(UnitTestCase):
 		)
 		self.assertEqual(len(logs), 1)
 
+	def test_correct_sets_source_to_manual(self):
+		# N1: a corrected row must be treated as Manual going forward, otherwise the
+		# next Zoom sync for the same trainee+date silently reverts the correction.
+		row = mark(self.trainee.name, "2026-10-08", "Absent", source="Zoom Sync")
+		row.correct("Present", reason="Trainee was present, Zoom missed the join")
+		row.reload()
+		self.assertEqual(row.status, "Present")
+		self.assertEqual(row.source, "Manual")
+
 	def test_correct_requires_reason(self):
 		row = mark(self.trainee.name, "2026-10-09", "Absent", source="Manual")
 		with self.assertRaises(frappe.MandatoryError):

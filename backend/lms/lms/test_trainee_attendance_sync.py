@@ -81,3 +81,49 @@ class TestTraineeAttendanceSync(UnitTestCase):
 			"Sales Trainee Attendance", {"trainee": self.trainee.name, "attendance_date": "2026-10-07"}, "status"
 		)
 		self.assertEqual(status, "Absent")  # manual entry wins; Zoom sync does not clobber a correction
+
+	def test_corrected_zoom_entry_is_not_reverted_by_next_sync(self):
+		# N1: a Zoom-sourced row that gets manually corrected must behave like a
+		# Manual row for future syncs, otherwise the next Zoom sync for the same
+		# trainee+date silently overwrites the human correction with no audit trail.
+		first_participant = frappe.get_doc(
+			{
+				"doctype": "LMS Live Class Participant",
+				"live_class": "does-not-need-to-exist-for-this-test",
+				"member": self.email,
+				"joined_at": "2026-10-08 09:00:00",
+				"left_at": "2026-10-08 10:00:00",
+				"duration": 60,
+			}
+		)
+		first_participant.flags.ignore_links = True
+		first_participant.insert(ignore_permissions=True)
+		sync_from_live_class_participant(first_participant, "after_insert")
+
+		row_name = frappe.db.get_value(
+			"Sales Trainee Attendance", {"trainee": self.trainee.name, "attendance_date": "2026-10-08"}, "name"
+		)
+		self.assertIsNotNone(row_name)
+		row = frappe.get_doc("Sales Trainee Attendance", row_name)
+		self.assertEqual(row.source, "Zoom Sync")
+		row.correct("Absent", reason="Trainee left immediately, Zoom counted them as present")
+		row.reload()
+		self.assertEqual(row.status, "Absent")
+		self.assertEqual(row.source, "Manual")
+
+		second_participant = frappe.get_doc(
+			{
+				"doctype": "LMS Live Class Participant",
+				"live_class": "does-not-need-to-exist-for-this-test",
+				"member": self.email,
+				"joined_at": "2026-10-08 09:05:00",
+				"left_at": "2026-10-08 10:05:00",
+				"duration": 60,
+			}
+		)
+		second_participant.flags.ignore_links = True
+		second_participant.insert(ignore_permissions=True)
+		sync_from_live_class_participant(second_participant, "after_insert")
+
+		status = frappe.db.get_value("Sales Trainee Attendance", row_name, "status")
+		self.assertEqual(status, "Absent")  # correction survives the next Zoom sync

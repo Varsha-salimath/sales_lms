@@ -34,6 +34,9 @@ class SalesTraineeAttendance(Document):
 			reason=reason,
 		)
 		self.status = new_status
+		# A corrected row must be treated as Manual going forward, otherwise the next
+		# Zoom sync for the same trainee+date silently reverts the correction (N1).
+		self.source = "Manual"
 		self.save(ignore_permissions=True)
 		return self
 
