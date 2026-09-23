@@ -618,6 +618,16 @@ const getSidebarItems = (forMobile = false) => {
 					},
 				},
 				{
+					label: 'Mark attendance',
+					icon: 'CalendarCheck',
+					to: 'TraineeAttendance',
+					activeFor: ['TraineeAttendance'],
+					condition: () => {
+						const roles = userResource?.data?.roles || []
+						return !forMobile && (roles.includes('Sales Training Team') || roles.includes('Sales Trainee Manager'))
+					},
+				},
+				{
 					label: 'Analytics',
 					icon: 'BarChart2',
 					to: 'AnalyticsDashboard',

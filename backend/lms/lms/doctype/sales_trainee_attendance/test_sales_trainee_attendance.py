@@ -65,3 +65,29 @@ class TestSalesTraineeAttendance(UnitTestCase):
 		row.reload()
 		self.assertEqual(row.status, "Present")
 		self.assertIn("Closed", cycle.status)  # cycle itself is untouched, correction just logs
+
+	def test_mark_attendance_whitelisted_wrapper(self):
+		from lms.lms.doctype.sales_trainee_attendance.sales_trainee_attendance import mark_attendance
+
+		result = mark_attendance(self.trainee.name, "2026-10-11", "Present")
+		self.assertEqual(result["status"], "Present")
+
+	def _get_or_create_user(self, email):
+		if frappe.db.exists("User", email):
+			return email
+		frappe.get_doc({"doctype": "User", "email": email, "first_name": email.split("@")[0]}).insert(
+			ignore_permissions=True
+		)
+		return email
+
+	def test_mark_attendance_requires_role(self):
+		# Security Review Focus: a user with no System Manager / Sales Training Team /
+		# Sales Trainee Manager role must not be able to mark attendance via the
+		# whitelisted wrapper.
+		from lms.lms.doctype.sales_trainee_attendance.sales_trainee_attendance import mark_attendance
+
+		email = self._get_or_create_user(f"attendance-no-access-{frappe.generate_hash(length=6)}@example.com")
+		frappe.set_user(email)
+		self.addCleanup(frappe.set_user, "Administrator")
+		with self.assertRaises(frappe.PermissionError):
+			mark_attendance(self.trainee.name, "2026-10-12", "Present")

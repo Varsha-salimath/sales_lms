@@ -61,3 +61,17 @@ def mark(trainee, attendance_date, status, source="Manual", marked_by=None):
 		)
 	doc.save(ignore_permissions=True)
 	return doc
+
+
+def _ensure_attendance_mark_access():
+	if frappe.session.user == "Guest":
+		frappe.throw(_("You are not permitted to mark attendance."), frappe.PermissionError)
+	roles = set(frappe.get_roles())
+	if roles.isdisjoint({"System Manager", "Sales Training Team", "Sales Trainee Manager"}):
+		frappe.throw(_("You are not permitted to mark attendance."), frappe.PermissionError)
+
+
+@frappe.whitelist(methods=["POST"])
+def mark_attendance(trainee, attendance_date, status):
+	_ensure_attendance_mark_access()
+	return mark(trainee, attendance_date, status, source="Manual").as_dict()
