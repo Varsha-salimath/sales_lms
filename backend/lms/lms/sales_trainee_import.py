@@ -27,10 +27,20 @@ def _validate_rows(rows):
 	return errors
 
 
+def _ensure_import_access():
+	if frappe.session.user == "Guest":
+		frappe.throw(_("You are not permitted to import trainees."), frappe.PermissionError)
+
+	roles = set(frappe.get_roles())
+	if roles.isdisjoint({"System Manager", "Sales Training Team"}):
+		frappe.throw(_("You are not permitted to import trainees."), frappe.PermissionError)
+
+
 @frappe.whitelist(methods=["POST"])
 def import_sales_trainees(rows, dry_run=True):
 	"""Bulk upsert Sales Trainee records, deduped by personal_email — same shape as
 	ojt_certification.py's row-key upsert. dry_run=True validates only, never writes."""
+	_ensure_import_access()
 	if isinstance(dry_run, str):
 		dry_run = dry_run.lower() in ("1", "true", "yes")
 	errors = _validate_rows(rows)

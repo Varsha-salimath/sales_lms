@@ -47,3 +47,21 @@ class TestSalesTraineeImport(UnitTestCase):
 		matches = frappe.get_all("Sales Trainee", filters={"personal_email": email})
 		self.assertEqual(len(matches), 1)
 		self.assertEqual(frappe.db.get_value("Sales Trainee", matches[0].name, "location"), "Bengaluru")
+
+	def _get_or_create_user(self, email):
+		if frappe.db.exists("User", email):
+			return email
+		frappe.get_doc({"doctype": "User", "email": email, "first_name": email.split("@")[0]}).insert(
+			ignore_permissions=True
+		)
+		return email
+
+	def test_user_without_required_role_is_rejected(self):
+		# Security Review Focus: a user with no System Manager / Sales Training Team
+		# role (e.g. read-only Sales Trainee Manager) must not be able to bulk-write
+		# trainee records, even in dry_run mode.
+		email = self._get_or_create_user(f"import-no-access-{frappe.generate_hash(length=6)}@example.com")
+		frappe.set_user(email)
+		self.addCleanup(frappe.set_user, "Administrator")
+		with self.assertRaises(frappe.PermissionError):
+			import_sales_trainees(rows=[self._row(f"blocked-{frappe.generate_hash(length=6)}@example.com")], dry_run=True)
