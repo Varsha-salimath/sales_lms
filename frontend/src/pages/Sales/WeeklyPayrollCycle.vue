@@ -17,7 +17,7 @@
 					<td>{{ c.status }}</td>
 					<td>{{ c.vendor_invoice_amount || '—' }}</td>
 					<td>
-						<Button size="sm" @click="prepInputs(c.name)">Prepare Inputs</Button>
+						<Button size="sm" @click="prepInputs(c.name)" v-if="c.status === 'Preparing'">Prepare Inputs</Button>
 						<Button size="sm" @click="advance(c.name, nextStatus(c.status))" v-if="nextStatus(c.status)">
 							Advance to {{ nextStatus(c.status) }}
 						</Button>
