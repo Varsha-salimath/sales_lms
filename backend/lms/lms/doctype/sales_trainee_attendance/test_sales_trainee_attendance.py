@@ -91,3 +91,42 @@ class TestSalesTraineeAttendance(UnitTestCase):
 		self.addCleanup(frappe.set_user, "Administrator")
 		with self.assertRaises(frappe.PermissionError):
 			mark_attendance(self.trainee.name, "2026-10-12", "Present")
+
+	def test_mark_attendance_remark_requires_reason(self):
+		# I6: re-marking an already-marked day with a new status is a correction.
+		from lms.lms.doctype.sales_trainee_attendance.sales_trainee_attendance import mark_attendance
+
+		mark_attendance(self.trainee.name, "2026-10-13", "Absent")
+		with self.assertRaises(frappe.MandatoryError):
+			mark_attendance(self.trainee.name, "2026-10-13", "Present")
+		self.assertEqual(
+			frappe.db.get_value(
+				"Sales Trainee Attendance", {"trainee": self.trainee.name, "attendance_date": "2026-10-13"}, "status"
+			),
+			"Absent",
+		)
+		self.assertEqual(frappe.db.count("Sales Trainee Audit Log", {"trainee": self.trainee.name}), 0)
+
+	def test_mark_attendance_remark_with_reason_is_audit_logged(self):
+		from lms.lms.doctype.sales_trainee_attendance.sales_trainee_attendance import mark_attendance
+
+		first = mark_attendance(self.trainee.name, "2026-10-14", "Absent")
+		second = mark_attendance(self.trainee.name, "2026-10-14", "Present", reason="Was on a client call")
+		self.assertEqual(second["name"], first["name"])
+		self.assertEqual(second["status"], "Present")
+		logs = frappe.get_all(
+			"Sales Trainee Audit Log",
+			filters={"trainee": self.trainee.name, "field_changed": f"attendance:{first['name']}"},
+			fields=["old_value", "new_value", "reason"],
+		)
+		self.assertEqual(len(logs), 1)
+		self.assertEqual((logs[0].old_value, logs[0].new_value), ("Absent", "Present"))
+		self.assertEqual(logs[0].reason, "Was on a client call")
+
+	def test_mark_attendance_same_status_is_noop_without_reason(self):
+		from lms.lms.doctype.sales_trainee_attendance.sales_trainee_attendance import mark_attendance
+
+		mark_attendance(self.trainee.name, "2026-10-15", "Present")
+		result = mark_attendance(self.trainee.name, "2026-10-15", "Present")
+		self.assertEqual(result["status"], "Present")
+		self.assertEqual(frappe.db.count("Sales Trainee Audit Log", {"trainee": self.trainee.name}), 0)

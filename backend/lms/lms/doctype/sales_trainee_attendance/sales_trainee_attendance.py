@@ -74,8 +74,22 @@ def _ensure_attendance_mark_access():
 
 
 @frappe.whitelist(methods=["POST"])
-def mark_attendance(trainee, attendance_date, status):
+def mark_attendance(trainee, attendance_date, status, reason=None):
+	"""Manual marking from the portal. A first mark for trainee+date creates the row.
+	A re-mark of an existing row with a different status is a correction, so it is
+	routed server-side through correct() (write permission, mandatory reason,
+	audit log) instead of mark()'s silent overwrite. Deciding here rather than in
+	the client keeps the audit guarantee independent of which call the UI picks."""
 	_ensure_attendance_mark_access()
+	existing = frappe.db.get_value(
+		"Sales Trainee Attendance", {"trainee": trainee, "attendance_date": getdate(attendance_date)}, "name"
+	)
+	if existing:
+		doc = frappe.get_doc("Sales Trainee Attendance", existing)
+		if doc.status == status:
+			doc.check_permission("write")
+			return doc.as_dict()
+		return doc.correct(status, reason=reason).as_dict()
 	# mark() saves with ignore_permissions, so apply the reporting-tree scope here:
 	# a Sales Trainee Manager may only mark trainees in their own tree.
 	frappe.has_permission(

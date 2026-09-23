@@ -91,6 +91,18 @@ class TestManagerScopedEndpoints(UnitTestCase):
 			frappe.db.exists("Sales Trainee Attendance", {"trainee": self.theirs.name, "attendance_date": "2026-10-08"})
 		)
 
+	def test_manager_cannot_remark_other_managers_trainee(self):
+		# setUp already marked `theirs` Present on Oct 6, so this goes down the correct() path.
+		run_as(self, self.manager_a)
+		with self.assertRaises(frappe.PermissionError):
+			mark_attendance(self.theirs.name, "2026-10-06", "Absent", reason="probe")
+		self.assertEqual(
+			frappe.db.get_value(
+				"Sales Trainee Attendance", {"trainee": self.theirs.name, "attendance_date": "2026-10-06"}, "status"
+			),
+			"Present",
+		)
+
 	def test_leadership_still_sees_everything(self):
 		run_as(self, make_user("i1-leadership", "Sales Training Leadership"))
 		self.assertEqual(get_cohort_stats(self.cohort.name)["total"], 2)
