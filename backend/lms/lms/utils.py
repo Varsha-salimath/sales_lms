@@ -9,7 +9,6 @@ from frappe.desk.doctype.dashboard_chart.dashboard_chart import get_result
 from frappe.desk.doctype.notification_log.notification_log import make_notification_logs
 from frappe.desk.notifications import extract_mentions
 from frappe.model.document import Document
-from frappe.rate_limiter import rate_limit
 from frappe.utils import (
 	add_months,
 	cint,
@@ -31,6 +30,7 @@ from pypika import functions as fn
 
 from lms.lms.content_scope import allowed_names, can_access, scope_filters
 from lms.lms.doctype.lms_enrollment.lms_enrollment import update_program_progress
+from lms.lms.throttle import portal_rate_limit
 from lms.lms.md import find_macros
 
 RE_SLUG_NOTALLOWED = re.compile("[^a-z0-9]+")
@@ -325,7 +325,7 @@ def get_average_rating(course: str):
 
 
 @frappe.whitelist(allow_guest=True)
-@rate_limit(limit=500, seconds=60 * 60)
+@portal_rate_limit()
 def get_reviews(course: str):
 	reviews = frappe.get_all(
 		"LMS Course Review",
@@ -626,7 +626,7 @@ def get_lesson_count(course: str) -> int:
 
 
 @frappe.whitelist(allow_guest=True)
-@rate_limit(limit=500, seconds=60 * 60)
+@portal_rate_limit()
 def get_chart_data(
 	chart_name: str,
 	timegrain: str = "Daily",
@@ -706,7 +706,7 @@ def get_chart_details(
 
 
 @frappe.whitelist(allow_guest=True)
-@rate_limit(limit=500, seconds=60 * 60)
+@portal_rate_limit()
 def get_course_completion_data():
 	all_membership = frappe.db.count("LMS Enrollment")
 	completed = frappe.db.count("LMS Enrollment", {"progress": [">=", 100]})
@@ -803,7 +803,7 @@ def guest_access_allowed():
 
 
 @frappe.whitelist(allow_guest=True)
-@rate_limit(limit=500, seconds=60 * 60)
+@portal_rate_limit()
 def get_courses(filters: dict = None, start: int = 0) -> list:
 	"""Returns the list of courses."""
 
@@ -963,7 +963,7 @@ def get_course_fields():
 
 
 @frappe.whitelist(allow_guest=True)
-@rate_limit(limit=500, seconds=60 * 60)
+@portal_rate_limit()
 def get_course_details(course: str):
 	if not guest_access_allowed():
 		return {}
@@ -1072,7 +1072,7 @@ def get_course_outline(course: str, progress: bool = False) -> list:
 
 
 @frappe.whitelist(allow_guest=True)
-@rate_limit(limit=500, seconds=60 * 60)
+@portal_rate_limit()
 def get_lesson(course: str, chapter: int, lesson: int) -> dict:
 	if not guest_access_allowed():
 		return {}
@@ -1204,7 +1204,7 @@ def get_neighbour_lesson(course: str, chapter: int, lesson: int) -> dict:
 
 
 @frappe.whitelist(allow_guest=True)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
-@rate_limit(limit=500, seconds=60 * 60)
+@portal_rate_limit()
 def get_batch_details(batch: str):
 	if not guest_access_allowed():
 		return {}
@@ -1348,7 +1348,7 @@ def get_question_details(question: str) -> dict:
 
 
 @frappe.whitelist(allow_guest=True)
-@rate_limit(limit=500, seconds=60 * 60)
+@portal_rate_limit()
 def get_batch_courses(batch: str) -> list:
 	if not guest_access_allowed():
 		return []
@@ -2377,7 +2377,7 @@ def validate_program_enrollment(program: str):
 
 
 @frappe.whitelist(allow_guest=True)
-@rate_limit(limit=500, seconds=60 * 60)
+@portal_rate_limit()
 def get_batches(filters: dict = None, start: int = 0, order_by: str = "start_date"):
 	if not guest_access_allowed():
 		return []
@@ -2513,7 +2513,7 @@ def get_palette(full_name: str) -> list:
 
 
 @frappe.whitelist(allow_guest=True)
-@rate_limit(limit=500, seconds=60 * 60)
+@portal_rate_limit()
 def get_related_courses(course: str) -> list:
 	if not guest_access_allowed():
 		return []

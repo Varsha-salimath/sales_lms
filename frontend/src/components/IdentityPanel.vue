@@ -21,6 +21,16 @@
 				</div>
 			</div>
 
+			<!-- Role at work -->
+			<div v-if="d.designation || d.grade" class="idp-row">
+				<div class="min-w-0 flex-1">
+					<div class="idp-label">{{ __('Designation') }}</div>
+					<div class="idp-value">
+						{{ d.designation || '—' }}<span v-if="d.grade" class="idp-tag">{{ d.grade }}</span>
+					</div>
+				</div>
+			</div>
+
 			<!-- Employee code -->
 			<div class="idp-row">
 				<div class="min-w-0 flex-1">

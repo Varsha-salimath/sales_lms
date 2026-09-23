@@ -31,22 +31,43 @@ TEMP_PREFIX = "TEMP-"
 # ---------------------------------------------------------------------------
 
 
+# Fields the HR roster fills in: the code identifies the person, the rest is who they are at work.
+ROSTER_FIELDS = (
+	{
+		"fieldname": "employee_code",
+		"label": "Employee code",
+		"insert_after": "last_name",
+		"search_index": 1,
+		"in_standard_filter": 1,
+		"description": "TEMP-#### until the real code is known. Changes are logged.",
+	},
+	{
+		"fieldname": "designation",
+		"label": "Designation",
+		"insert_after": "employee_code",
+		"description": "Job title from the HR roster, e.g. Senior Manager.",
+	},
+	{
+		"fieldname": "grade",
+		"label": "Grade",
+		"insert_after": "designation",
+		"in_standard_filter": 1,
+		"description": "Band from the HR roster, e.g. L2.",
+	},
+)
+
+
 def setup():
-	"""after_migrate: employee_code on User, and a placeholder code for every learner without one."""
-	if not frappe.db.exists("Custom Field", {"dt": "User", "fieldname": "employee_code"}):
-		frappe.get_doc(
-			{
-				"doctype": "Custom Field",
-				"dt": "User",
-				"fieldname": "employee_code",
-				"label": "Employee code",
-				"fieldtype": "Data",
-				"insert_after": "last_name",
-				"search_index": 1,
-				"in_standard_filter": 1,
-				"description": "TEMP-#### until the real code is known. Changes are logged.",
-			}
-		).insert(ignore_permissions=True)
+	"""after_migrate: the roster fields on User, and a placeholder code for everyone without one."""
+	added = False
+	for field in ROSTER_FIELDS:
+		if frappe.db.exists("Custom Field", {"dt": "User", "fieldname": field["fieldname"]}):
+			continue
+		frappe.get_doc({"doctype": "Custom Field", "dt": "User", "fieldtype": "Data", **field}).insert(
+			ignore_permissions=True
+		)
+		added = True
+	if added:
 		frappe.clear_cache(doctype="User")
 	if not frappe.db.has_column("User", "employee_code"):
 		return
@@ -131,7 +152,9 @@ def get_identity(user: str | None = None):
 	user = user or viewer
 	if viewer == "Guest" or not _can_view(user, viewer):
 		frappe.throw(_("You can't see this person's account history."), frappe.PermissionError)
-	info = frappe.db.get_value("User", user, ["name", "email", "full_name", "employee_code"], as_dict=True)
+	info = frappe.db.get_value(
+		"User", user, ["name", "email", "full_name", "employee_code", "designation", "grade"], as_dict=True
+	)
 	if not info:
 		frappe.throw(_("User not found."))
 	history = frappe.get_all(
@@ -149,6 +172,8 @@ def get_identity(user: str | None = None):
 		"email": info.email or info.name,
 		"full_name": info.full_name,
 		"employee_code": info.get("employee_code"),
+		"designation": info.get("designation"),
+		"grade": info.get("grade"),
 		"is_temp_code": (info.get("employee_code") or "").startswith(TEMP_PREFIX),
 		"can_edit": _can_edit(user, viewer),
 		"history": history,
