@@ -76,4 +76,12 @@ def _ensure_attendance_mark_access():
 @frappe.whitelist(methods=["POST"])
 def mark_attendance(trainee, attendance_date, status):
 	_ensure_attendance_mark_access()
+	# mark() saves with ignore_permissions, so apply the reporting-tree scope here:
+	# a Sales Trainee Manager may only mark trainees in their own tree.
+	frappe.has_permission(
+		"Sales Trainee Attendance",
+		"create",
+		doc=frappe.get_doc({"doctype": "Sales Trainee Attendance", "trainee": trainee}),
+		throw=True,
+	)
 	return mark(trainee, attendance_date, status, source="Manual").as_dict()

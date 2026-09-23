@@ -30,11 +30,12 @@ def export_active_trainees_csv(cohort=None, location=None):
 		filters["cohort"] = cohort
 	if location:
 		filters["location"] = location
-	rows = frappe.get_all(
+	rows = frappe.get_list(
 		"Sales Trainee",
 		filters=filters,
 		fields=["trainee_name", "personal_email", "location", "cohort", "date_of_joining", "employee_dummy_vendor_code"],
 		order_by="date_of_joining asc",
+		limit_page_length=0,
 	)
 	return _to_xlsx(
 		"Active Trainees",
@@ -46,11 +47,12 @@ def export_active_trainees_csv(cohort=None, location=None):
 @frappe.whitelist()
 def export_weekly_attendance_payroll_report(week_start, week_end):
 	_ensure_report_access()
-	rows = frappe.get_all(
+	rows = frappe.get_list(
 		"Sales Trainee Attendance",
 		filters={"attendance_date": ["between", [week_start, week_end]]},
 		fields=["trainee", "attendance_date", "status", "source"],
 		order_by="attendance_date asc",
+		limit_page_length=0,
 	)
 	return _to_xlsx(
 		"Weekly Attendance",
@@ -74,11 +76,12 @@ def export_vendor_payroll_input(cycle_name):
 def export_exit_churn_report(month=None):
 	_ensure_report_access()
 	filters = {"training_status": ["in", ["Resigned", "Absconded", "Exited/Churned"]]}
-	rows = frappe.get_all(
+	rows = frappe.get_list(
 		"Sales Trainee",
 		filters=filters,
 		fields=["trainee_name", "training_status", "exit_date", "exit_reason", "cohort"],
 		order_by="exit_date desc",
+		limit_page_length=0,
 	)
 	if month:
 		rows = [r for r in rows if r.exit_date and str(r.exit_date).startswith(month)]
@@ -95,11 +98,12 @@ def export_training_outcome_report(cohort=None):
 	filters = {}
 	if cohort:
 		filters["cohort"] = cohort
-	rows = frappe.get_all(
+	rows = frappe.get_list(
 		"Sales Trainee",
 		filters=filters,
 		fields=["trainee_name", "training_status", "location", "cohort"],
 		order_by="cohort asc",
+		limit_page_length=0,
 	)
 	return _to_xlsx(
 		"Training Outcomes",

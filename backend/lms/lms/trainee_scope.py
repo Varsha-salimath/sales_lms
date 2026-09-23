@@ -5,7 +5,10 @@ import frappe
 
 from lms.lms import access
 
-FINANCE_AND_LEADERSHIP_ROLES = {"Sales Training Finance", "Sales Training Leadership"}
+# Roles that see every trainee org-wide. Sales Training Team is here because it runs
+# bulk onboarding (sales_trainee_import.py), which never sets assigned_trainer /
+# assigned_sales_manager, and owns CRT-week fallback marking for all trainees.
+ORG_WIDE_TRAINEE_ROLES = {"Sales Training Team", "Sales Training Finance", "Sales Training Leadership"}
 
 
 def _active_reporting_lines():
@@ -19,7 +22,7 @@ def _sees_everything(user):
 	if access.is_admin(user):
 		return True
 	roles = set(frappe.get_roles(user))
-	return bool(roles & FINANCE_AND_LEADERSHIP_ROLES)
+	return bool(roles & ORG_WIDE_TRAINEE_ROLES)
 
 
 def sales_trainee_query_conditions(user=None):

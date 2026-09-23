@@ -10,7 +10,7 @@ EXIT_STATUSES = ("Resigned", "Absconded", "Exited/Churned")
 @frappe.whitelist()
 def get_cohort_stats(cohort):
 	_ensure_cohort_stats_access()
-	rows = frappe.get_all("Sales Trainee", filters={"cohort": cohort}, fields=["training_status"])
+	rows = frappe.get_list("Sales Trainee", filters={"cohort": cohort}, fields=["training_status"], limit_page_length=0)
 	total = len(rows)
 	exits = sum(1 for r in rows if r.training_status in EXIT_STATUSES)
 	active = sum(1 for r in rows if r.training_status == "In Training")
@@ -26,14 +26,15 @@ def list_missing_attendance(attendance_date, cohort=None):
 	filters = {"training_status": "In Training"}
 	if cohort:
 		filters["cohort"] = cohort
-	active_trainees = frappe.get_all("Sales Trainee", filters=filters, pluck="name")
+	active_trainees = frappe.get_list("Sales Trainee", filters=filters, pluck="name", limit_page_length=0)
 	if not active_trainees:
 		return []
 	marked = set(
-		frappe.get_all(
+		frappe.get_list(
 			"Sales Trainee Attendance",
 			filters={"trainee": ["in", active_trainees], "attendance_date": attendance_date},
 			pluck="trainee",
+			limit_page_length=0,
 		)
 	)
 	return [name for name in active_trainees if name not in marked]
