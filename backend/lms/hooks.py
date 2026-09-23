@@ -128,6 +128,8 @@ permission_query_conditions = {
 	"LMS Certificate": "lms.lms.doctype.lms_certificate.lms_certificate.get_permission_query_conditions",
 	"Sales Training Evaluation": "lms.lms.sales_journey.get_permission_query_conditions",
 	"Sales OJT Attempt": "lms.lms.sales_journey.get_ojt_permission_query_conditions",
+	"Sales Trainee": "lms.lms.trainee_scope.sales_trainee_query_conditions",
+	"Sales Trainee Attendance": "lms.lms.trainee_scope.sales_trainee_attendance_query_conditions",
 }
 
 has_permission = {
@@ -138,6 +140,8 @@ has_permission = {
 	"LMS Certificate": "lms.lms.doctype.lms_certificate.lms_certificate.has_permission",
 	"Sales Training Evaluation": "lms.lms.sales_journey.has_permission",
 	"Sales OJT Attempt": "lms.lms.sales_journey.has_ojt_permission",
+	"Sales Trainee": "lms.lms.trainee_scope.sales_trainee_has_permission",
+	"Sales Trainee Attendance": "lms.lms.trainee_scope.sales_trainee_has_permission",
 }
 
 # DocType Class
