@@ -1,21 +1,43 @@
 <!-- frontend/src/pages/Sales/TraineeDashboard.vue -->
 <template>
 	<div class="p-6 max-w-4xl mx-auto">
-		<h1 class="text-xl font-semibold mb-4">Trainee Dashboard</h1>
-		<div class="flex gap-2 mb-4">
-			<input v-model="month" type="month" class="border rounded px-2 py-1" placeholder="Month" />
-			<input v-model="location" type="text" class="border rounded px-2 py-1" placeholder="Location" />
-			<input v-model="cohort" type="text" class="border rounded px-2 py-1" placeholder="Cohort" />
+		<h1 class="mb-4 text-xl font-semibold text-[color:var(--genius-navy)]">Trainee Dashboard</h1>
+		<div class="genius-card mb-6 flex flex-wrap gap-2 rounded-2xl p-4 sm:p-5">
+			<input
+				v-model="month"
+				type="month"
+				class="rounded-lg border px-2.5 py-1.5 text-sm"
+				style="border-color: var(--genius-border)"
+				placeholder="Month"
+			/>
+			<input
+				v-model="location"
+				type="text"
+				class="rounded-lg border px-2.5 py-1.5 text-sm"
+				style="border-color: var(--genius-border)"
+				placeholder="Location"
+			/>
+			<input
+				v-model="cohort"
+				type="text"
+				class="rounded-lg border px-2.5 py-1.5 text-sm"
+				style="border-color: var(--genius-border)"
+				placeholder="Cohort"
+			/>
 		</div>
-		<div class="grid grid-cols-4 gap-4 mb-6">
-			<div class="border rounded p-4" v-for="(label, key) in {
-				in_training: 'In Training', training_cleared: 'Training Cleared',
-				training_not_cleared: 'Training Not Cleared', resigned: 'Resigned',
-				absconded: 'Absconded', exited_churned: 'Exited/Churned',
-				payroll_eligible: 'Payroll Eligible', open_payroll_cycles: 'Open Payroll Cycles',
-			}" :key="key">
-				<div class="text-2xl font-semibold">{{ summary.data?.[key] ?? '—' }}</div>
-				<div class="text-sm text-gray-500">{{ label }}</div>
+		<div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+			<div
+				class="genius-card rounded-2xl p-4 sm:p-5"
+				v-for="(label, key) in {
+					in_training: 'In Training', training_cleared: 'Training Cleared',
+					training_not_cleared: 'Training Not Cleared', resigned: 'Resigned',
+					absconded: 'Absconded', exited_churned: 'Exited/Churned',
+					payroll_eligible: 'Payroll Eligible', open_payroll_cycles: 'Open Payroll Cycles',
+				}"
+				:key="key"
+			>
+				<div class="text-2xl font-semibold text-[color:var(--genius-navy)]">{{ summary.data?.[key] ?? '—' }}</div>
+				<div class="mt-1 text-xs text-[color:var(--genius-muted)]">{{ label }}</div>
 			</div>
 		</div>
 		<Button @click="downloadExport">Export Active Trainee Report</Button>

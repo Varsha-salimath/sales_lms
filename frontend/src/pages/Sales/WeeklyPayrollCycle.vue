@@ -1,37 +1,74 @@
 <!-- frontend/src/pages/Sales/WeeklyPayrollCycle.vue -->
 <template>
 	<div class="p-6 max-w-4xl mx-auto">
-		<h1 class="text-xl font-semibold mb-4">Weekly Payroll Cycles</h1>
-		<table class="w-full text-left border-collapse mb-6">
-			<thead>
-				<tr class="border-b">
-					<th class="py-2">Week</th>
-					<th>Status</th>
-					<th>Vendor Invoice</th>
-					<th></th>
-				</tr>
-			</thead>
-			<tbody>
-				<tr v-for="c in cycles.data" :key="c.name" class="border-b">
-					<td class="py-2">{{ c.week_start }} – {{ c.week_end }}</td>
-					<td>{{ c.status }}</td>
-					<td>{{ c.vendor_invoice_amount || '—' }}</td>
-					<td>
-						<Button size="sm" @click="prepInputs(c.name)" v-if="c.status === 'Preparing'">Prepare Inputs</Button>
-						<Button size="sm" @click="advance(c.name, nextStatus(c.status))" v-if="nextStatus(c.status)">
-							Advance to {{ nextStatus(c.status) }}
-						</Button>
-					</td>
-				</tr>
-			</tbody>
-		</table>
+		<h1 class="mb-4 text-xl font-semibold text-[color:var(--genius-navy)]">Weekly Payroll Cycles</h1>
+		<div class="genius-card rounded-2xl p-4 sm:p-5">
+			<div class="overflow-x-auto">
+				<table class="min-w-full text-left text-sm">
+					<thead>
+						<tr
+							class="border-b text-[11px] uppercase tracking-wide text-[color:var(--genius-muted)]"
+							style="border-color: var(--genius-border)"
+						>
+							<th class="pb-2 pr-3 font-medium">Week</th>
+							<th class="pb-2 pr-3 font-medium">Status</th>
+							<th class="pb-2 pr-3 font-medium">Vendor Invoice</th>
+							<th class="pb-2 font-medium"></th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr
+							v-for="c in cycles.data"
+							:key="c.name"
+							class="border-b last:border-0"
+							style="border-color: var(--genius-border)"
+						>
+							<td class="py-2.5 pr-3 font-medium text-[color:var(--genius-navy)]">
+								{{ c.week_start }} – {{ c.week_end }}
+							</td>
+							<td class="py-2.5 pr-3">
+								<span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="statusBadge(c.status)">
+									{{ c.status }}
+								</span>
+							</td>
+							<td class="py-2.5 pr-3 text-xs text-[color:var(--genius-muted)]">
+								{{ c.vendor_invoice_amount || '—' }}
+							</td>
+							<td class="py-2.5">
+								<div class="flex gap-2">
+									<Button size="sm" :loading="busy === c.name" @click="prepInputs(c.name)" v-if="c.status === 'Preparing'">
+										Prepare Inputs
+									</Button>
+									<Button size="sm" :loading="busy === c.name" @click="advance(c.name, nextStatus(c.status))" v-if="nextStatus(c.status)">
+										Advance to {{ nextStatus(c.status) }}
+									</Button>
+								</div>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+				<div v-if="!cycles.loading && !cycles.data?.length" class="py-8 text-center text-sm text-[color:var(--genius-muted)]">
+					No payroll cycles yet.
+				</div>
+			</div>
+		</div>
 	</div>
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { call, createListResource, Button } from 'frappe-ui'
 
 const SEQUENCE = ['Preparing', 'Ready to Share', 'Shared with Vendor', 'Awaiting Invoice', 'Finance Validation', 'Closed']
+const STATUS_BADGES = {
+	Preparing: 'bg-gray-100 text-gray-600',
+	'Ready to Share': 'bg-blue-50 text-blue-700',
+	'Shared with Vendor': 'bg-blue-50 text-blue-700',
+	'Awaiting Invoice': 'bg-amber-50 text-amber-700',
+	'Finance Validation': 'bg-amber-50 text-amber-700',
+	Closed: 'bg-green-50 text-green-700',
+}
+const busy = ref(null)
 
 const cycles = createListResource({
 	doctype: 'Weekly Payroll Cycle',
@@ -40,19 +77,31 @@ const cycles = createListResource({
 	pageLength: 50,
 })
 
+function statusBadge(status) {
+	return STATUS_BADGES[status] || 'bg-gray-100 text-gray-600'
+}
+
 function nextStatus(current) {
 	const i = SEQUENCE.indexOf(current)
 	return i >= 0 && i < SEQUENCE.length - 1 ? SEQUENCE[i + 1] : null
 }
 
 async function prepInputs(name) {
-	await call('lms.lms.trainee_payroll.prepare_weekly_inputs', { cycle_name: name })
+	busy.value = name
+	try {
+		await call('lms.lms.trainee_payroll.prepare_weekly_inputs', { cycle_name: name })
+	} finally {
+		busy.value = null
+	}
 }
 
 async function advance(name, newStatus) {
-	await call('frappe.client.get_doc', { doctype: 'Weekly Payroll Cycle', name }).then(async (doc) => {
+	busy.value = name
+	try {
 		await call('run_doc_method', { dt: 'Weekly Payroll Cycle', dn: name, method: 'advance_status', args: { new_status: newStatus } })
-	})
-	cycles.reload()
+		cycles.reload()
+	} finally {
+		busy.value = null
+	}
 }
 </script>
