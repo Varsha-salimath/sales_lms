@@ -248,16 +248,21 @@
 						sidebarStore.isSidebarCollapsed ? __('Expand') : __('Collapse')
 					"
 				>
-					<CollapseSidebar
-						class="size-4 text-white duration-300 stroke-1.5 ease-in-out cursor-pointer"
-						:style="{
-							transform:
-								isRtl !== sidebarStore.isSidebarCollapsed
-									? 'rotateY(180deg)'
-									: '',
-						}"
+					<button
+						type="button"
+						class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white transition-colors hover:bg-white/12"
 						@click="toggleSidebar()"
-					/>
+					>
+						<CollapseSidebar
+							class="size-4 stroke-1.5 duration-300 ease-in-out"
+							:style="{
+								transform:
+									isRtl !== sidebarStore.isSidebarCollapsed
+										? 'rotateY(180deg)'
+										: '',
+							}"
+						/>
+					</button>
 				</Tooltip>
 			</div>
 		</div>
