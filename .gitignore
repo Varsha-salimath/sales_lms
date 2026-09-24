@@ -52,6 +52,12 @@ lms/public/frontend/
 lms/www/lms.html
 lms/www/_lms.html
 coverage/
+
+# Local bench-build artifacts (backend/ is bench's `lms` app root in this repo layout)
+backend/frontend
+backend/lms/public/frontend/
+backend/lms/public/node_modules
+backend/lms/www/_lms.html
 *.map
 
 # Frappe bench local (if present in clone)
