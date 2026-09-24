@@ -500,6 +500,12 @@ export function getSidebarLinks(forMobile = false) {
 
 	links.forEach((link) => {
 		link.items = link.items.filter((item) => {
+			if (item.learningMenu) {
+				item.menuItems = (item.menuItems || []).filter((entry) => {
+					return entry.condition ? entry.condition() : true
+				})
+				return item.menuItems.length > 0
+			}
 			return item.condition ? item.condition() : true
 		})
 	})
@@ -510,6 +516,84 @@ export function getSidebarLinks(forMobile = false) {
 
 	return links
 }
+
+const LEARNING_MENU_ITEMS = (forMobile) => [
+	{
+		label: 'Courses',
+		icon: 'Library',
+		to: 'Courses',
+		activeFor: [
+			'Courses',
+			'CourseDetail',
+			'GeniusCourseDetail',
+			'GeniusScormPlayer',
+			'LessonForm',
+		],
+	},
+	{
+		label: 'Programs',
+		icon: 'Route',
+		to: 'Programs',
+		activeFor: ['Programs', 'ProgramDetail'],
+		await: true,
+		condition: () => {
+			return checkIfCanAddProgram(forMobile)
+		},
+	},
+	{
+		label: 'Batches',
+		icon: 'Users',
+		to: 'Batches',
+		activeFor: [
+			'Batches',
+			'BatchDetail',
+			'BatchLeaderboard',
+			'Batch',
+			'BatchForm',
+		],
+	},
+	{
+		label: 'Quizzes',
+		icon: 'CircleHelp',
+		to: 'Quizzes',
+		condition: () => {
+			return !forMobile && isAdmin()
+		},
+		activeFor: [
+			'Quizzes',
+			'QuizForm',
+			'QuizPage',
+			'QuizSubmissionList',
+			'QuizSubmission',
+		],
+	},
+	{
+		label: 'Assignments',
+		icon: 'Pencil',
+		to: 'Assignments',
+		condition: () => {
+			return !forMobile && isAdmin()
+		},
+		activeFor: [
+			'Assignments',
+			'AssignmentSubmissionList',
+			'AssignmentSubmission',
+		],
+	},
+	{
+		label: 'Programming Exercises',
+		icon: 'Code',
+		to: 'ProgrammingExercises',
+		condition: () => {
+			return !forMobile && isAdmin()
+		},
+		activeFor: [
+			'ProgrammingExercises',
+			'ProgrammingExerciseSubmissions',
+			'ProgrammingExerciseSubmission',
+		],
+	},
+]
 
 const getSidebarItems = (forMobile = false) => {
 	const { userResource } = usersStore()
@@ -538,22 +622,6 @@ const getSidebarItems = (forMobile = false) => {
 					],
 					condition: () => {
 						return userResource?.data
-					},
-				},
-				{
-					label: 'Search',
-					icon: 'Search',
-					to: 'Search',
-					condition: () => {
-						return !forMobile && userResource?.data
-					},
-				},
-				{
-					label: 'Notifications',
-					icon: 'Bell',
-					to: 'Notifications',
-					condition: () => {
-						return !forMobile && userResource?.data
 					},
 				},
 				{
@@ -628,46 +696,21 @@ const getSidebarItems = (forMobile = false) => {
 						)
 					},
 				},
+				{
+					label: 'Curriculum',
+					icon: 'BookOpen',
+					learningMenu: true,
+					menuItems: LEARNING_MENU_ITEMS(forMobile),
+					condition: () => {
+						return !forMobile && userResource?.data
+					},
+				},
 			],
 		},
 		{
 			label: 'Training',
 			hideLabel: true,
 			items: [
-				{
-					label: 'Courses',
-					icon: 'Library',
-					to: 'Courses',
-					activeFor: [
-						'Courses',
-						'CourseDetail',
-						'GeniusCourseDetail',
-						'GeniusScormPlayer',
-						'LessonForm',
-					],
-				},
-				{
-					label: 'Programs',
-					icon: 'Route',
-					to: 'Programs',
-					activeFor: ['Programs', 'ProgramDetail'],
-					await: true,
-					condition: () => {
-						return checkIfCanAddProgram(forMobile)
-					},
-				},
-				{
-					label: 'Batches',
-					icon: 'Users',
-					to: 'Batches',
-					activeFor: [
-						'Batches',
-						'BatchDetail',
-						'BatchLeaderboard',
-						'Batch',
-						'BatchForm',
-					],
-				},
 				{
 					label: 'Certificates',
 					icon: 'GraduationCap',
@@ -691,55 +734,6 @@ const getSidebarItems = (forMobile = false) => {
 							settings?.data?.contact_us_url
 						)
 					},
-				},
-			],
-		},
-		{
-			label: 'Practice Hub',
-			hideLabel: false,
-			collapsible: true,
-			icon: 'Layers',
-			items: [
-				{
-					label: 'Quizzes',
-					icon: 'CircleHelp',
-					to: 'Quizzes',
-					condition: () => {
-						return !forMobile && isAdmin()
-					},
-					activeFor: [
-						'Quizzes',
-						'QuizForm',
-						'QuizPage',
-						'QuizSubmissionList',
-						'QuizSubmission',
-					],
-				},
-				{
-					label: 'Assignments',
-					icon: 'Pencil',
-					to: 'Assignments',
-					condition: () => {
-						return !forMobile && isAdmin()
-					},
-					activeFor: [
-						'Assignments',
-						'AssignmentSubmissionList',
-						'AssignmentSubmission',
-					],
-				},
-				{
-					label: 'Programming Exercises',
-					icon: 'Code',
-					to: 'ProgrammingExercises',
-					condition: () => {
-						return !forMobile && isAdmin()
-					},
-					activeFor: [
-						'ProgrammingExercises',
-						'ProgrammingExerciseSubmissions',
-						'ProgrammingExerciseSubmission',
-					],
 				},
 			],
 		},

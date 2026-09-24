@@ -5,6 +5,7 @@ export const useSidebar = defineStore('sidebar', () => {
 	const isSidebarCollapsed = ref(false)
 	const isWebpagesCollapsed = ref(true)
 	const isPracticeHubCollapsed = ref(true)
+	const isLearningCollapsed = ref(true)
 
 	if (localStorage.getItem('isSidebarCollapsed')) {
 		isSidebarCollapsed.value = JSON.parse(
@@ -24,9 +25,16 @@ export const useSidebar = defineStore('sidebar', () => {
 		)
 	}
 
+	if (localStorage.getItem('isLearningCollapsed')) {
+		isLearningCollapsed.value = JSON.parse(
+			localStorage.getItem('isLearningCollapsed')
+		)
+	}
+
 	return {
 		isSidebarCollapsed,
 		isWebpagesCollapsed,
 		isPracticeHubCollapsed,
+		isLearningCollapsed,
 	}
 })

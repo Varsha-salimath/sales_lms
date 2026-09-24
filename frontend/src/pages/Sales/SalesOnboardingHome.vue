@@ -1,12 +1,39 @@
 <template>
 	<div class="il-page min-h-full">
-		<!-- Page header: IL "Home" title + program pill -->
-		<header class="flex flex-wrap items-center justify-between gap-3 pt-5 pb-2">
-			<h1 class="il-page-title">{{ __('Home') }}</h1>
-			<span class="il-pill text-sm sm:text-base">
-				<GraduationCap class="h-5 w-5 stroke-[1.75]" />
-				{{ __('Sales onboarding') }}
-			</span>
+		<!-- Page header: program title + Home pill with quick actions -->
+		<header class="flex flex-wrap items-center justify-end gap-3 pt-5 pb-2">
+			<div class="flex flex-wrap items-center justify-end gap-2">
+				<Tooltip :text="__('Search')" placement="bottom">
+					<button
+						type="button"
+						class="il-header-icon-btn"
+						:aria-label="__('Search')"
+						@click="goSearch"
+					>
+						<Search class="h-5 w-5 stroke-[1.75]" />
+					</button>
+				</Tooltip>
+				<Tooltip :text="__('Notifications')" placement="bottom">
+					<button
+						type="button"
+						class="il-header-icon-btn relative"
+						:aria-label="__('Notifications')"
+						@click="goNotifications"
+					>
+						<Bell class="h-5 w-5 stroke-[1.75]" />
+						<span
+							v-if="unreadCount.data"
+							class="absolute -top-0.5 -end-0.5 min-w-[1.125rem] rounded-full bg-[color:var(--il-error-50)] px-1 text-center text-[10px] font-semibold leading-4 text-white tabular-nums"
+						>
+							{{ unreadCount.data > 99 ? '99+' : unreadCount.data }}
+						</span>
+					</button>
+				</Tooltip>
+				<span class="il-pill text-sm sm:text-base">
+					<Home class="h-5 w-5 stroke-[1.75]" />
+					{{ __('Home') }}
+				</span>
+			</div>
 		</header>
 
 		<div v-if="home.loading || (!home.data && !home.error)" class="mt-6 space-y-6">
@@ -105,11 +132,48 @@
 <script setup>
 import { computed, inject } from 'vue'
 import { useRouter } from 'vue-router'
-import { createResource } from 'frappe-ui'
-import { Check, ChevronRight, ClipboardList, GraduationCap, Lock, Mic, PhoneCall, PlayCircle, Star } from 'lucide-vue-next'
+import { createResource, Tooltip } from 'frappe-ui'
+import {
+	Bell,
+	Check,
+	ChevronRight,
+	ClipboardList,
+	Home,
+	Lock,
+	Mic,
+	PhoneCall,
+	PlayCircle,
+	Search,
+	Star,
+} from 'lucide-vue-next'
+import { sessionStore } from '@/stores/session'
 
 const user = inject('$user')
+const { user: sessionUser } = sessionStore()
 const router = useRouter()
+
+const unreadCount = createResource({
+	cache: 'Unread Notifications Count',
+	url: 'frappe.client.get_count',
+	makeParams() {
+		return {
+			doctype: 'Notification Log',
+			filters: {
+				for_user: sessionUser,
+				read: 0,
+			},
+		}
+	},
+	auto: !!sessionUser,
+})
+
+function goSearch() {
+	router.push({ name: 'Search' })
+}
+
+function goNotifications() {
+	router.push({ name: 'Notifications' })
+}
 
 const home = createResource({
 	url: 'lms.lms.sales_journey.get_onboarding_home',
@@ -427,6 +491,23 @@ const continueLearning = () => {
 
 li + li .jr-row {
 	margin-top: 0.15rem;
+}
+
+.il-header-icon-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2.5rem;
+	height: 2.5rem;
+	border-radius: 999px;
+	background: #ffffff;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16);
+	color: var(--il-primary-40);
+	transition: background-color 0.15s ease;
+}
+
+.il-header-icon-btn:hover {
+	background: var(--il-primary-95);
 }
 
 @media (max-width: 640px) {

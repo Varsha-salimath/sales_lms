@@ -97,7 +97,11 @@ const destructureSidebarLinks = () => {
 	let links = []
 	sidebarLinks.value.forEach((link) => {
 		link.items?.forEach((item) => {
-			links.push(item)
+			if (item.learningMenu && item.menuItems?.length) {
+				item.menuItems.forEach((entry) => links.push(entry))
+			} else {
+				links.push(item)
+			}
 		})
 	})
 	sidebarLinks.value = links
