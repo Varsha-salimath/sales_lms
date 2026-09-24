@@ -1,18 +1,16 @@
-# Sales LMS (CRT)
+# Sales LMS
 
-Infinity Learn **Sales LMS** — Frappe LMS for Sales Classroom Readiness Training (CRT). Infinity Learn branded Vue SPA. Curriculum comes from the CRT Excel import, not from frontend constants.
+Frappe-based learning platform with a Vue 3 SPA, Docker Compose for local and production-style runs, and optional CRT schedule import from Excel.
 
 | Item | Value |
 |------|--------|
-| **Stack** | Frappe 16 · Vue 3 · **MariaDB** (MySQL-compatible) · Redis · Docker |
-| **Local / prod app port** | **8080** (same everywhere) |
+| **Stack** | Frappe 16 · Vue 3 · MariaDB (MySQL-compatible) · Redis · Docker |
+| **Default app port** | **8080** (configure via `APP_PORT`) |
 | **CRT course slug** | `sales-crt` |
 
-**Never commit** `.env`, secrets, or **`CRT-Schedule.xlsx`** (internal curriculum links).  
-**Official repo (deploy):** Bitbucket `CodeRepoInfinitylearn/saleslms` — private.  
-Do **not** mirror this project to a **public** GitHub repo.
+**Security:** Do not commit `.env`, API keys, SMTP credentials, production hostnames, or curriculum files such as **`CRT-Schedule.xlsx`**. Use `.env.example` as a template only; set all secrets locally or in your deployment secret store.
 
-For a full from-scratch production runbook, see **[PRODUCTION_DEPLOY.md](PRODUCTION_DEPLOY.md)**.
+For deployment notes, see **[PRODUCTION_DEPLOY.md](PRODUCTION_DEPLOY.md)** (generic checklist — no production secrets in git).
 
 ---
 
@@ -21,15 +19,15 @@ For a full from-scratch production runbook, see **[PRODUCTION_DEPLOY.md](PRODUCT
 | Path | Role |
 |------|------|
 | `backend/` | Frappe app sources (installed as **`lms`**) |
-| `frontend/` | Vue SPA (Sales / Infinity Learn branded; built into the backend image, served via nginx) |
-| `docker-compose.yml` | **Only** Compose file (local + prod) |
-| `.env` / `.env.example` | **Only** env file |
+| `frontend/` | Vue SPA (built into the backend image, served via nginx) |
+| `docker-compose.yml` | Compose stack (local + production-style) |
+| `.env` / `.env.example` | Environment configuration (not committed) |
 | `docker/Dockerfile.backend` | Backend image |
 | `docker/Dockerfile.frontend` | Frontend image (`FROM` backend) |
 | `docker/entrypoint-backend.sh` | Site bootstrap + serve / worker / socketio |
-| `data/CRT-Schedule.xlsx` | CRT workbook — **local/prod only** (see `data/README.md`; not in git) |
+| `data/CRT-Schedule.xlsx` | Optional CRT workbook — **not in git** (see `data/README.md`) |
 
-No parallel compose stacks. No Redis Cloud as default. Frappe uses `DB_TYPE=mariadb` for MySQL/MariaDB servers.
+Frappe uses `DB_TYPE=mariadb` for MySQL-protocol servers. **MariaDB 10.6+** is required for Frappe 16.
 
 ---
 
@@ -37,7 +35,7 @@ No parallel compose stacks. No Redis Cloud as default. Frappe uses `DB_TYPE=mari
 
 ```bash
 cp .env.example .env
-# Edit .env — set DB_PASSWORD and required SMTP_* values
+# Edit .env — set DB_PASSWORD, REDIS_PASSWORD, SMTP_*, DEFAULT_SENDER, ADMIN_PASSWORD, etc.
 
 docker compose --env-file .env build backend
 docker compose --env-file .env build frontend
@@ -48,26 +46,24 @@ docker compose --env-file .env up -d
 |-------|--------|
 | App | http://localhost:8080/lms |
 | Ping | `curl http://127.0.0.1:8080/api/method/ping` |
-| Login | `Administrator` / `ADMIN_PASSWORD` (default `admin`) |
+| Desk / SPA login | Use the site admin credentials you set in `.env` (`ADMIN_PASSWORD`) — **never use example passwords in production** |
 | CRT schedule | http://localhost:8080/lms/crt |
 | Import | http://localhost:8080/lms/crt/import |
 
-`COMPOSE_PROFILES=embedded-db` starts the in-compose MariaDB 10.11 service (`db`, port 3306). Redis always runs in Compose (known-good path for Frappe 16).
+`COMPOSE_PROFILES=embedded-db` starts the in-compose MariaDB service (`db`). Redis runs in Compose by default.
 
-Frappe uses `DB_TYPE=mariadb` for all MySQL-protocol servers. **MariaDB 10.6+ is required** — Oracle MySQL 8 is not supported by Frappe 16.
-
-A **fresh site has no courses** until you import the Excel.
+A **fresh site has no courses** until you import the CRT Excel (if you use that workflow).
 
 ### Import the CRT schedule
 
-After login as Administrator / Moderator / Course Creator:
+After login with a role that can manage courses (e.g. System Manager / Moderator / Course Creator):
 
 1. Open `/lms/crt/import`
-2. **Dry-run preview** (bundled Excel or upload)
-3. **Import into Frappe** — creates/updates course `sales-crt`, Day chapters, lessons, and `Sales CRT Session` rows
-4. Open `/lms/crt` — schedule is read from the backend
+2. Dry-run preview (bundled Excel or upload)
+3. Import into Frappe — creates/updates course `sales-crt`, chapters, lessons, and session rows
+4. Open `/lms/crt`
 
-CLI equivalent (inside backend):
+CLI equivalent (inside backend container):
 
 ```bash
 docker compose --env-file .env exec -w /home/frappe/frappe-bench backend \
@@ -81,78 +77,41 @@ docker compose --env-file .env exec -w /home/frappe/frappe-bench backend \
 
 | Service | Role | When |
 |---------|------|------|
-| `frontend` | nginx reverse proxy + static assets | always — **only** host-published port (`APP_PORT`) |
+| `frontend` | nginx reverse proxy + static assets | always — host-published `APP_PORT` |
 | `backend` | Frappe + workers + socketio | always — internal |
 | `redis` | cache / queue / socketio | always — internal |
-**Switching from an older Postgres-based local setup:** stop the stack, remove volumes `sales_db_data` and `sales_sites`, then rebuild and `up -d` so Frappe creates a fresh MariaDB site.
+| `db` | MariaDB | only if `COMPOSE_PROFILES=embedded-db` |
 
-| `db` | MariaDB 10.11 | only if `COMPOSE_PROFILES=embedded-db` |
+**Switching from an older Postgres-based local setup:** stop the stack, remove volumes `sales_db_data` and `sales_sites`, then rebuild and `up -d`.
 
 ---
 
 ## Required env (local + prod)
 
-Same keys in `.env.example`. Compose **will not start** without:
+See `.env.example`. Compose typically requires at least:
 
 | Key | Purpose |
 |-----|---------|
 | `DB_PASSWORD` | App DB password |
 | `DB_ROOT_PASSWORD` | Privileged user for `bench new-site` |
 | `REDIS_PASSWORD` | Compose Redis password |
-| `SMTP_HOST` | SMTP server |
-| `SMTP_USER` | SMTP login |
-| `SMTP_PASSWORD` | SMTP password |
-| `DEFAULT_SENDER` | From address (Email Account) |
+| `SMTP_HOST` / `SMTP_USER` / `SMTP_PASSWORD` | Outbound email |
+| `DEFAULT_SENDER` | From address for Email Account bootstrap |
+| `ADMIN_PASSWORD` | Initial Frappe Administrator password (strong, unique per environment) |
 
-Optional Redis URI overrides: `REDIS_CACHE` / `REDIS_QUEUE` / `REDIS_SOCKETIO`.  
-Otherwise URIs are built as `redis://[REDIS_USERNAME]:REDIS_PASSWORD@REDIS_HOST:REDIS_PORT?protocol=3`  
-(local: empty username + Compose Redis).
+Optional Redis URI overrides: `REDIS_CACHE` / `REDIS_QUEUE` / `REDIS_SOCKETIO`.
 
 ---
 
-## Production anti-footguns
+## Production (summary)
 
-1. **MariaDB 10.6+ only** (`DB_TYPE=mariadb`, port 3306). Site name **must not** equal DB name (`sales.localhost` ≠ `salesapp`).
-2. **`DB_ROOT_USERNAME` must not** equal the app DB user (`salesapp`). Root creates databases; app user is runtime.
-3. Never half-create a site then point it at a different DB without cleaning `site_config` + empty DB. **Ask before any wipe.**
-4. **Redis:** Frappe 16 is incompatible with Redis Cloud CLIENT TRACKING (`syntax error`). Default: Compose Redis (`REDIS_HOST=redis`, `6379`).
-5. Public LB/proxy must target the **frontend** container `APP_PORT` (**8080**), not uvicorn.
-6. **SMTP is required** from day one.
-7. Image deploy does **not** create CRT content. Import Excel after boot.
-8. **Same `APP_PORT` for local and prod (8080).**
+Use the same Compose file with production values in `.env` (external MariaDB, no embedded `db` profile, LB targeting **frontend** `:8080`, required SMTP). Details: **[PRODUCTION_DEPLOY.md](PRODUCTION_DEPLOY.md)**.
 
----
-
-## Production (DevOps)
-
-Same Compose file and env keys — only values change.
-
-1. Clear `COMPOSE_PROFILES` (do **not** start embedded MariaDB).
-2. Set AWS POC database (dedicated Sales LMS DB — not Genius LMS Postgres on GCP):
-   - `DB_HOST` = MariaDB/MySQL-compatible host from DevOps
-   - `DB_PORT` = `3306`
-   - `DB_TYPE` = `mariadb`
-   - `DB_NAME` / `DB_USER` = **`salesapp`** (site hostname ≠ DB name)
-   - `DB_PASSWORD`, `DB_ROOT_USERNAME`, `DB_ROOT_PASSWORD` (root must be able to create DB on first boot; root ≠ salesapp)
-3. Keep **Compose Redis** unless an external Redis is proven with Frappe 16.
-4. Set **required** SMTP, `APP_PORT=8080`, site host, LB real-IP.
-5. Build and run:
+Smoke test after deploy:
 
 ```bash
-docker compose --env-file .env build backend
-docker compose --env-file .env build frontend
-docker compose --env-file .env up -d
+curl -fsS http://127.0.0.1:8080/api/method/ping
 ```
-
-Smoke: `curl -fsS http://127.0.0.1:8080/api/method/ping` → `pong`
-
-Then import CRT Excel (content is not in the image).
-
----
-
-## SMTP
-
-`SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`, and `DEFAULT_SENDER` are **required**. On site create/migrate the entrypoint bootstraps the Desk outgoing Email Account from these values.
 
 ---
 
@@ -160,12 +119,11 @@ Then import CRT Excel (content is not in the image).
 
 | Symptom | Check |
 |---------|--------|
-| Compose refuses to start | Missing `DB_PASSWORD` / `REDIS_PASSWORD` / required `SMTP_*` / `DEFAULT_SENDER` |
-| Ping 500 | MariaDB reachability / credentials; `docker compose logs backend` |
-| Redis `syntax error` | You pointed Frappe 16 at Redis Cloud CLIENT TRACKING — switch to Compose Redis |
-| Public domain returns foreign JSON auth errors | LB is not targeting Compose frontend `:8080` |
-| Empty CRT schedule | Expected on a fresh site — run Excel import |
-| Assets 404 / MIME errors | Rebuild **backend** then **frontend** so LMS asset symlink is baked in |
+| Compose refuses to start | Missing required env keys in `.env` |
+| Ping 500 | DB reachability / credentials; `docker compose logs backend` |
+| Redis errors with external Redis | Frappe 16 may be incompatible with some managed Redis features — prefer Compose Redis for POC |
+| Empty CRT schedule | Fresh site — run Excel import |
+| Assets 404 / MIME errors | Rebuild **backend** then **frontend** |
 
 ```bash
 docker compose --env-file .env logs -f backend

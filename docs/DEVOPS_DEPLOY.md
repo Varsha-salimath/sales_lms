@@ -1,14 +1,16 @@
-# DevOps — Sales LMS production deploy (POC)
+# DevOps — production deploy (generic)
 
-VM path: `/var/www/saleslms`  
-Domain: `https://lms.infinitylearn.com` (Frappe site name stays `saleslms.infinitylearn.com`)  
-Port: **8080** (LB → nginx frontend only)
+Use this as a short operator checklist. **Do not** put real hostnames, RDS endpoints, or passwords in git.
+
+VM path: e.g. `/var/www/sales-lms`  
+Public URL: your `HOST_NAME` from `.env`  
+Port: **8080** (load balancer → nginx **frontend** only)
 
 ## 1. Get code
 
 ```bash
-cd /var/www/saleslms
-git pull origin main
+cd /var/www/sales-lms
+git pull
 ```
 
 ## 2. Production `.env`
@@ -16,41 +18,27 @@ git pull origin main
 ```bash
 cp .env.prod.example .env
 chmod 600 .env
-nano .env   # fill <placeholders> from secure credentials (see team)
+# Edit .env — values from your secret store / internal runbook
 ```
 
-**Required values (team provides):**
+Required keys: `ADMIN_PASSWORD`, `DB_*`, `REDIS_PASSWORD`, `SMTP_*`, `DEFAULT_SENDER`, `SITE_NAME`, `HOST_NAME`.
 
-| Key | Notes |
-|-----|--------|
-| `ADMIN_PASSWORD` | Frappe Administrator login |
-| `DB_HOST` | AWS RDS endpoint |
-| `DB_PASSWORD` / `DB_ROOT_PASSWORD` | RDS `saleslms_admin` password; **single quotes** if password contains `$` |
-| `DB_USE_SSL` | `1` for AWS RDS (`require_secure_transport=ON`) |
-| `REDIS_PASSWORD` | Any strong password (Compose Redis on VM) |
-| `SMTP_USER` / `SMTP_PASSWORD` | AWS SES IAM SMTP credentials |
-| `UPSTREAM_REAL_IP_ADDRESS` | Load balancer / reverse proxy IP or CIDR |
+- `COMPOSE_PROFILES=` must be **empty** (external DB).
+- Prefer Compose Redis (`REDIS_HOST=redis`) unless external Redis is validated with Frappe 16.
 
-**Do not change for prod:**
-
-- `COMPOSE_PROFILES=` — must be **empty**
-- `REDIS_HOST=redis`, `REDIS_PORT=6379`, `REDIS_USERNAME=` — **empty username** (Compose Redis)
-- Do **not** use Redis Cloud (Frappe 16 breaks)
-
-**Pre-checks:**
+Pre-checks:
 
 ```bash
-free -h    # Mem total must be ≥3.8Gi before backend build
+free -h
 nc -vz <DB_HOST> 3306
-nc -vz email-smtp.ap-south-1.amazonaws.com 587
-ls -la data/CRT-Schedule.xlsx
+nc -vz <SMTP_HOST> 587
 ```
 
-## 3. Build and start (backend first — ~10–15 min)
+## 3. Build and start
 
 ```bash
 export DOCKER_BUILDKIT=1
-docker compose --env-file .env build --no-cache backend
+docker compose --env-file .env build backend
 docker compose --env-file .env build frontend
 docker compose --env-file .env up -d
 docker compose --env-file .env ps
@@ -61,9 +49,6 @@ docker compose --env-file .env ps
 ```bash
 curl -fsS http://127.0.0.1:8080/api/method/ping
 curl -fsSI http://127.0.0.1:8080/lms
-docker compose --env-file .env logs backend | grep -i "bundled CRT"
 ```
 
-Expected containers: `sales_lms_frontend`, `sales_lms_backend`, `sales_lms_redis` — **no** `sales_lms_db`.
-
-Full runbook: [PRODUCTION_DEPLOY.md](../PRODUCTION_DEPLOY.md)
+Full checklist: [PRODUCTION_DEPLOY.md](../PRODUCTION_DEPLOY.md)

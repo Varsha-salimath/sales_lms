@@ -4,12 +4,12 @@
 		:class="sidebarStore.isSidebarCollapsed ? 'w-16' : 'w-64'"
 	>
 		<div
-			class="flex flex-col overflow-y-auto overflow-x-hidden min-w-0"
+			class="flex flex-col overflow-x-hidden min-w-0 flex-1 min-h-0 overflow-y-hidden"
 			:class="sidebarStore.isSidebarCollapsed ? 'items-center' : ''"
 		>
 			<UserDropdown :isCollapsed="sidebarStore.isSidebarCollapsed" />
-			<div class="flex flex-col" v-if="sidebarSettings.data">
-				<div v-for="link in sidebarLinks" class="mx-2 my-2.5">
+			<div class="flex flex-col gap-0.5" v-if="sidebarSettings.data">
+				<div v-for="link in sidebarLinks" class="mx-2 my-0.5">
 					<div
 						v-if="link.dividerBefore && !sidebarStore.isSidebarCollapsed"
 						class="mb-2 mt-1 border-t"
@@ -24,41 +24,51 @@
 					<div
 						v-if="link.collapsible && !sidebarStore.isSidebarCollapsed"
 						class="genius-sidebar-section-label mb-2 mt-3 flex cursor-pointer items-center gap-1.5 border-b px-1 text-base font-medium transition-all duration-300 ease-in-out"
-						@click="togglePracticeHub"
+						@click="toggleCollapsibleSection(link)"
 					>
 						<ChevronRight
 							class="h-4 w-4 stroke-1.5 text-white transition-all duration-300 ease-in-out"
 							:class="{
-								'rotate-90': !sidebarStore.isPracticeHubCollapsed,
-								'rtl:rotate-180': sidebarStore.isPracticeHubCollapsed,
+								'rotate-90': !isCollapsibleSectionCollapsed(link),
+								'rtl:rotate-180': isCollapsibleSectionCollapsed(link),
 							}"
 						/>
 						<span>{{ __(link.label) }}</span>
 					</div>
 					<Tooltip
 						v-if="link.collapsible && sidebarStore.isSidebarCollapsed"
-						:text="__('Practice Hub')"
+						:text="__(link.label)"
 					>
 						<button
 							type="button"
 							class="mx-auto mb-2 mt-2 flex h-8 w-8 items-center justify-center rounded-lg text-white transition-colors hover:bg-white/12"
-							@click="togglePracticeHub"
+							@click="toggleCollapsibleSection(link)"
 						>
-							<Layers class="h-4 w-4 stroke-1.5" />
+							<component
+								:is="icons[link.icon]"
+								v-if="link.icon && icons[link.icon]"
+								class="h-4 w-4 stroke-1.5"
+							/>
 						</button>
 					</Tooltip>
 					<nav
-						class="space-y-1 transition-all duration-300 ease-in-out"
+						class="space-y-0.5 transition-all duration-300 ease-in-out"
 						:class="
 							link.collapsible &&
-							(sidebarStore.isPracticeHubCollapsed ||
+							(isCollapsibleSectionCollapsed(link) ||
 								sidebarStore.isSidebarCollapsed)
 								? 'hidden'
 								: 'block'
 						"
 					>
-						<div v-for="item in link.items">
+						<div v-for="item in link.items" :key="item.label">
+							<SidebarLearningMenu
+								v-if="item.learningMenu"
+								:menuItems="item.menuItems"
+								:isCollapsed="sidebarStore.isSidebarCollapsed"
+							/>
 							<SidebarLink
+								v-else
 								:link="item"
 								:isCollapsed="sidebarStore.isSidebarCollapsed"
 							/>
@@ -276,22 +286,25 @@ import {
 	onUnmounted,
 	computed,
 } from 'vue'
+import { useRoute } from 'vue-router'
 import {
 	CircleAlert,
 	ChevronRight,
 	ChevronsRight,
-	Layers,
 	Plus,
 	User,
 } from 'lucide-vue-next'
+import * as icons from 'lucide-vue-next'
 import UserDropdown from '@/components/Sidebar/UserDropdown.vue'
 import CollapseSidebar from '@/components/Icons/CollapseSidebar.vue'
 import SidebarLink from '@/components/Sidebar/SidebarLink.vue'
+import SidebarLearningMenu from '@/components/Sidebar/SidebarLearningMenu.vue'
 import CommandPalette from '@/components/CommandPalette/CommandPalette.vue'
 
 const { user } = sessionStore()
 const { userResource } = usersStore()
 let sidebarStore = useSidebar()
+const route = useRoute()
 const socket = inject('$socket')
 const unreadCount = ref(0)
 const sidebarLinks = ref(null)
@@ -328,9 +341,18 @@ const updateSidebarLinksVisibility = () => {
 				Object.keys(data).forEach((key) => {
 					if (!parseInt(data[key])) {
 						sidebarLinks.value.forEach((link) => {
-							link.items = link.items.filter(
-								(item) => item.label.toLowerCase().split(' ').join('_') !== key
-							)
+							link.items = link.items.filter((item) => {
+								if (item.learningMenu && item.menuItems) {
+									item.menuItems = item.menuItems.filter(
+										(entry) =>
+											entry.label.toLowerCase().split(' ').join('_') !== key
+									)
+									return item.menuItems.length > 0
+								}
+								return (
+									item.label.toLowerCase().split(' ').join('_') !== key
+								)
+							})
 						})
 					}
 				})
@@ -428,6 +450,31 @@ const togglePracticeHub = () => {
 		'isPracticeHubCollapsed',
 		JSON.stringify(sidebarStore.isPracticeHubCollapsed)
 	)
+}
+
+const toggleLearning = () => {
+	sidebarStore.isLearningCollapsed = !sidebarStore.isLearningCollapsed
+	localStorage.setItem(
+		'isLearningCollapsed',
+		JSON.stringify(sidebarStore.isLearningCollapsed)
+	)
+}
+
+function isCollapsibleSectionCollapsed(link) {
+	const key = link?.collapsibleKey || 'practiceHub'
+	if (key === 'learning') {
+		return sidebarStore.isLearningCollapsed
+	}
+	return sidebarStore.isPracticeHubCollapsed
+}
+
+function toggleCollapsibleSection(link) {
+	const key = link?.collapsibleKey || 'practiceHub'
+	if (key === 'learning') {
+		toggleLearning()
+		return
+	}
+	togglePracticeHub()
 }
 
 watch(userResource, async () => {
