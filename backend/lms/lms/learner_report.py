@@ -422,17 +422,17 @@ def _rows(
 	if search:
 		term = f"%{search.strip()}%"
 		or_filters = {"employee_name": ["like", term], "email": ["like", term]}
-	rows = [
-		enrich(r)
-		for r in frappe.get_all(
-			DOCTYPE,
-			filters=filters,
-			or_filters=or_filters,
-			fields=FIELDS,
-			order_by="employee_name asc",
-			limit_page_length=0,
-		)
-	]
+	sheet_rows = frappe.get_all(
+		DOCTYPE,
+		filters=filters,
+		or_filters=or_filters,
+		fields=FIELDS,
+		order_by="employee_name asc",
+		limit_page_length=0,
+	)
+	rows = [enrich(r) for r in _with_test_scores(sheet_rows)]
+	rows += _lms_rows({(r.email or "").lower() for r in rows}, batch_start, location, training_manager, search)
+	rows.sort(key=lambda r: (r.employee_name or r.email or "").lower())
 	if batch_code and batch_code != "__all__":
 		allowed = _emails_for_batch_code(batch_code)
 		if allowed:
@@ -447,6 +447,149 @@ def _rows(
 			else:
 				rows = []
 	return rows
+
+
+# ---------------------------------------------------------------------------
+# Test scores from the LMS
+# ---------------------------------------------------------------------------
+
+# The CRT quizzes are the product tests. Each is out of 20, the same scale as the sheet columns.
+QUIZ_TO_TEST = {
+	"crt-1-target-exam-quiz": "target_exam",
+	"crt-2-cbse-foundation-quiz": "cbse",
+	"crt-2-math-champ-quiz": "math_champ",
+	"crt-3-test-prep-quiz": "test_prep",
+	"crt-4-lsq-quiz": "lsq",
+}
+TEST_SCALE = 20
+
+
+def _quiz_scores(users) -> dict:
+	"""{user: {test_field: best score out of 20}} from LMS quiz attempts."""
+	users = sorted({u for u in users if u})
+	if not users:
+		return {}
+	out: dict = {}
+	for sub in frappe.get_all(
+		"LMS Quiz Submission",
+		{"member": ["in", users], "quiz": ["in", list(QUIZ_TO_TEST)]},
+		["member", "quiz", "percentage"],
+	):
+		field = QUIZ_TO_TEST[sub.quiz]
+		score = round(flt(sub.percentage) / 100 * TEST_SCALE, 1)
+		mine = out.setdefault(sub.member.lower(), {})
+		mine[field] = max(score, mine.get(field) or 0)
+	return out
+
+
+def _with_test_scores(rows):
+	"""Tests come from the LMS: a learner's best quiz attempt fills the matching column.
+
+	Attendance, calls and demos stay as the OJT sheet has them — those are recorded outside the LMS.
+	A sheet value is only used for a test the learner hasn't taken in the LMS.
+	"""
+	from lms.lms.ojt_certification import derive_product_avg, derive_stage
+
+	scores = _quiz_scores([_learner_user(r) for r in rows])
+	for row in rows:
+		mine = scores.get(_learner_user(row)) or {}
+		sources = {}
+		for field in QUIZ_TO_TEST.values():
+			if field in mine:
+				row[field] = mine[field]
+				sources[field] = "lms"
+			elif row.get(field) not in (None, ""):
+				sources[field] = "sheet"
+		if mine:
+			row["product_avg"] = derive_product_avg(row)
+			row["stage"] = derive_stage(row)
+		row["test_sources"] = sources
+	return rows
+
+
+# ---------------------------------------------------------------------------
+# Learners who are in the LMS but not (yet) in the OJT sheet
+# ---------------------------------------------------------------------------
+
+LMS_ROW_PREFIX = "lms:"
+STAFF_ROLES = ("Admin", "Manager", "Instructor")
+
+
+def _active_learners() -> set[str]:
+	"""Everyone actually learning: in a batch, or with CRT progress or a viva, and not staff.
+
+	The report used to list only people in the OJT Google Sheet, so a learner added through the LMS
+	(a batch upload, a CRT enrollment) never appeared however much they did.
+	"""
+	in_batch = set(frappe.get_all("LMS Batch Enrollment", pluck="member"))
+	crt = set(frappe.get_all("LMS Course Progress", {"course": "sales-crt"}, pluck="member", distinct=True))
+	if frappe.db.table_exists("Sales Viva Attempt"):
+		crt |= set(frappe.get_all("Sales Viva Attempt", pluck="member", distinct=True))
+	staff = set(frappe.get_all("LMS Member", {"access_role": ["in", STAFF_ROLES]}, pluck="name"))
+	# Admins and trainers testing the CRT or a viva aren't learners (System Managers have no
+	# LMS Member row, so the tier catches them too).
+	staff |= {u for u in crt if access.get_tier(u) >= access.INSTRUCTOR}
+	# Someone in a batch is a learner there, even a manager on a managers' course.
+	return {u for u in in_batch | (crt - staff) if u and u not in ("Administrator", "Guest")}
+
+
+def _lms_row(user: str) -> frappe._dict | None:
+	info = frappe.db.get_value("User", user, ["name", "full_name", "email", "modified"], as_dict=True)
+	if not info:
+		return None
+	email = (info.email or info.name).lower()
+	manager = frappe.db.get_value(
+		"LMS Reporting Line",
+		{"member": user, "line_type": "Training Manager", "status": "Active"},
+		"manager",
+	)
+	latest_batch = frappe.get_all(
+		"LMS Batch Enrollment", {"member": user}, ["batch"], order_by="creation desc", limit=1
+	)
+	batch_start = (
+		frappe.db.get_value("LMS Batch", latest_batch[0].batch, "start_date") if latest_batch else None
+	)
+	activity = frappe.db.sql(
+		"select max(modified) from `tabLMS Course Progress` where member=%s", user
+	)[0][0]
+	row = {field: None for field in FIELDS}
+	row.update(
+		{
+			"name": f"{LMS_ROW_PREFIX}{user}",
+			"learner": user,
+			"employee_name": info.full_name or email,
+			"email": email,
+			"training_manager": (frappe.db.get_value("User", manager, "email") or manager or "").lower() or None,
+			"batch_start": batch_start,
+			"modified": activity or info.modified,
+		}
+	)
+	row = enrich(_with_test_scores([row])[0])
+	row.source = "lms"  # no OJT sheet row yet: attendance and demos are empty, not zero
+	return row
+
+
+def _lms_rows(known_emails: set[str], batch_start=None, location=None, training_manager=None, search=None):
+	if location and location != "__all__":
+		return []  # location comes from the OJT sheet; LMS-only learners don't have one yet
+	target_start = getdate(batch_start) if batch_start and batch_start != "__all__" else None
+	term = (search or "").strip().lower()
+	out = []
+	for user in sorted(_active_learners()):
+		email = (frappe.db.get_value("User", user, "email") or user).lower()
+		if email in known_emails or user.lower() in known_emails:
+			continue
+		row = _lms_row(user)
+		if not row:
+			continue
+		if target_start and (not row.batch_start or getdate(row.batch_start) != target_start):
+			continue
+		if training_manager and training_manager != "__all__" and row.training_manager != training_manager.lower():
+			continue
+		if term and term not in (row.employee_name or "").lower() and term not in email:
+			continue
+		out.append(row)
+	return out
 
 
 def _options(field):
@@ -572,9 +715,14 @@ def get_combined_report(
 @frappe.whitelist()
 def get_learner_report(name: str):
 	_ensure_report_access()
-	if not name or not frappe.db.exists(DOCTYPE, name):
+	if name and name.startswith(LMS_ROW_PREFIX):
+		row = _lms_row(name[len(LMS_ROW_PREFIX):])
+		if not row:
+			frappe.throw(_("Learner report not found"))
+	elif not name or not frappe.db.exists(DOCTYPE, name):
 		frappe.throw(_("Learner report not found"))
-	row = enrich(frappe.db.get_value(DOCTYPE, name, FIELDS, as_dict=True))
+	else:
+		row = enrich(_with_test_scores([frappe.db.get_value(DOCTYPE, name, FIELDS, as_dict=True)])[0])
 	if not _scoped([row]):
 		frappe.throw(_("You do not have access to this learner's report."), frappe.PermissionError)
 	cohort = _rows(batch_start=row.batch_start) if row.batch_start else [row]

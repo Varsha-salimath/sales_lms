@@ -556,6 +556,38 @@ def sync_ojt_certification_metrics(sheet_url: str | None = None):
 		frappe.throw(_("Could not sync OJT certification sheet: {0}").format(str(exc)))
 
 
+def scheduled_sync():
+	"""Hourly: pull the OJT sheet so edits there reach the learner report without anyone clicking Sync.
+
+	Same work as the Sync button, minus the permission check (it runs as the scheduler). A failure is
+	recorded on the settings and in the error log, and the rows already stored are left untouched.
+	"""
+	settings = frappe.get_single(SETTINGS)
+	url = (settings.sheet_url or DEFAULT_SHEET_URL).strip()
+	if not url:
+		return
+	try:
+		rows = parse_ojt_certification_csv(_fetch_google_sheet_csv(url))
+		if not rows:
+			raise frappe.ValidationError(_("No learner rows found in the sheet."))
+		saved = replace_ojt_certification_rows(rows)
+		settings.last_synced = now_datetime()
+		settings.last_sync_source = "Google Sheet (hourly)"
+		settings.last_sync_status = "Success"
+		settings.row_count = saved
+		settings.last_sync_message = _("Synced {0} learners from Google Sheet.").format(saved)
+		settings.save(ignore_permissions=True)
+		frappe.db.commit()
+	except Exception as exc:
+		frappe.db.rollback()
+		frappe.log_error(title="OJT sheet: hourly sync failed", message=frappe.get_traceback())
+		settings = frappe.get_single(SETTINGS)
+		settings.last_sync_status = "Failed"
+		settings.last_sync_message = str(exc)[:500]
+		settings.save(ignore_permissions=True)
+		frappe.db.commit()
+
+
 def seed_ojt_certification_metrics_if_empty():
 	"""Load the attached sheet snapshot once, only when the table is empty."""
 	if not frappe.db.exists("DocType", DOCTYPE):
