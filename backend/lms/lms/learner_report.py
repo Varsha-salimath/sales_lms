@@ -38,15 +38,37 @@ def _scoped(rows):
 	user = frappe.session.user
 	if access.can_view_department(OJT_DEPARTMENT, user):
 		return rows
+	me = user.lower()
+	me_email = (frappe.db.get_value("User", user, "email") or user or "").strip().lower()
+	tm_tree = access.training_manager_tree(user)
+	# Training Manager without instructor/admin tier: only TM reporting-line learners.
+	if access.get_tier(user) < access.INSTRUCTOR and tm_tree:
+		tm_emails = set()
+		for member in tm_tree:
+			email = (frappe.db.get_value("User", member, "email") or member or "").strip().lower()
+			tm_emails.add(email)
+			tm_emails.add(member.lower())
+		return [
+			r
+			for r in rows
+			if (r.email or "").lower() in tm_emails
+			or (r.training_manager or "").lower() in {me, me_email}
+		]
 	visible = access.get_visible_members(user)
 	visible = {v.lower() for v in visible} if visible is not access.EVERYONE else None
-	me = user.lower()
+	tm_emails = set()
+	if tm_tree:
+		for member in tm_tree:
+			email = (frappe.db.get_value("User", member, "email") or member or "").strip().lower()
+			tm_emails.add(email)
+			tm_emails.add(member.lower())
 	return [
 		r
 		for r in rows
 		if visible is None
 		or (r.email or "").lower() in visible
-		or (r.training_manager or "").lower() == me
+		or (r.email or "").lower() in tm_emails
+		or (r.training_manager or "").lower() in {me, me_email}
 		or (r.training_manager or "").lower() in visible
 	]
 
@@ -435,6 +457,27 @@ def _options(field):
 	]
 
 
+def _training_manager_filter_options() -> list[str]:
+	emails = set(_options("training_manager"))
+	for row in frappe.get_all(
+		"LMS Reporting Line",
+		filters={"line_type": "Training Manager", "status": "Active"},
+		fields=["manager"],
+		distinct=True,
+	):
+		manager = row.manager
+		if not manager:
+			continue
+		email = (frappe.db.get_value("User", manager, "email") or manager or "").strip().lower()
+		if email:
+			emails.add(email)
+	user = frappe.session.user
+	if access.get_tier() < access.INSTRUCTOR and access.training_manager_tree(user):
+		me = (frappe.db.get_value("User", user, "email") or user or "").strip().lower()
+		return sorted({me} & emails or {me})
+	return sorted(emails)
+
+
 def _learner_user(row) -> str:
 	return (row.get("learner") or row.get("email") or "").strip().lower()
 
@@ -502,6 +545,12 @@ def get_combined_report(
 		if r.readiness_band:
 			bands[r.readiness_band] += 1
 	last_updated = max((r.modified for r in rows if r.modified), default=None)
+	tm_options = _training_manager_filter_options()
+	default_tm = None
+	if access.get_tier() < access.INSTRUCTOR and access.training_manager_tree(frappe.session.user):
+		me = (frappe.db.get_value("User", frappe.session.user, "email") or frappe.session.user or "").strip().lower()
+		if me in tm_options:
+			default_tm = me
 	return {
 		"rows": rows,
 		"stats": stats,
@@ -513,8 +562,9 @@ def get_combined_report(
 		"options": {
 			"batch_code": _batch_codes_for_training_manager(training_manager),
 			"location": sorted(_options("location")),
-			"training_manager": sorted(_options("training_manager")),
+			"training_manager": tm_options,
 		},
+		"default_training_manager": default_tm,
 		"last_updated": last_updated,
 	}
 

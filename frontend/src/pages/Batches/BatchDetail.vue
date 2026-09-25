@@ -33,7 +33,10 @@
 			</Dropdown>
 		</header>
 		<div>
-			<BatchOverview v-if="!isAdmin && !isStudent" :batch="batch" />
+			<BatchOverview
+				v-if="!isAdmin && !isStudent && !batch.data?.view_as_training_manager"
+				:batch="batch"
+			/>
 			<div v-else>
 				<Tabs :tabs="tabs" v-model="tabIndex">
 					<template #tab-panel="{ tab }">
@@ -159,18 +162,27 @@ const batch = createResource({
 	},
 })
 
-watch(batch, () => {
-	updateTabs()
-	updateTabIndex()
-})
+watch(
+	[() => batch.data, () => user.data],
+	() => {
+		updateTabs()
+		updateTabIndex()
+	},
+	{ immediate: true }
+)
 
 const updateTabs = () => {
+	if (!batch.data) {
+		return
+	}
+	tabs.value = []
 	addToTabs('Overview', markRaw(BatchOverview), List)
-	if (!user.data) return
-	if (isAdmin.value) {
-		addToTabs('Dashboard', markRaw(AdminBatchDashboard), TrendingUp)
-	} else if (isStudent.value) {
-		addToTabs('Dashboard', markRaw(StudentBatchDashboard), ClipboardPen)
+	if (user.data) {
+		if (isAdmin.value || batch.data?.view_as_training_manager) {
+			addToTabs('Dashboard', markRaw(AdminBatchDashboard), TrendingUp)
+		} else if (isStudent.value) {
+			addToTabs('Dashboard', markRaw(StudentBatchDashboard), ClipboardPen)
+		}
 	}
 	addToTabs('Classes', markRaw(LiveClass), Laptop)
 	addToTabs('Announcements', markRaw(Announcements), Mail)
@@ -178,6 +190,7 @@ const updateTabs = () => {
 	if (isAdmin.value) {
 		addToTabs('Settings', markRaw(BatchForm), Settings2)
 	}
+	updateTabIndex()
 }
 
 const addToTabs = (label, component, icon) => {

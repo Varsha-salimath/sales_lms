@@ -6,13 +6,16 @@ from __future__ import annotations
 import csv
 import io
 import json
+from collections import defaultdict
 
 import frappe
 from frappe import _
-from frappe.utils import getdate
+from frappe.desk.doctype.notification_log.notification_log import make_notification_logs
+from frappe.utils import getdate, get_url
 
 from lms.lms import access, content_scope
 from lms.lms import team_access
+from lms.lms.utils import get_lms_route
 
 HEADER_ALIASES = {
 	"batch start": "batch_start",
@@ -168,7 +171,7 @@ def _is_already_enrolled(batch: str, email: str) -> bool:
 	return bool(frappe.db.exists("LMS Batch Enrollment", {"batch": batch, "member": member}))
 
 
-def _validate_rows(batch: str, rows: list[dict]) -> dict:
+def _validate_rows(batch: str, rows: list[dict], assign_training_manager: bool = False) -> dict:
 	errors = []
 	warnings = []
 	preview = []
@@ -227,14 +230,20 @@ def _validate_rows(batch: str, rows: list[dict]) -> dict:
 			row_errors.append(_("Employee Name is required."))
 
 		tm = (row.get("training_manager") or "").strip().lower()
-		if tm and not frappe.db.exists("User", tm):
+		if assign_training_manager and tm and not team_access.resolve_user_email(tm):
+			row_errors.append(
+				_(
+					"Training Manager {0} is not in the LMS. Add them under Team & access (or invite the user), then upload again."
+				).format(tm)
+			)
+		elif tm and not team_access.resolve_user_email(tm):
 			warnings.append(
 				_(
-					"Row {0}: Training Manager {1} is not an LMS user — reporting line will be skipped (add them under Team & access or fix the email)."
+					"Row {0}: Training Manager {1} is not an LMS user — reporting line will be skipped."
 				).format(line_no, tm)
 			)
-		elif not tm:
-			warnings.append(_("Row {0}: no Training Manager — reporting line will be skipped.").format(line_no))
+		elif assign_training_manager and not tm:
+			warnings.append(_("Row {0}: no Training Manager in CSV — reporting line will be skipped.").format(line_no))
 
 		if row.get("batch_start") and batch_start and not _batch_start_matches(batch, row.get("batch_start")):
 			warnings.append(
@@ -329,23 +338,186 @@ def _assign_member_teams(email: str, departments: list[str], access_role: str = 
 	access.clear_cache()
 
 
-def _ensure_reporting_line(member: str, manager: str):
-	if not manager or not frappe.db.exists("User", manager):
+def _assign_training_manager(member_email: str, manager_email: str | None) -> bool:
+	if not manager_email:
+		return False
+	return team_access.set_training_manager_line(member_email, manager_email)
+
+
+def _normalized_manager_email(manager_email: str | None) -> str:
+	if not manager_email:
+		return ""
+	user = team_access.resolve_user_email(manager_email) or manager_email.strip()
+	return (frappe.db.get_value("User", user, "email") or user or "").strip().lower()
+
+
+def _training_manager_line_matches(member_email: str, manager_email: str | None) -> bool:
+	if not manager_email:
+		return False
+	target = _normalized_manager_email(manager_email)
+	current = team_access.get_active_training_manager(member_email) or {}
+	cur = (current.get("email") or "").strip().lower()
+	if not cur and current.get("user"):
+		cur = (
+			frappe.db.get_value("User", current.get("user"), "email") or current.get("user") or ""
+		).strip().lower()
+	return bool(target and cur == target)
+
+
+def _training_manager_assignment_changed(member_email: str, manager_email: str | None) -> bool:
+	if not manager_email:
+		return False
+	target = _normalized_manager_email(manager_email)
+	current = team_access.get_active_training_manager(member_email) or {}
+	cur = (current.get("email") or "").strip().lower()
+	if not cur and current.get("user"):
+		cur = (
+			frappe.db.get_value("User", current.get("user"), "email") or current.get("user") or ""
+		).strip().lower()
+	return cur != target
+
+
+def _manager_user_for_email(manager_email: str | None) -> str | None:
+	if not manager_email:
+		return None
+	manager_email = manager_email.strip().lower()
+	user = frappe.db.get_value("User", {"email": manager_email}, "name")
+	if user:
+		return user
+	if frappe.db.exists("User", manager_email):
+		return manager_email
+	return None
+
+
+def _notify_training_managers_bulk(batch: str, assignments: list[dict]) -> None:
+	"""Alert each Training Manager about learners assigned to them in this import."""
+	if not assignments:
 		return
-	if not (access.is_admin() or frappe.db.get_value("LMS Member", frappe.session.user, "access_role") == "Admin"):
+	batch_title = frappe.db.get_value("LMS Batch", batch, "title") or batch
+	link = get_lms_route(f"batches/{batch}#dashboard")
+	by_manager: dict[str, list[dict]] = defaultdict(list)
+	for row in assignments:
+		mgr = row.get("manager_user")
+		if mgr:
+			by_manager[mgr].append(row)
+
+	for mgr, items in by_manager.items():
+		labels = []
+		for it in items[:20]:
+			labels.append(it.get("learner_label") or it.get("learner_email") or "")
+		listing = ", ".join([x for x in labels if x])
+		if len(items) > 20:
+			listing = _("{0} and {1} more").format(listing, len(items) - 20)
+		count = len(items)
+		subject = _("{0} learner(s) assigned to you in {1}").format(count, batch_title)
+		body = _("You are the Training Manager for the following learner(s) in batch {0}: {1}").format(
+			batch_title, listing
+		)
+		notification = frappe._dict(
+			{
+				"subject": subject,
+				"email_content": body,
+				"document_type": "LMS Batch",
+				"document_name": batch,
+				"from_user": frappe.session.user,
+				"type": "Alert",
+				"link": link,
+			}
+		)
+		make_notification_logs(notification, [mgr])
+		frappe.publish_realtime("publish_lms_notifications", user=mgr, after_commit=True)
+
+
+def _batch_course_titles(batch: str) -> list[str]:
+	rows = frappe.get_all("Batch Course", filters={"parent": batch}, fields=["title", "course"], order_by="idx asc")
+	titles = []
+	for row in rows:
+		label = row.title or frappe.db.get_value("LMS Course", row.course, "title") or row.course
+		if label:
+			titles.append(label)
+	return titles
+
+
+def _sync_ojt_learner_row(
+	email: str,
+	employee_name: str | None,
+	location: str | None,
+	training_manager: str | None,
+	batch: str,
+):
+	from lms.lms.ojt_certification import DOCTYPE, make_row_key
+
+	if not frappe.db.exists("DocType", DOCTYPE):
 		return
-	exists = frappe.db.exists(
-		"LMS Reporting Line",
-		{
-			"member": member,
-			"manager": manager,
-			"line_type": "Training Manager",
-			"status": "Active",
-		},
+	member = _member_for_email(email)
+	batch_start = frappe.db.get_value("LMS Batch", batch, "start_date")
+	if not batch_start:
+		return
+	email = email.strip().lower()
+	tm = (training_manager or "").strip().lower() or None
+	if tm and not team_access.resolve_user_email(tm):
+		tm = None
+	key = make_row_key(email, batch_start)
+	existing = frappe.db.get_value(DOCTYPE, {"row_key": key}, "name")
+	doc = frappe.get_doc(DOCTYPE, existing) if existing else frappe.new_doc(DOCTYPE)
+	doc.email = email
+	if member:
+		doc.learner = member
+	if employee_name:
+		doc.employee_name = employee_name
+	elif member and not doc.employee_name:
+		doc.employee_name = frappe.db.get_value("User", member, "full_name")
+	if location:
+		doc.location = location.strip()
+	doc.batch_start = getdate(batch_start)
+	if tm:
+		doc.training_manager = tm
+	doc.flags.from_bulk_enroll = True
+	if existing:
+		doc.save(ignore_permissions=True)
+	else:
+		doc.insert(ignore_permissions=True)
+
+
+def _send_bulk_enrollment_email(member: str, batch: str, *, is_new_account: bool):
+	"""One enrollment email per new batch membership (bulk path skips default welcome + confirmation)."""
+	outgoing = frappe.get_cached_value(
+		"Email Account", {"default_outgoing": 1, "enable_outgoing": 1}, "name"
 	)
-	if exists:
+	if not (outgoing or frappe.conf.get("mail_login")):
 		return
-	team_access.add_reporting_line(member, manager, "Training Manager")
+	batch_row = frappe.db.get_value(
+		"LMS Batch",
+		batch,
+		["title", "name", "start_date", "start_time", "medium"],
+		as_dict=True,
+	)
+	if not batch_row:
+		return
+	student_name = frappe.db.get_value("User", member, "full_name") or member
+	tm = team_access.get_active_training_manager(member)
+	subject = _("You are enrolled in {0} — Infinity Learn LMS").format(batch_row.title)
+	args = {
+		"student_name": student_name,
+		"batch_title": batch_row.title,
+		"start_date": batch_row.start_date,
+		"start_time": batch_row.start_time,
+		"medium": batch_row.medium,
+		"courses": _batch_course_titles(batch),
+		"training_manager_name": tm.get("full_name") if tm else None,
+		"training_manager_email": tm.get("email") if tm else None,
+		"batch_url": get_url(get_lms_route(f"batches/{batch_row.name}")),
+		"login_url": get_url("/login"),
+		"is_new_account": is_new_account,
+	}
+	frappe.sendmail(
+		recipients=member,
+		subject=subject,
+		template="bulk_batch_enrollment",
+		args=args,
+		header=[batch_row.title, "green"],
+		retry=3,
+	)
 
 
 def _create_learner(email: str, first_name: str, last_name: str, departments: list[str], send_welcome: bool):
@@ -380,17 +552,20 @@ def _ensure_member_on_teams(email: str, departments: list[str]):
 	_assign_member_teams(email, merged)
 
 
-def _enroll_member(batch: str, member_email: str):
+def _enroll_member(batch: str, member_email: str) -> bool:
 	member = _member_for_email(member_email) or member_email
 	if _is_already_enrolled(batch, member_email):
 		return False
-	doc = frappe.get_doc({"doctype": "LMS Batch Enrollment", "member": member, "batch": batch})
+	frappe.flags.skip_batch_confirmation_email = True
 	try:
+		doc = frappe.get_doc({"doctype": "LMS Batch Enrollment", "member": member, "batch": batch})
 		doc.insert(ignore_permissions=True)
 	except frappe.ValidationError as exc:
 		if exc.args and "already enrolled" in str(exc.args[0]).lower():
 			return False
 		raise
+	finally:
+		frappe.flags.skip_batch_confirmation_email = False
 	return True
 
 
@@ -413,12 +588,14 @@ def get_batch_upload_template_csv(batch: str | None = None):
 
 
 @frappe.whitelist()
-def preview_batch_enrollment_upload(batch: str, file_content: str):
+def preview_batch_enrollment_upload(batch: str, file_content: str, options: str | None = None):
 	_ensure_bulk_enroll(batch)
+	opts = json.loads(options or "{}")
+	assign_tm = bool(opts.get("assign_training_manager", True))
 	rows = _parse_rows(file_content or "")
 	if not rows:
 		frappe.throw(_("No data rows found in the file."))
-	result = _validate_rows(batch, rows)
+	result = _validate_rows(batch, rows, assign_training_manager=assign_tm)
 	result["batch"] = batch
 	return result
 
@@ -433,7 +610,7 @@ def commit_batch_enrollment_upload(batch: str, file_content: str, options: str |
 	rows = _parse_rows(file_content or "")
 	if not rows:
 		frappe.throw(_("No data rows found in the file."))
-	validation = _validate_rows(batch, rows)
+	validation = _validate_rows(batch, rows, assign_training_manager=assign_tm)
 	if validation["errors"]:
 		frappe.throw(_("Fix errors before importing."))
 
@@ -441,43 +618,98 @@ def commit_batch_enrollment_upload(batch: str, file_content: str, options: str |
 	enrolled = 0
 	skipped = 0
 	failed = []
+	tm_notifications: list[dict] = []
+
+	seen_tm_notify: set[tuple[str, str]] = set()
+
+	def _queue_tm_notification(item: dict, manager_email: str | None) -> None:
+		if not assign_tm or not manager_email:
+			return
+		mgr_user = _manager_user_for_email(manager_email)
+		if not mgr_user:
+			return
+		learner_email = (item.get("email") or "").strip().lower()
+		key = (mgr_user, learner_email)
+		if key in seen_tm_notify:
+			return
+		seen_tm_notify.add(key)
+		learner_label = (
+			item.get("employee_name")
+			or " ".join(filter(None, [item.get("first_name"), item.get("last_name")])).strip()
+			or item.get("email")
+		)
+		tm_notifications.append(
+			{
+				"manager_user": mgr_user,
+				"learner_email": learner_email,
+				"learner_label": learner_label,
+			}
+		)
 
 	for item in validation["preview"]:
 		email = item["email"]
+		tm = item.get("training_manager")
 		if item["status"] == "already_enrolled":
 			skipped += 1
 			try:
 				if item.get("departments"):
 					_ensure_member_on_teams(email, item["departments"])
-				tm = item.get("training_manager")
-				if assign_tm and tm and frappe.db.exists("User", tm):
-					_ensure_reporting_line(email, tm)
+				if assign_tm and tm:
+					notify_tm = _training_manager_assignment_changed(email, tm)
+					_assign_training_manager(email, tm)
+					if notify_tm and _training_manager_line_matches(email, tm):
+						_queue_tm_notification(item, tm)
+				_sync_ojt_learner_row(
+					email,
+					item.get("employee_name"),
+					item.get("location"),
+					tm if assign_tm else None,
+					batch,
+				)
 				frappe.db.commit()
 			except Exception:
 				frappe.db.rollback()
 			continue
 		try:
-			if not _member_for_email(email):
+			is_new = not _member_for_email(email)
+			if is_new:
+				# Bulk sends one combined enrollment email; skip Frappe default welcome.
 				_create_learner(
 					email,
 					item["first_name"],
 					item["last_name"],
 					item["departments"],
-					send_welcome,
+					send_welcome=False,
 				)
 				created += 1
 			else:
 				_ensure_member_on_teams(email, item["departments"])
 
-			tm = item.get("training_manager")
-			if assign_tm and tm and frappe.db.exists("User", tm):
-				try:
-					_ensure_reporting_line(email, tm)
-				except Exception:
-					pass
+			notify_tm = bool(assign_tm and tm and _training_manager_assignment_changed(email, tm))
+			if assign_tm and tm:
+				_assign_training_manager(email, tm)
 
-			if _enroll_member(batch, email):
+			did_enroll = _enroll_member(batch, email)
+			if did_enroll:
 				enrolled += 1
+				member_id = _member_for_email(email) or email
+				_sync_ojt_learner_row(
+					email,
+					item.get("employee_name"),
+					item.get("location"),
+					tm if assign_tm else None,
+					batch,
+				)
+				# One email per new batch membership (re-bulk skips already_enrolled). New accounts only
+				# when "Send welcome" is checked; existing users always get the batch notice once.
+				if not is_new or send_welcome:
+					_send_bulk_enrollment_email(
+						member_id,
+						batch,
+						is_new_account=bool(is_new and send_welcome),
+					)
+				if assign_tm and tm and (did_enroll or notify_tm) and _training_manager_line_matches(email, tm):
+					_queue_tm_notification(item, tm)
 			frappe.db.commit()
 		except Exception as exc:
 			frappe.db.rollback()
@@ -489,6 +721,8 @@ def commit_batch_enrollment_upload(batch: str, file_content: str, options: str |
 				continue
 			failed.append({"row": item["row"], "email": email, "message": msg})
 			continue
+
+	_notify_training_managers_bulk(batch, tm_notifications)
 	return {
 		"created": created,
 		"enrolled": enrolled,

@@ -34,6 +34,21 @@
 						<div class="text-sm text-ink-gray-7">
 							{{ studentDetails.data.email }}
 						</div>
+						<div
+							v-if="studentDetails.data.training_manager?.full_name"
+							class="text-sm text-ink-gray-6"
+						>
+							{{ __('Training Manager') }}:
+							<span class="text-ink-gray-8">{{
+								studentDetails.data.training_manager.full_name
+							}}</span>
+							<span
+								v-if="studentDetails.data.training_manager.email"
+								class="text-ink-gray-5"
+							>
+								({{ studentDetails.data.training_manager.email }})
+							</span>
+						</div>
 					</div>
 				</div>
 

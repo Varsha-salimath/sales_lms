@@ -21,7 +21,10 @@
 
 		<template v-else-if="data">
 			<!-- Teams -->
-			<section class="ta-teams no-scrollbar">
+			<p class="mb-2 text-xs font-semibold uppercase tracking-wide text-[color:var(--il-muted)]">
+				{{ __('Filter by team') }}
+			</p>
+			<section class="ta-teams no-scrollbar" :aria-label="__('Filter by team')">
 				<button type="button" class="ta-team" :class="{ 'is-active': !team }" @click="team = null">
 					<span class="text-sm font-medium">{{ __('All teams') }}</span>
 					<span class="ta-count">{{ data.members.length }}</span>
@@ -50,19 +53,69 @@
 
 			<!-- People -->
 			<section v-if="tab === 'people'" class="il-card overflow-hidden">
-				<div class="flex flex-wrap items-center gap-3 border-b border-[color:var(--il-neutral-95)] px-4 py-3">
-					<label class="ta-search">
-						<Search class="h-4 w-4 text-[color:var(--il-neutral-60)]" />
-						<input v-model="search" :placeholder="__('Search people')" />
-					</label>
-					<label class="flex items-center gap-2 text-sm text-[color:var(--il-muted)]">
-						<input v-model="onlyUnassigned" type="checkbox" class="rounded" />
-						{{ __('No manager yet') }}
-					</label>
+				<div class="border-b border-[color:var(--il-neutral-95)] px-4 py-3 space-y-3">
+					<div class="flex flex-wrap items-center gap-2">
+						<span class="text-xs font-semibold text-[color:var(--il-muted)]">{{ __('Role') }}</span>
+						<button
+							v-for="r in roleFilters"
+							:key="r.value || 'all'"
+							type="button"
+							class="ta-pill-filter"
+							:class="{ 'is-active': filterRole === r.value }"
+							@click="filterRole = r.value"
+						>
+							{{ r.label }}
+						</button>
+					</div>
+					<div class="flex flex-wrap items-end gap-3">
+						<label class="ta-search">
+							<Search class="h-4 w-4 text-[color:var(--il-neutral-60)]" />
+							<input v-model="search" :placeholder="__('Search name or email')" />
+						</label>
+						<label class="ta-field">
+							<span class="ta-field-label">{{ __('Status') }}</span>
+							<select v-model="filterStatus" class="ta-select ta-select-compact">
+								<option value="active">{{ __('Active') }}</option>
+								<option value="all">{{ __('All') }}</option>
+								<option value="inactive">{{ __('Deactivated') }}</option>
+							</select>
+						</label>
+						<label class="ta-field">
+							<span class="ta-field-label">{{ __('Manager') }}</span>
+							<select v-model="filterManager" class="ta-select ta-select-compact">
+								<option value="">{{ __('Any') }}</option>
+								<option value="none">{{ __('No manager yet') }}</option>
+								<option value="any">{{ __('Has a manager') }}</option>
+								<option v-for="lt in lineTypeOptions" :key="lt" :value="lt">{{ lt }}</option>
+							</select>
+						</label>
+						<button
+							v-if="hasPeopleFilters"
+							type="button"
+							class="ta-clear-filters"
+							@click="clearPeopleFilters"
+						>
+							{{ __('Clear filters') }}
+						</button>
+					</div>
+					<p class="text-xs text-[color:var(--il-muted)]">
+						{{ __('Showing {0} people').format(people.length) }}
+						<template v-if="showSuperAdmins && data.super_admins?.length">
+							· {{ __('plus {0} Super Admin(s)').format(data.super_admins.length) }}
+						</template>
+					</p>
+				</div>
+
+				<div class="ta-table-head hidden md:flex">
+					<span class="flex-1">{{ __('Person') }}</span>
+					<span class="w-[7.25rem] text-center">{{ __('Role') }}</span>
+					<span class="w-[15rem]">{{ __('Team') }}</span>
+					<span class="w-[11rem]">{{ __('Manager') }}</span>
+					<span class="w-9" />
 				</div>
 
 				<ul>
-					<template v-if="!team && !search && !onlyUnassigned">
+					<template v-if="showSuperAdmins">
 					<li v-for="s in data.super_admins" :key="`sa-${s.user}`" class="ta-row">
 						<span class="ta-avatar is-super">{{ initials(s.full_name || s.user) }}</span>
 						<div class="min-w-0 flex-1">
@@ -104,8 +157,8 @@
 						</button>
 						<span v-else class="w-9" />
 					</li>
-					<li v-if="!people.length" class="px-4 py-10 text-center text-sm text-[color:var(--il-muted)]">
-						{{ search || team || onlyUnassigned ? __('Nobody matches.') : __('No one here yet. Use “Add person”.') }}
+					<li v-if="!people.length && !showSuperAdmins" class="px-4 py-10 text-center text-sm text-[color:var(--il-muted)]">
+						{{ hasPeopleFilters ? __('Nobody matches these filters.') : __('No one here yet. Use “Add person”.') }}
 					</li>
 				</ul>
 			</section>
@@ -115,6 +168,20 @@
 				<div class="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--il-neutral-95)] px-4 py-3">
 					<p class="text-sm text-[color:var(--il-muted)]">{{ __('Ending a line removes the manager’s view straight away. Training data is kept.') }}</p>
 					<button class="il-btn il-btn-light !h-9 !px-4 text-sm" @click="openLine()"><Plus class="h-4 w-4" /> {{ __('Add line') }}</button>
+				</div>
+				<div class="flex flex-wrap items-end gap-3 border-b border-[color:var(--il-neutral-95)] px-4 py-3">
+					<label class="ta-search">
+						<Search class="h-4 w-4 text-[color:var(--il-neutral-60)]" />
+						<input v-model="lineSearch" :placeholder="__('Search member or manager')" />
+					</label>
+					<label class="ta-field">
+						<span class="ta-field-label">{{ __('Line type') }}</span>
+						<select v-model="lineTypeFilter" class="ta-select ta-select-compact">
+							<option value="">{{ __('All types') }}</option>
+							<option v-for="lt in lineTypeOptions" :key="lt" :value="lt">{{ lt }}</option>
+						</select>
+					</label>
+					<p class="text-xs text-[color:var(--il-muted)] pb-1">{{ __('Showing {0} lines').format(lines.length) }}</p>
 				</div>
 				<ul>
 					<li v-for="l in lines" :key="l.name" class="ta-row">
@@ -363,8 +430,29 @@ const data = computed(() => res.data)
 const tab = ref('people')
 const team = ref(null)
 const search = ref('')
-const onlyUnassigned = ref(false)
+const filterRole = ref('')
+const filterStatus = ref('active')
+const filterManager = ref('')
+const lineSearch = ref('')
+const lineTypeFilter = ref('')
 const saving = ref(false)
+
+const lineTypeOptions = [
+	'Training Manager',
+	'Performance Manager',
+	'Floor Manager',
+	'Line Manager',
+	'Instructor',
+	'Other',
+]
+
+const roleFilters = computed(() => [
+	{ value: '', label: __('All roles') },
+	{ value: 'User', label: __('Learners') },
+	{ value: 'Instructor', label: __('Instructors') },
+	{ value: 'Manager', label: __('Managers') },
+	{ value: 'Admin', label: __('Team admins') },
+])
 
 const tabs = computed(() => [
 	{ key: 'people', label: __('People'), badge: null },
@@ -382,19 +470,75 @@ const scopeLine = computed(() => {
 const visibleTeams = computed(() => (data.value?.departments || []).filter((d) => d.count || d.can_assign))
 const assignableTeams = computed(() => (data.value?.departments || []).filter((d) => d.can_assign))
 
+function matchesManagerFilter(m) {
+	const f = filterManager.value
+	if (!f) return true
+	if (f === 'none') return !m.managers?.length
+	if (f === 'any') return Boolean(m.managers?.length)
+	return (m.managers || []).some((l) => l.line_type === f)
+}
+
 const people = computed(() => {
 	const term = search.value.trim().toLowerCase()
-	return (data.value?.members || []).filter(
-		(m) =>
-			(!team.value || m.departments.some((d) => d.department === team.value)) &&
-			(!onlyUnassigned.value || !m.managers.length) &&
-			(!term || `${m.full_name} ${m.user}`.toLowerCase().includes(term))
-	)
+	return (data.value?.members || []).filter((m) => {
+		if (team.value && !m.departments.some((d) => d.department === team.value)) return false
+		if (filterRole.value && m.access_role !== filterRole.value) return false
+		if (filterStatus.value === 'active' && m.status !== 'Active') return false
+		if (filterStatus.value === 'inactive' && m.status === 'Active') return false
+		if (!matchesManagerFilter(m)) return false
+		if (term) {
+			const hay = `${m.full_name || ''} ${m.user || ''} ${m.employee_code || ''}`.toLowerCase()
+			if (!hay.includes(term)) return false
+		}
+		return true
+	})
 })
 
+const hasPeopleFilters = computed(
+	() =>
+		Boolean(
+			search.value.trim() ||
+				team.value ||
+				filterRole.value ||
+				filterStatus.value !== 'active' ||
+				filterManager.value
+		)
+)
+
+const showSuperAdmins = computed(
+	() => !hasPeopleFilters.value && (data.value?.super_admins?.length || 0) > 0
+)
+
+function clearPeopleFilters() {
+	search.value = ''
+	team.value = null
+	filterRole.value = ''
+	filterStatus.value = 'active'
+	filterManager.value = ''
+}
+
 const lines = computed(() => {
-	const members = new Set(people.value.map((m) => m.user))
-	return (data.value?.lines || []).filter((l) => !team.value || members.has(l.member))
+	const term = lineSearch.value.trim().toLowerCase()
+	const teamMembers = team.value
+		? new Set(
+				(data.value?.members || [])
+					.filter((m) => m.departments.some((d) => d.department === team.value))
+					.map((m) => m.user)
+			)
+		: null
+	return (data.value?.lines || []).filter((l) => {
+		if (teamMembers && !teamMembers.has(l.member)) return false
+		if (lineTypeFilter.value && l.line_type !== lineTypeFilter.value) return false
+		if (filterRole.value) {
+			const member = (data.value?.members || []).find((m) => m.user === l.member)
+			if (!member || member.access_role !== filterRole.value) return false
+		}
+		if (term) {
+			const hay = `${l.member_name || ''} ${l.member || ''} ${l.manager_name || ''} ${l.manager || ''}`.toLowerCase()
+			if (!hay.includes(term)) return false
+		}
+		return true
+	})
 })
 
 const roleHelp = [
@@ -704,6 +848,70 @@ async function revokeGrant(g) {
 	background: transparent;
 	box-shadow: none;
 	font-size: 0.875rem;
+}
+
+.ta-pill-filter {
+	flex-shrink: 0;
+	height: 2rem;
+	border: 1px solid var(--il-neutral-90);
+	border-radius: 999px;
+	padding: 0 0.85rem;
+	background: #fff;
+	color: var(--il-muted);
+	font-size: 0.8125rem;
+	font-weight: 500;
+}
+
+.ta-pill-filter.is-active {
+	border-color: #00254c;
+	background: #00254c;
+	color: #fff;
+}
+
+.ta-field {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+.ta-field-label {
+	font-size: 0.6875rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--il-muted);
+}
+
+.ta-select-compact {
+	min-width: 9.5rem;
+	height: 2.4rem;
+	font-size: 0.8125rem;
+}
+
+.ta-clear-filters {
+	height: 2.4rem;
+	padding: 0 0.75rem;
+	border-radius: 999px;
+	color: var(--il-primary-40);
+	font-size: 0.8125rem;
+	font-weight: 600;
+}
+
+.ta-clear-filters:hover {
+	background: var(--il-primary-95);
+}
+
+.ta-table-head {
+	align-items: center;
+	gap: 0.85rem;
+	border-bottom: 1px solid var(--il-neutral-95);
+	padding: 0.45rem 1rem;
+	background: var(--il-neutral-98, #fafafa);
+	font-size: 0.6875rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--il-muted);
 }
 
 .ta-row {

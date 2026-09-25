@@ -13,10 +13,6 @@ Write-Host "Copying LMS public from $backend..."
 docker cp "${backend}:${public}/." $staging
 Write-Host "Installing into $frontend and linking assets/lms..."
 docker cp "${staging}/." "${frontend}:${public}/"
-docker exec -u root $frontend bash -c @"
-chown -R frappe:frappe $public
-ln -sfn $public /home/frappe/frappe-bench/assets/lms
-test -f /home/frappe/frappe-bench/assets/lms/frontend/index.html && echo OK: assets/lms linked
-"@
+docker exec -u root $frontend bash -c "chown -R frappe:frappe /home/frappe/frappe-bench/apps/lms/lms/public && ln -sfn /home/frappe/frappe-bench/apps/lms/lms/public /home/frappe/frappe-bench/assets/lms && test -f /home/frappe/frappe-bench/assets/lms/frontend/index.html && echo OK: assets/lms linked"
 Remove-Item -Recurse -Force $staging
 Write-Host "Done. Hard-refresh the browser (Ctrl+Shift+R)."

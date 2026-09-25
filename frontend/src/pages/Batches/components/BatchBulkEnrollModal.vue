@@ -169,6 +169,13 @@ watch(show, (open) => {
 	}
 })
 
+watch(
+	() => options.assign_training_manager,
+	() => {
+		if (csvText.value) validateFile()
+	}
+)
+
 function statusLabel(status) {
 	if (status === 'will_create') return __('New account + enroll')
 	if (status === 'will_enroll') return __('Enroll')
@@ -201,6 +208,7 @@ async function validateFile() {
 			{
 				batch: props.batchName,
 				file_content: csvText.value,
+				options: JSON.stringify(options),
 			}
 		)
 	} catch (err) {

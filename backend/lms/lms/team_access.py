@@ -258,6 +258,74 @@ def save_member(user: str, access_role: str, departments=None, primary: str | No
 	return {"user": user}
 
 
+def resolve_user_email(email_or_name: str) -> str | None:
+	"""Return User.name for an email or existing username."""
+	key = (email_or_name or "").strip().lower()
+	if not key:
+		return None
+	if frappe.db.exists("User", key):
+		return key
+	rows = frappe.get_all("User", filters={"email": key}, pluck="name", limit=1)
+	return rows[0] if rows else None
+
+
+def get_active_training_manager(member: str) -> dict | None:
+	"""Active Training Manager reporting line for a learner (for UI and emails)."""
+	user = resolve_user_email(member) or (member if frappe.db.exists("User", member) else None)
+	if not user:
+		return None
+	line = frappe.db.get_value(
+		"LMS Reporting Line",
+		{"member": user, "line_type": "Training Manager", "status": "Active"},
+		["manager", "manager_name"],
+		as_dict=True,
+	)
+	if not line:
+		return None
+	manager = line.manager
+	email = (frappe.db.get_value("User", manager, "email") or manager or "").strip().lower()
+	return {
+		"user": manager,
+		"email": email,
+		"full_name": line.manager_name or frappe.db.get_value("User", manager, "full_name") or manager,
+	}
+
+
+def set_training_manager_line(member: str, manager: str, reason: str | None = None) -> bool:
+	"""Create or switch an active Training Manager line (bulk enroll; bypasses Team & Access UI gates)."""
+	member_user = resolve_user_email(member) or member
+	manager_user = resolve_user_email(manager) or manager
+	if not member_user or not manager_user:
+		return False
+	if not frappe.db.exists("User", member_user) or not frappe.db.exists("User", manager_user):
+		return False
+	reason = reason or _("Bulk batch enroll")
+	active = frappe.get_all(
+		"LMS Reporting Line",
+		filters={"member": member_user, "line_type": "Training Manager", "status": "Active"},
+		fields=["name", "manager"],
+	)
+	for row in active:
+		if row.manager == manager_user:
+			return True
+		end_reporting_line(frappe.get_doc("LMS Reporting Line", row.name), reason)
+	doc = frappe.new_doc("LMS Reporting Line")
+	doc.update(
+		{
+			"member": member_user,
+			"member_name": frappe.db.get_value("User", member_user, "full_name"),
+			"manager": manager_user,
+			"manager_name": frappe.db.get_value("User", manager_user, "full_name"),
+			"line_type": "Training Manager",
+			"from_date": getdate(nowdate()),
+			"status": "Active",
+		}
+	)
+	doc.insert(ignore_permissions=True)
+	access.clear_cache()
+	return True
+
+
 @frappe.whitelist(methods=["POST"])
 def add_reporting_line(member: str, manager: str, line_type: str, from_date: str | None = None, department: str | None = None):
 	_ensure_admin()

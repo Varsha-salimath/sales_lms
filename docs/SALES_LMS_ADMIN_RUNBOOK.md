@@ -225,7 +225,7 @@ Repeat for each learner, or add people in small groups over time.
 4. **Choose CSV file** — review the preview (errors per row).
 5. Options:
    - **Send welcome email to new accounts** — password setup mail for newly created users.
-   - **Assign Training Manager reporting line** — uses the **Training Manager** column (must be an existing LMS user email, or the line is skipped with a warning).
+   - **Assign Training Manager reporting line** — CSV **Training Manager** must be an **existing LMS user email** (add them under **Team & access** first). When checked, missing TMs block import with a clear error.
 6. Click **Enroll learners**.
 
 **Template columns:** Batch Start, Employee Name, Email ID, Locations, Training Manager.
@@ -233,9 +233,19 @@ Repeat for each learner, or add people in small groups over time.
 - **Batch Start** should match the batch start date (use **Download template** on the bulk enroll dialog); a mismatch shows a warning only — enrollment still applies to the batch you opened.
 - **Locations** is mapped to a team (department); if no match, the batch’s primary team is used.
 - New emails create a **Learner** account, assign team, enroll, and send batch confirmation email (if configured on the batch).
-- Learners **already in the batch** are listed as skipped; they are not enrolled again (team / Training Manager updates may still apply if you run import).
+- Learners **already in the batch** are listed as skipped; they are **not enrolled again** and **do not get another email** (TM / team / learner report row can still update).
+- **Email:** one enrollment message per **new** batch membership (batch name, courses, TM). New accounts include welcome text when **Send welcome email** is checked. Re-uploading the same CSV does not resend mail to skipped rows.
+- **Training Manager alerts:** when a learner is newly enrolled or their TM line changes, the assigned Training Manager gets an **LMS notification** listing those learners and a link to the batch **Dashboard**.
 
 **Expected result:** Summary toast (enrolled / new accounts / skipped). **Students** list refreshes.
+
+### 4.2.1 What Training Managers see
+
+Training Managers (users with learners on an active **Training Manager** reporting line) can:
+
+- Open **Learner reports → Sales CRT** — use the **By batch** tab for a batch-wise list of assigned learners (enrollment date, readiness, links to batch dashboard and report cards). Other tabs show CRT metrics scoped to **their learners**; the Training manager filter defaults to themselves.
+- Open a batch where they have assigned learners → **Dashboard** — **Students**, progress, and charts show **only their learners** (no **Bulk enroll** / **Enroll**). A blue banner explains the scoped view.
+- Use **Notifications** (bell) after bulk enroll to see which learners were assigned to them in that batch.
 
 ### 4.3 High-volume enrollment (LMS Moderator only — Data Import)
 

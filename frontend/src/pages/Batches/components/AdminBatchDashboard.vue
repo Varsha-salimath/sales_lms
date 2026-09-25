@@ -1,9 +1,19 @@
 <template>
 	<div v-if="batch?.data" class="p-5">
+		<div
+			v-if="batch.data.view_as_training_manager"
+			class="mb-5 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-ink-gray-8"
+		>
+			{{
+				__(
+					'You are viewing learners assigned to you as Training Manager in this batch. Progress and reports are limited to your team.'
+				)
+			}}
+		</div>
 		<div class="grid grid-cols-2 md:grid-cols-4 gap-5 mb-8">
 			<NumberChartGraph
 				:title="__('Enrolled')"
-				:value="formatAmount(batch.data?.students?.length) || 0"
+				:value="formatAmount(enrolledCount) || 0"
 			/>
 
 			<NumberChartGraph
@@ -64,19 +74,33 @@
 							:placeholder="__('Search by name')"
 							type="text"
 						/>
-						<Button variant="outline" @click="showBulkEnrollModal = true">
-							{{ __('Bulk enroll') }}
-						</Button>
-						<Button @click="showEnrollmentModal = true">
-							<template #prefix>
-								<Plus class="size-4 stroke-1.5" />
-							</template>
-							{{ __('Enroll') }}
-						</Button>
+						<template v-if="canManageBatch">
+							<Button variant="outline" @click="showBulkEnrollModal = true">
+								{{ __('Bulk enroll') }}
+							</Button>
+							<Button @click="showEnrollmentModal = true">
+								<template #prefix>
+									<Plus class="size-4 stroke-1.5" />
+								</template>
+								{{ __('Enroll') }}
+							</Button>
+						</template>
 					</div>
 				</div>
 				<div
-					v-if="students.loading || students.data?.length"
+					v-if="students.loading"
+					class="py-8 text-center text-sm text-ink-gray-6"
+				>
+					{{ __('Loading students…') }}
+				</div>
+				<div
+					v-else-if="!students.data?.length"
+					class="py-8 text-center text-sm text-ink-gray-6"
+				>
+					{{ __('No students to show.') }}
+				</div>
+				<div
+					v-else
 					class="max-h-[63vh] overflow-y-auto"
 				>
 					<ListView
@@ -142,14 +166,6 @@
 							</ListRow>
 						</ListRows>
 					</ListView>
-					<div
-						v-if="students.data && students.hasNextPage"
-						class="flex justify-center my-3"
-					>
-						<Button @click="students.next()">
-							{{ __('Load More') }}
-						</Button>
-					</div>
 				</div>
 			</div>
 
@@ -210,7 +226,6 @@
 import {
 	AxisChart,
 	createResource,
-	createListResource,
 	FormControl,
 	ListView,
 	ListHeader,
@@ -242,60 +257,72 @@ const props = defineProps<{
 	batch: { [key: string]: any } | null
 }>()
 
+const canManageBatch = computed(() => {
+	if (props.batch?.data?.view_as_training_manager) {
+		return false
+	}
+	return props.batch?.data?.can_manage_batch !== false
+})
+
+const enrolledCount = computed(() => {
+	if (props.batch?.data?.view_as_training_manager) {
+		return props.batch?.data?.students?.length || 0
+	}
+	return students.data?.length || props.batch?.data?.students?.length || 0
+})
+
 const totalAssessmentCount = computed(() => {
 	const batchCount = props.batch?.data?.assessments?.length || 0
 	const courseCount = props.batch?.data?.live_course_assessments?.length || 0
 	return batchCount + courseCount
 })
 
+const batchName = computed(() => props.batch?.data?.name)
+
 const chartData = createResource({
 	url: 'lms.lms.utils.get_batch_chart_data',
-	cache: ['batch_chart_data', props.batch?.data?.name],
-	params: { batch: props.batch?.data?.name },
-	auto: true,
+	makeParams: () => ({ batch: batchName.value }),
+	auto: false,
 })
 
 const certificationCount = createResource({
-	url: 'frappe.client.get_count',
-	cache: ['batch_certificate_count', props.batch?.data?.name],
-	params: {
-		doctype: 'LMS Certificate',
-		filters: { batch_name: props.batch?.data?.name },
-	},
-	auto: true,
+	url: 'lms.lms.utils.get_batch_certified_count',
+	makeParams: () => ({ batch: batchName.value }),
+	auto: false,
 })
 
-const students = createListResource({
-	doctype: 'LMS Batch Enrollment',
-	filters: {
-		batch: props.batch?.data?.name,
+const students = createResource({
+	url: 'lms.lms.utils.get_batch_dashboard_enrollments',
+	makeParams: () => ({
+		batch: batchName.value,
+		search: searchFilter.value || undefined,
+	}),
+	auto: false,
+	transform(data) {
+		return data || []
 	},
-	fields: [
-		'name',
-		'member',
-		'member_name',
-		'member_username',
-		'member_image',
-		'creation',
-	],
-	orderBy: 'creation desc',
-	auto: true,
 })
+
+function reloadDashboardData() {
+	if (!batchName.value) {
+		return
+	}
+	students.reload()
+	chartData.reload()
+	certificationCount.reload()
+}
+
+watch(batchName, (name) => {
+	if (name) {
+		reloadDashboardData()
+	}
+}, { immediate: true })
 
 const filteredChartData = computed(() =>
 	(chartData.data || []).filter((item: { value: number }) => item.value > 0)
 )
 
 watch(searchFilter, () => {
-	let filters: Record<string, any> = {
-		batch: props.batch?.data?.name,
-	}
-
-	if (searchFilter.value) {
-		filters.member_name = ['like', `%${searchFilter.value}%`]
-	}
-
-	students.update({ filters })
 	students.reload()
 })
 

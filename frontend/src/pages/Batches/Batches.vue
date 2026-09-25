@@ -51,7 +51,7 @@
 				{{ pageHeading }}
 			</div>
 			<div
-				v-if="!showInlineLeaderboard"
+				v-if="!showStudentEnrolledLeaderboard"
 				class="flex flex-col space-y-3 lg:space-y-0 lg:flex-row lg:items-center lg:gap-x-4"
 			>
 				<TabButtons
@@ -96,26 +96,29 @@
 			/>
 		</div>
 
-		<!-- single batch -->
-		<div v-if="showInlineLeaderboard" class="max-w-4xl">
+		<!-- learner: enrolled tab with leaderboard on this page -->
+		<div v-if="showStudentEnrolledLeaderboard" class="space-y-5 max-w-5xl">
+			<div
+				v-if="batches.data.length > 1"
+				class="flex flex-wrap gap-2"
+			>
+				<Button
+					v-for="batch in batches.data"
+					:key="batch.name"
+					:variant="selectedLeaderboardBatch === batch.name ? 'solid' : 'outline'"
+					size="sm"
+					@click="selectedLeaderboardBatch = batch.name"
+				>
+					{{ batch.title }}
+				</Button>
+			</div>
 			<BatchLeaderboardPanel
-				:batch-name="batches.data[0].name"
+				v-if="selectedLeaderboardBatch"
+				:batch-name="selectedLeaderboardBatch"
 				show-batch-details-link
 			/>
 		</div>
 
-		<!-- multiple batches -->
-		<div
-			v-else-if="showEnrolledBatchCards"
-			class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
-		>
-			<BatchCard
-				v-for="batch in batches.data"
-				:key="batch.name"
-				:batch="batch"
-				show-leaderboard-action
-			/>
-		</div>
 		<div
 			v-else-if="batches.data?.length"
 			class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
@@ -150,7 +153,7 @@
 		<EmptyStateLayout v-else-if="!batches.list.loading" name="Batches" />
 
 		<div
-			v-if="!showInlineLeaderboard && !batches.list.loading && batches.hasNextPage"
+			v-if="!showStudentEnrolledLeaderboard && !batches.list.loading && batches.hasNextPage"
 			class="flex justify-center mt-5"
 		>
 			<Button @click="batches.next()">
@@ -196,7 +199,13 @@ const title = ref('')
 const certification = ref(false)
 const filters = ref({})
 const is_student = computed(() => user.data?.is_student)
-const currentTab = ref(is_student.value ? 'all' : 'upcoming')
+const isLearnerOnly = computed(() => {
+	const u = user.data
+	if (!u?.is_student) return false
+	return !u.is_moderator && !u.is_instructor && !u.is_evaluator && !u.is_system_manager
+})
+const currentTab = ref('all')
+const selectedLeaderboardBatch = ref(null)
 const orderBy = ref('start_date')
 const readOnlyMode = window.read_only_mode
 const router = useRouter()
@@ -204,6 +213,9 @@ const showBatchModal = ref(false)
 
 onMounted(() => {
 	setFiltersFromQuery()
+	if (isLearnerOnly.value) {
+		currentTab.value = 'enrolled'
+	}
 	updateBatches()
 	categories.value = [
 		{
@@ -212,6 +224,30 @@ onMounted(() => {
 		},
 	]
 })
+
+watch(
+	() => user.data,
+	(u) => {
+		if (u && isLearnerOnly.value && currentTab.value === 'all') {
+			currentTab.value = 'enrolled'
+			updateBatches()
+		}
+	}
+)
+
+watch(
+	() => batches.data,
+	(data) => {
+		if (!data?.length) {
+			selectedLeaderboardBatch.value = null
+			return
+		}
+		const stillValid = data.some((b) => b.name === selectedLeaderboardBatch.value)
+		if (!stillValid) {
+			selectedLeaderboardBatch.value = data[0].name
+		}
+	}
+)
 
 const setFiltersFromQuery = () => {
 	let queries = new URLSearchParams(location.search)
@@ -313,6 +349,9 @@ const updateTabFilter = () => {
 }
 
 const updateStudentFilter = () => {
+	if (!user.data) {
+		return
+	}
 	if (is_student.value && currentTab.value === 'enrolled') {
 		return
 	}
@@ -322,7 +361,7 @@ const updateStudentFilter = () => {
 		delete filters.value['published']
 		return
 	}
-	if (!user.data || is_student.value) {
+	if (is_student.value) {
 		filters.value['start_date'] = ['>=', dayjs().format('YYYY-MM-DD')]
 		filters.value['published'] = 1
 		delete filters.value['student_all']
@@ -395,18 +434,11 @@ const isStudentEnrolledTab = computed(
 	() => is_student.value && currentTab.value === 'enrolled'
 )
 
-const showInlineLeaderboard = computed(
+const showStudentEnrolledLeaderboard = computed(
 	() =>
 		isStudentEnrolledTab.value &&
 		!batches.list.loading &&
-		batches.data?.length === 1
-)
-
-const showEnrolledBatchCards = computed(
-	() =>
-		isStudentEnrolledTab.value &&
-		!batches.list.loading &&
-		batches.data?.length > 1
+		(batches.data?.length || 0) > 0
 )
 
 const showStudentNotEnrolled = computed(
@@ -414,7 +446,7 @@ const showStudentNotEnrolled = computed(
 )
 
 const pageHeading = computed(() => {
-	if (showInlineLeaderboard.value) return __('Your Batch Leaderboard')
+	if (showStudentEnrolledLeaderboard.value) return __('Your Batch Leaderboard')
 	if (isStudentEnrolledTab.value) return __('Your Batches')
 	return __('All Batches')
 })

@@ -62,6 +62,15 @@
 					<p class="text-sm font-medium text-white/75">{{ greeting }}, {{ firstName }} 👋</p>
 					<h2 class="text-2xl font-semibold leading-tight text-white sm:text-[1.75rem]">{{ bannerTitle }}</h2>
 					<p class="text-sm leading-6 text-white/80">{{ bannerDetail }}</p>
+					<p
+						v-if="home.data?.learner?.training_manager?.full_name"
+						class="text-sm text-white/75"
+					>
+						{{ __('Training Manager') }}:
+						<span class="font-medium text-white">{{
+							home.data.learner.training_manager.full_name
+						}}</span>
+					</p>
 					<div v-if="primaryAction" class="mt-3">
 						<button type="button" class="il-btn il-btn-light" @click="primaryAction.run">
 							<component :is="primaryAction.icon" class="h-4 w-4" />

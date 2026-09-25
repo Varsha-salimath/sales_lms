@@ -1,0 +1,47 @@
+<p>{{ _("Dear") }} {{ student_name }},</p>
+<br>
+{% if is_new_account %}
+<p>
+	{{ _("Welcome to Infinity Learn LMS. Your learner account is ready.") }}
+</p>
+<br>
+{% endif %}
+<p>
+	{{ _("You have been enrolled in the following batch:") }}
+</p>
+<p>
+	<b>{{ _("Batch:") }}</b> {{ batch_title }}<br>
+	{% if start_date %}
+	<b>{{ _("Start date:") }}</b> {{ frappe.utils.format_date(start_date, "medium") }}<br>
+	{% endif %}
+	{% if start_time %}
+	<b>{{ _("Timings:") }}</b> {{ frappe.utils.format_time(start_time, "hh:mm a") }}<br>
+	{% endif %}
+	{% if medium %}
+	<b>{{ _("Medium:") }}</b> {{ medium }}<br>
+	{% endif %}
+</p>
+{% if courses %}
+<p><b>{{ _("Course(s) in this batch:") }}</b></p>
+<ul>
+	{% for course in courses %}
+	<li>{{ course }}</li>
+	{% endfor %}
+</ul>
+{% endif %}
+{% if training_manager_name %}
+<p>
+	<b>{{ _("Your Training Manager:") }}</b> {{ training_manager_name }}
+	{% if training_manager_email %} ({{ training_manager_email }}){% endif %}
+</p>
+{% endif %}
+<br>
+<p>
+	<a href="{{ batch_url }}">{{ _("Open your batch in LMS") }}</a>
+</p>
+{% if is_new_account and login_url %}
+<p>{{ _("Sign in with this email address:") }} <a href="{{ login_url }}">{{ login_url }}</a></p>
+{% endif %}
+<br>
+<p>{{ _("If you need help, reply to this email or contact your Training Manager.") }}</p>
+<p>{{ _("Best regards,") }}<br>{{ _("Infinity Learn LMS Team") }}</p>
