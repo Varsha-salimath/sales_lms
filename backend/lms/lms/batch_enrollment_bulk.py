@@ -591,7 +591,9 @@ def get_batch_upload_template_csv(batch: str | None = None):
 def preview_batch_enrollment_upload(batch: str, file_content: str, options: str | None = None):
 	_ensure_bulk_enroll(batch)
 	opts = json.loads(options or "{}")
-	assign_tm = bool(opts.get("assign_training_manager", True))
+	# A Training Manager line gives that person the learner's reports and the power to unlock
+	# their vivas, so choosing it stays with Admins even when others may upload the enrolment.
+	assign_tm = bool(opts.get("assign_training_manager", True)) and _can_create_accounts()
 	rows = _parse_rows(file_content or "")
 	if not rows:
 		frappe.throw(_("No data rows found in the file."))
@@ -605,7 +607,9 @@ def commit_batch_enrollment_upload(batch: str, file_content: str, options: str |
 	_ensure_bulk_enroll(batch)
 	opts = json.loads(options or "{}")
 	send_welcome = bool(opts.get("send_welcome", True))
-	assign_tm = bool(opts.get("assign_training_manager", True))
+	# A Training Manager line gives that person the learner's reports and the power to unlock
+	# their vivas, so choosing it stays with Admins even when others may upload the enrolment.
+	assign_tm = bool(opts.get("assign_training_manager", True)) and _can_create_accounts()
 
 	rows = _parse_rows(file_content or "")
 	if not rows:
