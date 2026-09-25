@@ -64,6 +64,9 @@
 							:placeholder="__('Search by name')"
 							type="text"
 						/>
+						<Button variant="outline" @click="showBulkEnrollModal = true">
+							{{ __('Bulk enroll') }}
+						</Button>
 						<Button @click="showEnrollmentModal = true">
 							<template #prefix>
 								<Plus class="size-4 stroke-1.5" />
@@ -190,6 +193,12 @@
 		:batch="batch"
 		:students="students"
 	/>
+	<BatchBulkEnrollModal
+		v-if="batch?.data?.name"
+		v-model="showBulkEnrollModal"
+		:batch-name="batch.data.name"
+		@success="onBulkEnrollSuccess"
+	/>
 	<BatchStudentProgress
 		v-if="showProgressModal"
 		v-model="showProgressModal"
@@ -220,10 +229,12 @@ import BatchFeedback from '@/pages/Batches/components/BatchFeedback.vue'
 import BatchStudentProgress from '@/pages/Batches/components/BatchStudentProgress.vue'
 import NumberChartGraph from '@/components/NumberChartGraph.vue'
 import StudentModal from '@/components/Modals/StudentModal.vue'
+import BatchBulkEnrollModal from '@/pages/Batches/components/BatchBulkEnrollModal.vue'
 
 const dayjs = inject<typeof dayjsType>('$dayjs')!
 const searchFilter = ref<string | null>(null)
 const showEnrollmentModal = ref<boolean>(false)
+const showBulkEnrollModal = ref<boolean>(false)
 const showProgressModal = ref<boolean>(false)
 const currentStudent = ref<any>(null)
 
@@ -309,4 +320,9 @@ const showProgressChart = computed(
 		(props.batch?.data?.courses?.length ||
 			props.batch?.data?.assessments?.length)
 )
+
+function onBulkEnrollSuccess() {
+	students.reload()
+	props.batch?.reload?.()
+}
 </script>
