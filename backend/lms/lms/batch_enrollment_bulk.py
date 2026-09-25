@@ -54,6 +54,8 @@ def _ensure_bulk_enroll(batch: str):
 		)
 	if not frappe.db.exists("LMS Batch", batch):
 		frappe.throw(_("Batch not found."))
+	if not content_scope.can_access("LMS Batch", batch):
+		frappe.throw(_("This batch belongs to another team."), frappe.PermissionError)
 
 
 def _can_create_accounts() -> bool:
@@ -309,7 +311,13 @@ def _assign_member_teams(email: str, departments: list[str], access_role: str = 
 	)
 	doc.user = email
 	doc.full_name = frappe.db.get_value("User", email, "full_name")
-	doc.access_role = access_role
+	# Enrolling someone in a batch must never change what they can do elsewhere. Only a brand-new
+	# member gets the default role; an existing Admin or Manager in the CSV stays exactly as they are.
+	if doc.is_new() or not doc.access_role:
+		doc.access_role = access_role
+	existing_primary = next((r.department for r in doc.get("departments") or [] if r.is_primary), None)
+	if existing_primary in departments:
+		primary = existing_primary
 	designations = {r.department: r.designation for r in doc.get("departments") or []}
 	doc.set("departments", [])
 	for d in departments:
