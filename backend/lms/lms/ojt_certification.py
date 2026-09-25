@@ -644,11 +644,12 @@ def parse_ojt_certification_csv(text: str) -> list[dict]:
 
 
 def replace_ojt_certification_rows(rows: list[dict]) -> int:
-	"""Bring stored rows in line with the sheet.
+	"""Bring the sheet's rows into the table: update the ones it has, add the ones that are new.
 
-	Rows are updated in place by `row_key` rather than deleted and re-inserted, so a bad sheet can
-	never leave the table half empty, and anything the sheet doesn't carry (manual edits to other
-	fields) survives. Rows that have left the sheet are removed only after every other row landed.
+	Rows the sheet doesn't mention are never removed. The sheet isn't the only thing that writes
+	here — the attendance CSV import and the report form add and edit rows too — so "not in the
+	sheet" means "recorded somewhere else", not "gone". Removing them would wipe every learner
+	uploaded by CSV the moment the (much shorter) sheet was synced.
 	"""
 	# The sheet can repeat a learner+batch; the last row wins. Duplicates used to break the insert
 	# halfway through, after the whole table had already been deleted.
@@ -677,10 +678,6 @@ def replace_ojt_certification_rows(rows: list[dict]) -> int:
 		doc.flags.from_sheet_sync = True
 		doc.save(ignore_permissions=True) if existing else doc.insert(ignore_permissions=True)
 
-	keys = list(unique)
-	stale = frappe.get_all(DOCTYPE, filters={"row_key": ["not in", keys]}, pluck="name") if keys else []
-	for name in stale:
-		frappe.delete_doc(DOCTYPE, name, ignore_permissions=True, force=True, delete_permanently=True)
 	return len(unique)
 
 
