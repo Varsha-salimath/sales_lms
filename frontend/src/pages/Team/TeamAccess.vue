@@ -140,7 +140,16 @@
 								{{ m.user }}<template v-if="m.employee_code"> · {{ m.employee_code }}</template>
 							</div>
 						</div>
-						<span class="ta-role" :class="`is-${m.access_role.toLowerCase()}`">{{ roleLabel(m.access_role) }}</span>
+						<div class="flex flex-wrap gap-1 justify-end">
+							<span
+								v-for="r in displayAccessRoles(m)"
+								:key="r"
+								class="ta-role"
+								:class="`is-${r.toLowerCase()}`"
+							>
+								{{ roleLabel(r) }}
+							</span>
+						</div>
 						<div class="ta-teams-cell">
 							<span v-for="d in m.departments" :key="d.department" class="ta-chip" :class="{ 'is-primary': d.is_primary }">{{ d.department }}</span>
 							<span v-if="!m.departments.length" class="text-xs text-[color:var(--il-warning-50)]">{{ __('No team') }}</span>
@@ -275,11 +284,30 @@
 
 				<div>
 					<div class="ta-label">{{ __('Access') }}</div>
+					<p class="mb-2 text-xs text-[color:var(--il-muted)]">
+						{{ __('Select one or more roles. Leave all unchecked for learner-only access.') }}
+					</p>
 					<div class="grid gap-2 sm:grid-cols-2">
-						<label v-for="r in roleHelp" :key="r.role" class="ta-option" :class="{ 'is-on': form.access_role === r.role, 'is-off': !data?.roles.includes(r.role) }">
-							<input v-model="form.access_role" type="radio" :value="r.role" :disabled="!data?.roles.includes(r.role)" class="sr-only" />
+						<label
+							v-for="r in staffRoleHelp"
+							:key="r.role"
+							class="ta-option"
+							:class="{
+								'is-on': form.access_roles.includes(r.role),
+								'is-off': !data?.roles.includes(r.role),
+							}"
+						>
+							<input
+								type="checkbox"
+								class="sr-only"
+								:checked="form.access_roles.includes(r.role)"
+								:disabled="!data?.roles.includes(r.role)"
+								@change="toggleAccessRole(r.role)"
+							/>
 							<span class="text-sm font-medium text-[color:var(--il-ink)]">{{ roleLabel(r.role) }}</span>
-							<span class="text-xs leading-4 text-[color:var(--il-muted)]">{{ data?.roles.includes(r.role) ? r.text : __('Only a Super Admin can give this.') }}</span>
+							<span class="text-xs leading-4 text-[color:var(--il-muted)]">{{
+								data?.roles.includes(r.role) ? r.text : __('Only a Super Admin can give this.')
+							}}</span>
 						</label>
 					</div>
 				</div>
@@ -482,7 +510,7 @@ const people = computed(() => {
 	const term = search.value.trim().toLowerCase()
 	return (data.value?.members || []).filter((m) => {
 		if (team.value && !m.departments.some((d) => d.department === team.value)) return false
-		if (filterRole.value && m.access_role !== filterRole.value) return false
+		if (filterRole.value && !memberAccessRoles(m).includes(filterRole.value)) return false
 		if (filterStatus.value === 'active' && m.status !== 'Active') return false
 		if (filterStatus.value === 'inactive' && m.status === 'Active') return false
 		if (!matchesManagerFilter(m)) return false
@@ -531,7 +559,7 @@ const lines = computed(() => {
 		if (lineTypeFilter.value && l.line_type !== lineTypeFilter.value) return false
 		if (filterRole.value) {
 			const member = (data.value?.members || []).find((m) => m.user === l.member)
-			if (!member || member.access_role !== filterRole.value) return false
+			if (!member || !memberAccessRoles(member).includes(filterRole.value)) return false
 		}
 		if (term) {
 			const hay = `${l.member_name || ''} ${l.member || ''} ${l.manager_name || ''} ${l.manager || ''}`.toLowerCase()
@@ -547,7 +575,18 @@ const roleHelp = [
 	{ role: 'Manager', text: __('Sees their reports’ progress and assigns refreshers from their team.') },
 	{ role: 'Admin', text: __('Runs a whole team: adds people, sets managers, sees all team reports.') },
 ]
+const staffRoleHelp = computed(() => roleHelp.filter((r) => r.role !== 'User'))
 const roleLabel = (r) => ({ User: __('Learner'), Instructor: __('Instructor'), Manager: __('Manager'), Admin: __('Team admin') })[r] || r
+
+function memberAccessRoles(m) {
+	const roles = m?.access_roles?.length ? [...m.access_roles] : [m?.access_role || 'User']
+	return roles.length ? roles : ['User']
+}
+
+function displayAccessRoles(m) {
+	const roles = memberAccessRoles(m)
+	return roles.includes('User') && roles.length === 1 ? roles : roles.filter((r) => r !== 'User')
+}
 const shortType = (t) => ({ 'Training Manager': 'TM', 'Performance Manager': 'PM', 'Line Manager': 'L1' })[t] || t
 
 function initials(name) {
@@ -581,7 +620,7 @@ const form = reactive({
 	employee_code: '',
 	first_name: '',
 	last_name: '',
-	access_role: 'User',
+	access_roles: [],
 	departments: [],
 	primary: '',
 	managers: [],
@@ -609,7 +648,7 @@ function openMember(m) {
 		first_name: '',
 		last_name: '',
 		employee_code: '',
-		access_role: m?.access_role || 'User',
+		access_roles: displayAccessRoles(m).filter((r) => r !== 'User'),
 		departments: m ? m.departments.filter((d) => assignableTeams.value.some((t) => t.name === d.department)).map((d) => d.department) : defaultTeams(),
 		primary: m?.departments.find((d) => d.is_primary)?.department || '',
 		managers: m?.managers || [],
@@ -630,10 +669,21 @@ function toggleTeam(name) {
 	if (!form.departments.includes(form.primary)) form.primary = form.departments[0] || ''
 }
 
+function toggleAccessRole(role) {
+	if (!data.value?.roles.includes(role)) return
+	const i = form.access_roles.indexOf(role)
+	if (i >= 0) form.access_roles.splice(i, 1)
+	else form.access_roles.push(role)
+}
+
 async function saveMember() {
 	saving.value = true
 	try {
-		const common = { access_role: form.access_role, departments: form.departments, primary: form.primary || form.departments[0] }
+		const common = {
+			access_roles: form.access_roles,
+			departments: form.departments,
+			primary: form.primary || form.departments[0],
+		}
 		if (form.isNew && form.mode === 'new') {
 			await call('lms.lms.team_access.create_account', {
 				...common,

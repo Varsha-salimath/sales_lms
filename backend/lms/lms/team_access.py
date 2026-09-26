@@ -15,6 +15,7 @@ from frappe import _
 from frappe.utils import getdate, nowdate
 
 from lms.lms import access
+from lms.lms.doctype.lms_member.lms_member import highest_access_role, normalize_access_roles_list
 from lms.lms.doctype.lms_reporting_line.lms_reporting_line import end_reporting_line
 
 ROLES = ["User", "Instructor", "Manager", "Admin"]
@@ -51,7 +52,8 @@ def _can_edit_member(user):
 		return True
 	if not frappe.db.exists("LMS Member", user):
 		return True  # adding someone new: allowed, but only into the admin's own teams
-	if frappe.db.get_value("LMS Member", user, "access_role") == "Admin":
+	member_roles = _member_roles_for_user(user)
+	if "Admin" in member_roles:
 		return False  # only a Super Admin changes another admin
 	current = set(
 		frappe.get_all("LMS Member Department", filters={"parenttype": "LMS Member", "parent": user}, pluck="department")
@@ -108,9 +110,12 @@ def get_team_access():
 	for r in rows:
 		member_teams.setdefault(r.parent, []).append({"department": r.department, "is_primary": r.is_primary})
 
+	member_fields = ["name as user", "full_name", "access_role", "status"]
+	if frappe.db.has_column("LMS Member", "access_roles"):
+		member_fields.append("access_roles")
 	members = frappe.get_all(
 		"LMS Member",
-		fields=["name as user", "full_name", "access_role", "status"],
+		fields=member_fields,
 		order_by="full_name asc",
 	)
 	code_field = ["employee_code"] if frappe.db.has_column("User", "employee_code") else []
@@ -139,8 +144,10 @@ def get_team_access():
 		m.user_image = images.get(m.user)
 		m.employee_code = (user_rows.get(m.user) or {}).get("employee_code")
 		m.managers = managers_of.get(m.user, [])
+		m.access_roles = normalize_access_roles_list(getattr(m, "access_roles", None) or [m.access_role or "User"])
+		m.access_role = highest_access_role(m.access_roles)
 		in_scope = teams is None or not m_teams or any(d["department"] in teams for d in m_teams)
-		m.can_edit = teams is None or (in_scope and m.access_role != "Admin")
+		m.can_edit = teams is None or (in_scope and "Admin" not in m.access_roles)
 		if in_scope:
 			out.append(m)
 
@@ -211,16 +218,45 @@ def _as_list(value):
 	return list(value or [])
 
 
+def _member_roles_for_user(user: str) -> list[str]:
+	if not frappe.db.exists("LMS Member", user):
+		return ["User"]
+	row = frappe.db.get_value("LMS Member", user, ["access_roles", "access_role"], as_dict=True)
+	if row and row.get("access_roles"):
+		return normalize_access_roles_list(row.access_roles)
+	return normalize_access_roles_list([row.access_role if row else "User"])
+
+
+def _coerce_access_roles(access_roles=None, access_role: str | None = None) -> list[str]:
+	if access_roles is not None:
+		return normalize_access_roles_list(_as_list(access_roles) if not isinstance(access_roles, list) else access_roles)
+	if access_role:
+		return normalize_access_roles_list([access_role])
+	return ["User"]
+
+
+def _validate_access_roles(roles: list[str]) -> None:
+	for role in roles:
+		if role not in ROLES:
+			frappe.throw(_("Unknown access role: {0}").format(role))
+	if "Admin" in roles and not access.is_super_admin():
+		frappe.throw(_("Only a Super Admin can make someone an Admin."), frappe.PermissionError)
+
+
 @frappe.whitelist(methods=["POST"])
-def save_member(user: str, access_role: str, departments=None, primary: str | None = None):
-	"""Create or update a person's access role and teams."""
+def save_member(
+	user: str,
+	access_role: str | None = None,
+	access_roles=None,
+	departments=None,
+	primary: str | None = None,
+):
+	"""Create or update a person's access role(s) and teams."""
 	_ensure_admin()
 	if not frappe.db.exists("User", user) or user in ("Guest", "Administrator"):
 		frappe.throw(_("Pick a valid user."))
-	if access_role not in ROLES:
-		frappe.throw(_("Unknown access role."))
-	if access_role == "Admin" and not access.is_super_admin():
-		frappe.throw(_("Only a Super Admin can make someone an Admin."), frappe.PermissionError)
+	roles = _coerce_access_roles(access_roles, access_role)
+	_validate_access_roles(roles)
 	if user == frappe.session.user and not access.is_super_admin():
 		frappe.throw(_("You cannot change your own access."), frappe.PermissionError)
 	_ensure_can_edit(user)
@@ -248,7 +284,8 @@ def save_member(user: str, access_role: str, departments=None, primary: str | No
 	doc = frappe.get_doc("LMS Member", user) if frappe.db.exists("LMS Member", user) else frappe.new_doc("LMS Member")
 	doc.user = user
 	doc.full_name = frappe.db.get_value("User", user, "full_name")
-	doc.access_role = access_role
+	doc.access_roles = roles
+	doc.access_role = highest_access_role(roles)
 	designations = {r.department: r.designation for r in doc.get("departments") or []}
 	doc.set("departments", [])
 	for d in departments:
@@ -396,6 +433,7 @@ def create_account(
 	first_name: str,
 	last_name: str | None = None,
 	access_role: str = "User",
+	access_roles=None,
 	departments=None,
 	primary: str | None = None,
 	employee_code: str | None = None,
@@ -411,9 +449,8 @@ def create_account(
 		frappe.throw(_("Enter a valid email and first name."))
 	if frappe.db.exists("User", email):
 		frappe.throw(_("{0} already has an account. Search for them instead.").format(email))
-	# Validate the team/role choice before creating anything.
-	if access_role not in ROLES or (access_role == "Admin" and not access.is_super_admin()):
-		frappe.throw(_("You cannot give this access role."), frappe.PermissionError)
+	roles = _coerce_access_roles(access_roles, access_role)
+	_validate_access_roles(roles)
 	teams = _my_teams()
 	chosen = [d for d in dict.fromkeys(_as_list(departments)) if d]
 	if not chosen or (teams is not None and any(d not in teams for d in chosen)):
@@ -436,5 +473,5 @@ def create_account(
 			frappe.throw(_("Employee code {0} already belongs to someone else.").format(code))
 		user.employee_code = code  # otherwise a TEMP-#### placeholder is assigned
 	user.insert(ignore_permissions=True)
-	save_member(email, access_role, chosen, primary)
+	save_member(email, access_roles=roles, departments=chosen, primary=primary)
 	return {"user": email}

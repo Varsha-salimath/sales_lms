@@ -130,3 +130,4 @@ lms.patches.v2_0.signup_school_and_phone_fields #18-08-2026
 lms.patches.v2_0.fix_workspace_progress_filter #25-08-2026
 lms.patches.v2_0.seed_ojt_certification_metrics #18-09-2026
 lms.patches.v2_0.backfill_ojt_certification_learner #18-09-2026
+lms.patches.v2_0.lms_member_access_roles #26-09-2026
