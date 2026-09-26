@@ -284,7 +284,7 @@ def save_member(
 	doc = frappe.get_doc("LMS Member", user) if frappe.db.exists("LMS Member", user) else frappe.new_doc("LMS Member")
 	doc.user = user
 	doc.full_name = frappe.db.get_value("User", user, "full_name")
-	doc.access_roles = roles
+	doc.access_roles = json.dumps(roles)
 	doc.access_role = highest_access_role(roles)
 	designations = {r.department: r.designation for r in doc.get("departments") or []}
 	doc.set("departments", [])
