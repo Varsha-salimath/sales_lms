@@ -1,0 +1,32 @@
+{
+ "actions": [],
+ "creation": "2026-09-28 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["user", "skipped_on"],
+ "fields": [
+  {"fieldname": "user", "fieldtype": "Link", "label": "User", "options": "User", "reqd": 1, "unique": 1, "in_list_view": 1},
+  {"fieldname": "skipped_on", "fieldtype": "Datetime", "label": "Skipped On"}
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-09-28 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "LMS",
+ "name": "Ops Checklist Tour State",
+ "owner": "Administrator",
+ "permissions": [
+  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1, "print": 1, "email": 1, "share": 1},
+  {"role": "Sales Training Team", "read": 1, "report": 1},
+  {"role": "Sales Trainee Manager", "read": 1, "report": 1},
+  {"role": "Sales Training Finance", "read": 1, "report": 1},
+  {"role": "Sales Training Leadership", "read": 1, "report": 1}
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "user",
+ "autoname": "field:user",
+ "naming_rule": "By fieldname",
+ "track_changes": 0
+}
