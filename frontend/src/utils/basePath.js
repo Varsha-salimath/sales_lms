@@ -10,8 +10,20 @@ export function getLmsBasePath() {
 }
 
 export function getRouterHistoryBase() {
-	const base = getLmsBasePath()
-	return base ? `/${base}` : '/'
+	const configured = getLmsBasePath()
+	if (!configured) {
+		return '/'
+	}
+	// Canonical LMS URLs are at site root (/analytics). If boot still has legacy
+	// lms_path but the browser path has no /lms prefix, mount the router at /.
+	if (typeof window !== 'undefined') {
+		const path = window.location.pathname || '/'
+		const prefix = `/${configured}`
+		if (path !== prefix && !path.startsWith(`${prefix}/`)) {
+			return '/'
+		}
+	}
+	return `/${configured}`
 }
 
 export function getLmsRoute(path = '') {

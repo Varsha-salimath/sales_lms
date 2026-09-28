@@ -8,14 +8,15 @@ Branch: `feature/consumer-sales-training-payroll-tracker` · App: `lms` (this re
 
 ## 1. Where it lives
 
-New screens live inside the existing LMS Vue app, under the **Sales Trainee** section of the sidebar (visible to staff roles, not learners):
+New screens live inside the existing LMS Vue app. In the sidebar, open **Sales trainees** (same flyout pattern as **Curriculum**) — visible to staff roles, not learners:
 
-| Sidebar label | Route | Component |
+| Flyout item | Route | Component |
 |---|---|---|
 | Trainee onboarding | `/sales-trainees/import` | [`TraineeImport.vue`](../frontend/src/pages/Sales/TraineeImport.vue) |
 | Trainees | `/sales-trainees` | [`TraineeList.vue`](../frontend/src/pages/Sales/TraineeList.vue) |
 | (cohorts, linked from Trainees) | `/sales-trainees/cohorts` | [`TraineeCohortList.vue`](../frontend/src/pages/Sales/TraineeCohortList.vue) |
 | Mark attendance | `/sales-trainees/attendance` | [`TraineeAttendance.vue`](../frontend/src/pages/Sales/TraineeAttendance.vue) |
+| Attendance history | `/sales-trainees/attendance-history` | [`TraineeAttendanceHistory.vue`](../frontend/src/pages/Sales/TraineeAttendanceHistory.vue) |
 | Payroll cycles | `/sales-trainees/payroll` | [`WeeklyPayrollCycle.vue`](../frontend/src/pages/Sales/WeeklyPayrollCycle.vue) |
 | Trainee dashboard | `/sales-trainees/dashboard` | [`TraineeDashboard.vue`](../frontend/src/pages/Sales/TraineeDashboard.vue) |
 

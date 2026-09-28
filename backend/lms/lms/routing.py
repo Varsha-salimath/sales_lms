@@ -54,6 +54,7 @@ SPA_TOP_LEVEL = {
 	"hello-ilians",
 	"viva",
 	"vivas",
+	"sales-trainees",
 }
 
 # Exact SPA paths the Vue router knows about (extra segments → invalid URL).
@@ -135,6 +136,13 @@ _ALLOWED_SPA_ROUTE_RES = tuple(
 		r"data-import/doctype/[^/]+",
 		r"data-import/[^/]+",
 		r"data-import",
+		r"sales-trainees/import",
+		r"sales-trainees/cohorts",
+		r"sales-trainees/attendance-history",
+		r"sales-trainees/attendance",
+		r"sales-trainees/payroll",
+		r"sales-trainees/dashboard",
+		r"sales-trainees",
 	)
 )
 

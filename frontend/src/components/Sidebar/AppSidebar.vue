@@ -64,6 +64,8 @@
 						<div v-for="item in link.items" :key="item.label">
 							<SidebarLearningMenu
 								v-if="item.learningMenu"
+								:label="item.label"
+								:icon="item.icon"
 								:menuItems="item.menuItems"
 								:isCollapsed="sidebarStore.isSidebarCollapsed"
 							/>
