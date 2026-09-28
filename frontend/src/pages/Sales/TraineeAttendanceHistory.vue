@@ -21,6 +21,14 @@
 				>
 					Weekly
 				</button>
+				<button
+					type="button"
+					class="px-3 py-1.5 text-sm font-medium"
+					:class="view === 'monthly' ? 'bg-[color:var(--genius-blue)] text-white' : 'text-[color:var(--genius-muted)]'"
+					@click="view = 'monthly'"
+				>
+					Monthly
+				</button>
 			</div>
 			<input
 				v-if="view === 'daily'"
@@ -30,9 +38,16 @@
 				style="border-color: var(--genius-border)"
 			/>
 			<input
-				v-else
+				v-else-if="view === 'weekly'"
 				v-model="weekStart"
 				type="date"
+				class="rounded-lg border px-2.5 py-1.5 text-sm"
+				style="border-color: var(--genius-border)"
+			/>
+			<input
+				v-else
+				v-model="month"
+				type="month"
 				class="rounded-lg border px-2.5 py-1.5 text-sm"
 				style="border-color: var(--genius-border)"
 			/>
@@ -44,8 +59,11 @@
 				<option value="">All cohorts</option>
 				<option v-for="c in cohorts.data" :key="c.name" :value="c.name">{{ c.cohort_name }}</option>
 			</select>
-			<Button v-if="view === 'weekly' && canExportWeekly" size="sm" :loading="exporting" @click="exportWeekly">
+			<Button v-if="view === 'weekly' && canExportReports" size="sm" :loading="exporting" @click="exportWeekly">
 				Export weekly attendance
+			</Button>
+			<Button v-if="view === 'monthly' && canExportReports" size="sm" :loading="exporting" @click="exportMonthly">
+				Export monthly attendance
 			</Button>
 		</div>
 
@@ -87,7 +105,7 @@
 			</div>
 		</div>
 
-		<div v-else class="genius-card rounded-2xl p-4 sm:p-5">
+		<div v-else-if="view === 'weekly'" class="genius-card rounded-2xl p-4 sm:p-5">
 			<div class="overflow-x-auto">
 				<table class="min-w-full text-left text-sm">
 					<thead>
@@ -120,6 +138,44 @@
 				</div>
 			</div>
 		</div>
+
+		<div v-else class="genius-card rounded-2xl p-4 sm:p-5">
+			<div class="overflow-x-auto">
+				<table class="min-w-full text-left text-sm">
+					<thead>
+						<tr
+							class="border-b text-[11px] uppercase tracking-wide text-[color:var(--genius-muted)]"
+							style="border-color: var(--genius-border)"
+						>
+							<th class="pb-2 pr-3 font-medium">Trainee</th>
+							<th class="pb-2 pr-3 font-medium">Assigned Trainer</th>
+							<th class="pb-2 pr-3 font-medium">Present</th>
+							<th class="pb-2 pr-3 font-medium">Absent</th>
+							<th class="pb-2 pr-3 font-medium">Leave</th>
+							<th class="pb-2 font-medium">Holiday</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr
+							v-for="t in trainees.data"
+							:key="t.name"
+							class="border-b last:border-0"
+							style="border-color: var(--genius-border)"
+						>
+							<td class="py-2.5 pr-3 font-medium text-[color:var(--genius-navy)]">{{ t.trainee_name }}</td>
+							<td class="py-2.5 pr-3 text-xs text-[color:var(--genius-muted)]">{{ t.assigned_trainer || 'Unassigned' }}</td>
+							<td class="py-2.5 pr-3">{{ monthlyCountFor(t.name, 'Present') }}</td>
+							<td class="py-2.5 pr-3">{{ monthlyCountFor(t.name, 'Absent') }}</td>
+							<td class="py-2.5 pr-3">{{ monthlyCountFor(t.name, 'Leave') }}</td>
+							<td class="py-2.5">{{ monthlyCountFor(t.name, 'Holiday') }}</td>
+						</tr>
+					</tbody>
+				</table>
+				<div v-if="!trainees.loading && !trainees.data?.length" class="py-8 text-center text-sm text-[color:var(--genius-muted)]">
+					No trainees in this scope.
+				</div>
+			</div>
+		</div>
 	</div>
 </template>
 
@@ -129,7 +185,7 @@ import { call, createListResource, Button } from 'frappe-ui'
 import { usersStore } from '@/stores/user'
 
 const { userResource } = usersStore()
-const canExportWeekly = computed(() => {
+const canExportReports = computed(() => {
 	const roles = userResource?.data?.roles || []
 	return roles.includes('Sales Training Finance') || roles.includes('Sales Training Team')
 })
@@ -147,6 +203,7 @@ const view = ref('daily')
 const cohort = ref('')
 const date = ref(new Date().toISOString().slice(0, 10))
 const weekStart = ref(mondayOf(new Date()).toISOString().slice(0, 10))
+const month = ref(new Date().toISOString().slice(0, 7))
 const exporting = ref(false)
 const missing = ref([])
 
@@ -181,13 +238,14 @@ const cohorts = createListResource({
 
 const trainees = createListResource({
 	doctype: 'Sales Trainee',
-	fields: ['name', 'trainee_name'],
+	fields: ['name', 'trainee_name', 'assigned_trainer'],
 	filters: { training_status: 'In Training' },
 	auto: true,
 	pageLength: 500,
 	onSuccess: () => {
 		loadDaily()
 		loadWeekly()
+		loadMonthly()
 	},
 })
 
@@ -239,7 +297,8 @@ function dailyStatusBadge(trainee) {
 watch([date, () => trainees.data], loadDaily)
 watch(view, (v) => {
 	if (v === 'daily') loadDaily()
-	else loadWeekly()
+	else if (v === 'weekly') loadWeekly()
+	else loadMonthly()
 })
 
 // Weekly view
@@ -287,6 +346,62 @@ async function exportWeekly() {
 		const link = document.createElement('a')
 		link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${encoded}`
 		link.download = `weekly-attendance-${weekStart.value}.xlsx`
+		link.click()
+	} finally {
+		exporting.value = false
+	}
+}
+
+// Monthly view
+const monthlyMarks = reactive({})
+
+const monthlyAttendance = createListResource({
+	doctype: 'Sales Trainee Attendance',
+	fields: ['trainee', 'status'],
+	filters: { trainee: ['in', ['']], attendance_date: ['between', [`${month.value}-01`, `${month.value}-01`]] },
+	pageLength: 10000,
+	auto: false,
+	onSuccess(rows) {
+		Object.keys(monthlyMarks).forEach((k) => delete monthlyMarks[k])
+		for (const r of rows) {
+			monthlyMarks[r.trainee] = monthlyMarks[r.trainee] || {}
+			monthlyMarks[r.trainee][r.status] = (monthlyMarks[r.trainee][r.status] || 0) + 1
+		}
+	},
+})
+
+const monthEnd = computed(() => {
+	const [y, m] = month.value.split('-').map(Number)
+	const lastDay = new Date(y, m, 0).getDate()
+	return `${month.value}-${String(lastDay).padStart(2, '0')}`
+})
+
+function loadMonthly() {
+	if (view.value !== 'monthly') return
+	const names = (trainees.data || []).map((t) => t.name)
+	if (!names.length) return
+	monthlyAttendance.update({
+		filters: { trainee: ['in', names], attendance_date: ['between', [`${month.value}-01`, monthEnd.value]] },
+	})
+	monthlyAttendance.reload()
+}
+
+function monthlyCountFor(trainee, status) {
+	return monthlyMarks[trainee]?.[status] || 0
+}
+
+watch([month, () => trainees.data], loadMonthly)
+
+async function exportMonthly() {
+	exporting.value = true
+	try {
+		const encoded = await call('lms.lms.trainee_reports.export_monthly_attendance_report', {
+			month: month.value,
+			cohort: cohort.value || undefined,
+		})
+		const link = document.createElement('a')
+		link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${encoded}`
+		link.download = `monthly-attendance-${month.value}.xlsx`
 		link.click()
 	} finally {
 		exporting.value = false

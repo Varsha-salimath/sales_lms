@@ -10,6 +10,7 @@ from lms.lms.trainee_reports import (
 	export_exit_churn_report,
 	export_finance_reconciliation_report,
 	export_location_cohort_report,
+	export_monthly_attendance_report,
 	export_training_outcome_report,
 	export_vendor_payroll_input,
 	export_weekly_attendance_payroll_report,
@@ -197,6 +198,65 @@ class TestTraineeReports(UnitTestCase):
 		unfiltered_trainees = {row[0].value for row in unfiltered.active.iter_rows(min_row=2)}
 		self.assertIn(trainee_a.name, unfiltered_trainees)
 		self.assertIn(trainee_b.name, unfiltered_trainees)
+
+	def test_export_monthly_attendance_report_filters_by_cohort_and_month(self):
+		cohort_a = frappe.get_doc(
+			{"doctype": "Sales Trainee Cohort", "cohort_name": f"MA-{frappe.generate_hash(length=6)}", "location": "Chennai", "start_date": "2026-10-06"}
+		).insert(ignore_permissions=True)
+		cohort_b = frappe.get_doc(
+			{"doctype": "Sales Trainee Cohort", "cohort_name": f"MB-{frappe.generate_hash(length=6)}", "location": "Pune", "start_date": "2026-10-06"}
+		).insert(ignore_permissions=True)
+		trainee_a = frappe.get_doc(
+			{
+				"doctype": "Sales Trainee",
+				"trainee_name": "Monthly A",
+				"personal_email": f"monthly-a-{frappe.generate_hash(length=6)}@example.com",
+				"date_of_joining": "2026-10-06",
+				"training_status": "In Training",
+				"cohort": cohort_a.name,
+				"assigned_trainer": "Administrator",
+			}
+		).insert(ignore_permissions=True)
+		trainee_b = frappe.get_doc(
+			{
+				"doctype": "Sales Trainee",
+				"trainee_name": "Monthly B",
+				"personal_email": f"monthly-b-{frappe.generate_hash(length=6)}@example.com",
+				"date_of_joining": "2026-10-06",
+				"training_status": "In Training",
+				"cohort": cohort_b.name,
+			}
+		).insert(ignore_permissions=True)
+		frappe.get_doc(
+			{"doctype": "Sales Trainee Attendance", "trainee": trainee_a.name, "attendance_date": "2026-10-06", "status": "Present"}
+		).insert(ignore_permissions=True)
+		frappe.get_doc(
+			{"doctype": "Sales Trainee Attendance", "trainee": trainee_b.name, "attendance_date": "2026-10-06", "status": "Present"}
+		).insert(ignore_permissions=True)
+		# outside the target month: must not appear even when cohort filter matches.
+		frappe.get_doc(
+			{"doctype": "Sales Trainee Attendance", "trainee": trainee_a.name, "attendance_date": "2026-11-02", "status": "Absent"}
+		).insert(ignore_permissions=True)
+
+		workbook = self._open_workbook(export_monthly_attendance_report("2026-10", cohort=cohort_a.name))
+		rows = list(workbook.active.iter_rows(min_row=2, values_only=True))
+		self.assertEqual(len(rows), 1)
+		self.assertEqual(rows[0][0], trainee_a.name)
+		self.assertEqual(rows[0][1], "2026-10-06")
+		self.assertTrue(rows[0][4])  # Marked By populated
+		self.assertEqual(rows[0][5], "Administrator")  # Assigned Trainer resolved
+
+		unfiltered = self._open_workbook(export_monthly_attendance_report("2026-10"))
+		unfiltered_rows = list(unfiltered.active.iter_rows(min_row=2, values_only=True))
+		unfiltered_trainees = {r[0] for r in unfiltered_rows}
+		self.assertIn(trainee_a.name, unfiltered_trainees)
+		self.assertIn(trainee_b.name, unfiltered_trainees)
+		trainee_b_row = next(r for r in unfiltered_rows if r[0] == trainee_b.name)
+		self.assertEqual(trainee_b_row[5], "Unassigned")
+
+	def test_export_monthly_attendance_report_rejects_bad_month_format(self):
+		with self.assertRaises(frappe.ValidationError):
+			export_monthly_attendance_report("2026/10")
 
 	def test_export_location_cohort_report_lists_every_cohort(self):
 		frappe.get_doc(
