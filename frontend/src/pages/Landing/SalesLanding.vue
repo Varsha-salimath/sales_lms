@@ -61,7 +61,7 @@
 				<p class="mt-5 max-w-xl text-base text-white sm:text-lg">
 					{{
 						__(
-							'Classroom Readiness Training for Academic Counsellors — products, call flow, demo conduction, LSQ and live calling across 5 days.'
+							'Class Room Training for Academic Counsellors — products, call flow, demo conduction, LSQ and live calling across 5 days.'
 						)
 					}}
 				</p>

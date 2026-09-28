@@ -5,7 +5,7 @@ from . import __version__ as app_version
 app_name = "frappe_lms"
 app_title = "LMS"
 app_publisher = "Varsity Education"
-app_description = "Sales onboarding and classroom readiness training platform"
+app_description = "Sales onboarding and Class Room Training platform"
 app_icon_url = "/assets/lms/images/il-favicon.png"
 app_icon_title = "LMS"
 app_icon_route = "/dashboard"

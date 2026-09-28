@@ -17,9 +17,6 @@
 	{% if start_time %}
 	<b>{{ _("Timings:") }}</b> {{ frappe.utils.format_time(start_time, "hh:mm a") }}<br>
 	{% endif %}
-	{% if medium %}
-	<b>{{ _("Medium:") }}</b> {{ medium }}<br>
-	{% endif %}
 </p>
 {% if courses %}
 <p><b>{{ _("Course(s) in this batch:") }}</b></p>

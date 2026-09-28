@@ -431,8 +431,11 @@ def _notify_training_managers_bulk(batch: str, assignments: list[dict]) -> None:
 def _batch_course_titles(batch: str) -> list[str]:
 	rows = frappe.get_all("Batch Course", filters={"parent": batch}, fields=["title", "course"], order_by="idx asc")
 	titles = []
+	from lms.lms.sales_crt import normalize_crt_display_title
+
 	for row in rows:
 		label = row.title or frappe.db.get_value("LMS Course", row.course, "title") or row.course
+		label = normalize_crt_display_title(label)
 		if label:
 			titles.append(label)
 	return titles
@@ -489,7 +492,7 @@ def _send_bulk_enrollment_email(member: str, batch: str, *, is_new_account: bool
 	batch_row = frappe.db.get_value(
 		"LMS Batch",
 		batch,
-		["title", "name", "start_date", "start_time", "medium"],
+		["title", "name", "start_date", "start_time"],
 		as_dict=True,
 	)
 	if not batch_row:
@@ -502,7 +505,6 @@ def _send_bulk_enrollment_email(member: str, batch: str, *, is_new_account: bool
 		"batch_title": batch_row.title,
 		"start_date": batch_row.start_date,
 		"start_time": batch_row.start_time,
-		"medium": batch_row.medium,
 		"courses": _batch_course_titles(batch),
 		"training_manager_name": tm.get("full_name") if tm else None,
 		"training_manager_email": tm.get("email") if tm else None,
