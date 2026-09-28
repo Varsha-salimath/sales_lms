@@ -18,7 +18,11 @@
 				</div>
 			</div>
 
-			<AnalyticsSectionNav v-model="activeSection" class="mb-4" />
+			<AnalyticsSectionNav
+				v-model="activeSection"
+				:show-sales-trainees="canViewSalesTrainees"
+				class="mb-4"
+			/>
 
 			<div v-show="activeSection === 'overview'" class="space-y-6">
 				<div>
@@ -515,6 +519,11 @@
 				<OJTCertificationAnalytics v-if="isAnalyticsStaff" embedded />
 			</div>
 
+			<!-- v-if (not only v-show) so trainee-tracker data never loads for unauthorized roles -->
+			<div v-if="canViewSalesTrainees" v-show="activeSection === 'sales-trainees'">
+				<AnalyticsSalesTraineeSection />
+			</div>
+
 			<div v-show="activeSection === 'feedback'" class="space-y-4">
 				<div>
 					<h2 class="text-base font-semibold text-ink-gray-9">
@@ -659,6 +668,7 @@ import {
 	usePageMeta,
 } from 'frappe-ui'
 import AnalyticsOperationsSection from '@/components/Analytics/AnalyticsOperationsSection.vue'
+import AnalyticsSalesTraineeSection from '@/components/Analytics/AnalyticsSalesTraineeSection.vue'
 import AnalyticsSectionNav from '@/components/Analytics/AnalyticsSectionNav.vue'
 import IssuedCertificatesList from '@/components/Analytics/IssuedCertificatesList.vue'
 import FailedQuizBlockedLearners from '@/components/Analytics/FailedQuizBlockedLearners.vue'
@@ -680,6 +690,17 @@ const BASE_SECTIONS = ['overview', 'progress', 'certification', 'feedback']
 const canViewOperations = computed(() => {
 	const u = userResource.data
 	return Boolean(u?.is_moderator || u?.is_system_manager || u?.name === 'Administrator')
+})
+
+// Mirrors the old standalone Trainee Dashboard's nav-visibility condition
+// (frontend/src/utils/index.js) and its backend gate
+// (trainee_dashboard.py::_ensure_dashboard_access): Admin/Super Admin tier,
+// or the Sales Training Leadership role. A System Manager grants access by
+// assigning that role to a user — no bespoke permission model needed.
+const canViewSalesTrainees = computed(() => {
+	const tier = userResource.data?.access_tier
+	const roles = userResource.data?.roles || []
+	return ['Admin', 'Super Admin'].includes(tier) || roles.includes('Sales Training Leadership')
 })
 
 // Full analytics staff; Training Managers without these roles get tree-scoped data only.
@@ -705,6 +726,9 @@ function resolveSection(section) {
 	if (normalized === 'operations') {
 		return canViewOperations.value ? 'operations' : 'overview'
 	}
+	if (normalized === 'sales-trainees') {
+		return canViewSalesTrainees.value ? 'sales-trainees' : 'overview'
+	}
 	if (normalized && BASE_SECTIONS.includes(normalized)) {
 		return normalized
 	}
@@ -718,7 +742,7 @@ onMounted(() => {
 })
 
 watch(
-	() => [normalizeSectionQuery(route.query.section), canViewOperations.value],
+	() => [normalizeSectionQuery(route.query.section), canViewOperations.value, canViewSalesTrainees.value],
 	() => {
 		const next = resolveSection(route.query.section)
 		if (activeSection.value !== next) {
@@ -730,6 +754,12 @@ watch(
 
 watch(activeSection, (section) => {
 	if (section === 'operations' && !canViewOperations.value) {
+		if (activeSection.value !== 'overview') {
+			activeSection.value = 'overview'
+		}
+		return
+	}
+	if (section === 'sales-trainees' && !canViewSalesTrainees.value) {
 		if (activeSection.value !== 'overview') {
 			activeSection.value = 'overview'
 		}

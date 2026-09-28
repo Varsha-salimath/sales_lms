@@ -91,11 +91,6 @@ const routes = [
 		component: () => import('@/pages/CRT/SalesImport.vue'),
 	},
 	{
-		path: '/sales-trainees/import',
-		name: 'TraineeImport',
-		component: () => import('@/pages/Sales/TraineeImport.vue'),
-	},
-	{
 		path: '/sales-trainees/cohorts',
 		name: 'TraineeCohortList',
 		component: () => import('@/pages/Sales/TraineeCohortList.vue'),
@@ -119,11 +114,6 @@ const routes = [
 		path: '/sales-trainees/payroll',
 		name: 'WeeklyPayrollCycle',
 		component: () => import('@/pages/Sales/WeeklyPayrollCycle.vue'),
-	},
-	{
-		path: '/sales-trainees/dashboard',
-		name: 'TraineeDashboard',
-		component: () => import('@/pages/Sales/TraineeDashboard.vue'),
 	},
 	{
 		path: '/crt/session/:sessionKey',
@@ -549,13 +539,11 @@ router.beforeEach(async (to, from, next) => {
 		'LearnerReports',
 		'LearnerReportCard',
 		'TeamAccess',
-		'TraineeImport',
 		'TraineeCohortList',
 		'TraineeList',
 		'TraineeAttendance',
 		'TraineeAttendanceHistory',
 		'WeeklyPayrollCycle',
-		'TraineeDashboard',
 		'VivaResults',
 	]
 	if (staffOnlyRoutes.includes(to.name)) {
@@ -582,13 +570,11 @@ router.beforeEach(async (to, from, next) => {
 		// Sales Training screens: the 4 Sales Training roles hold none of the flags above, so they
 		// need their own allow-list (per-screen data access is still enforced by the API).
 		const salesTrainingRoutes = [
-			'TraineeImport',
 			'TraineeCohortList',
 			'TraineeList',
 			'TraineeAttendance',
 			'TraineeAttendanceHistory',
 			'WeeklyPayrollCycle',
-			'TraineeDashboard',
 		]
 		const salesTrainingRoles = [
 			'Sales Training Team',

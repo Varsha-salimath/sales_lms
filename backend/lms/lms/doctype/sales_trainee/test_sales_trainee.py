@@ -8,7 +8,7 @@ class TestSalesTrainee(UnitTestCase):
 			{
 				"doctype": "Sales Trainee",
 				"trainee_name": "Asha Rao",
-				"personal_email": "asha.rao.candidate@example.com",
+				"personal_email": f"asha.rao.candidate-{frappe.generate_hash(length=6)}@example.com",
 				"phone": "9876543210",
 				"date_of_joining": "2026-10-06",
 			}
@@ -18,11 +18,12 @@ class TestSalesTrainee(UnitTestCase):
 		self.assertEqual(trainee.employee_dummy_vendor_code, None)
 
 	def test_duplicate_email_rejected(self):
+		email = f"dup-{frappe.generate_hash(length=6)}@example.com"
 		frappe.get_doc(
 			{
 				"doctype": "Sales Trainee",
 				"trainee_name": "First",
-				"personal_email": "dup@example.com",
+				"personal_email": email,
 				"date_of_joining": "2026-10-06",
 			}
 		).insert(ignore_permissions=True)
@@ -31,7 +32,7 @@ class TestSalesTrainee(UnitTestCase):
 				{
 					"doctype": "Sales Trainee",
 					"trainee_name": "Second",
-					"personal_email": "dup@example.com",
+					"personal_email": email,
 					"date_of_joining": "2026-10-06",
 				}
 			).insert(ignore_permissions=True)

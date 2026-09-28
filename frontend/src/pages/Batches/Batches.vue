@@ -3,7 +3,11 @@
 		class="sticky flex items-center justify-between top-0 z-10 border-b bg-surface-white px-3 py-2.5 sm:px-5"
 	>
 		<Breadcrumbs :items="breadcrumbs" />
-		<Dropdown
+		<div class="flex items-center gap-2">
+			<Button v-if="canOnboardTrainees" variant="outline" @click="showOnboardTraineesModal = true">
+				{{ __('Onboard sales trainees') }}
+			</Button>
+			<Dropdown
 			v-if="canCreateBatch()"
 			:options="[
 				{
@@ -41,7 +45,8 @@
 					</template>
 				</Button>
 			</template>
-		</Dropdown>
+			</Dropdown>
+		</div>
 	</header>
 	<div class="p-5 pb-10">
 		<div
@@ -166,6 +171,10 @@
 		v-model="showBatchModal"
 		:batches="batches"
 	/>
+	<SalesTraineeOnboardModal
+		v-if="showOnboardTraineesModal"
+		v-model="showOnboardTraineesModal"
+	/>
 </template>
 <script setup>
 import {
@@ -187,6 +196,7 @@ import BatchCard from '@/pages/Batches/components/BatchCard.vue'
 import BatchLeaderboardPanel from '@/pages/Batches/components/BatchLeaderboardPanel.vue'
 import EmptyStateLayout from '@/components/Layouts/EmptyStateLayout.vue'
 import NewBatchModal from '@/pages/Batches/components/NewBatchModal.vue'
+import SalesTraineeOnboardModal from '@/pages/Batches/components/SalesTraineeOnboardModal.vue'
 
 const user = inject('$user')
 const dayjs = inject('$dayjs')
@@ -210,6 +220,15 @@ const orderBy = ref('start_date')
 const readOnlyMode = window.read_only_mode
 const router = useRouter()
 const showBatchModal = ref(false)
+const showOnboardTraineesModal = ref(false)
+
+// Mirrors the existing "Trainee onboarding" sidebar-nav condition (frontend/src/utils/index.js)
+// and the backend gate in sales_trainee_import.py::_ensure_import_access.
+const canOnboardTrainees = computed(() => {
+	const tier = user.data?.access_tier
+	const roles = user.data?.roles || []
+	return ['Admin', 'Super Admin'].includes(tier) || roles.includes('Sales Training Team')
+})
 
 onMounted(() => {
 	setFiltersFromQuery()

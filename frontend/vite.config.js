@@ -17,7 +17,13 @@ export default defineConfig(async ({ mode }) => {
 				lucideIcons: true,
 				jinjaBootData: true,
 				buildConfig: {
-					indexHtmlPath: '../lms/www/_lms.html',
+					// findOutputDir()'s auto-detection (frappe-ui/vite/buildConfig.js) walks up
+					// from process.cwd() looking for a sibling app dir with public/+hooks.py; it
+					// can't find one here because `frontend/` is a repo-root package, not nested
+					// under `backend/` (only reached via the `backend/frontend` symlink, which
+					// Node resolves to its real path before this ever runs). Set both explicitly.
+					outDir: '../backend/lms/public/frontend',
+					indexHtmlPath: '../backend/lms/www/_lms.html',
 				},
 			}),
 			vue(),

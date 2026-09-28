@@ -32,6 +32,10 @@ const props = defineProps({
 		type: Boolean,
 		default: false,
 	},
+	showSalesTrainees: {
+		type: Boolean,
+		default: false,
+	},
 })
 
 defineEmits(['update:modelValue'])
@@ -45,6 +49,9 @@ const items = computed(() => {
 		{ id: 'progress', label: __('Learner Progress') },
 		{ id: 'certification', label: __('Certification') },
 		{ id: 'feedback', label: __('Feedback') },
+		...(props.showSalesTrainees
+			? [{ id: 'sales-trainees', label: __('Sales Trainees') }]
+			: []),
 	]
 	return list
 })
