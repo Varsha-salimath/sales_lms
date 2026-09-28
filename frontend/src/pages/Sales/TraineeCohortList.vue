@@ -1,6 +1,6 @@
 <!-- frontend/src/pages/Sales/TraineeCohortList.vue -->
 <template>
-	<div class="p-6 max-w-4xl mx-auto">
+	<div class="min-h-full w-full px-4 pb-8 pt-4 sm:px-6 lg:px-8">
 		<h1 class="mb-4 text-xl font-semibold text-[color:var(--genius-navy)]">Trainee Cohorts</h1>
 		<div class="genius-card rounded-2xl p-4 sm:p-5">
 			<div class="overflow-x-auto">
@@ -13,7 +13,12 @@
 							<th class="pb-2 pr-3 font-medium">Cohort</th>
 							<th class="pb-2 pr-3 font-medium">Location</th>
 							<th class="pb-2 pr-3 font-medium">Start Date</th>
-							<th class="pb-2 font-medium">Trainer</th>
+							<th class="pb-2 pr-3 font-medium">Trainer</th>
+							<th class="pb-2 pr-3 font-medium">Total</th>
+							<th class="pb-2 pr-3 font-medium">Active</th>
+							<th class="pb-2 pr-3 font-medium">Cleared</th>
+							<th class="pb-2 pr-3 font-medium">Not Cleared</th>
+							<th class="pb-2 font-medium">Exits</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -33,7 +38,12 @@
 							</td>
 							<td class="py-2.5 pr-3 text-xs text-[color:var(--genius-muted)]">{{ c.location }}</td>
 							<td class="py-2.5 pr-3 text-xs text-[color:var(--genius-muted)]">{{ c.start_date }}</td>
-							<td class="py-2.5 text-xs text-[color:var(--genius-muted)]">{{ c.trainer }}</td>
+							<td class="py-2.5 pr-3 text-xs text-[color:var(--genius-muted)]">{{ c.trainer }}</td>
+							<td class="py-2.5 pr-3 text-xs text-[color:var(--genius-muted)]">{{ stats[c.name]?.total ?? '—' }}</td>
+							<td class="py-2.5 pr-3 text-xs text-[color:var(--genius-muted)]">{{ stats[c.name]?.active ?? '—' }}</td>
+							<td class="py-2.5 pr-3 text-xs text-[color:var(--genius-muted)]">{{ stats[c.name]?.cleared ?? '—' }}</td>
+							<td class="py-2.5 pr-3 text-xs text-[color:var(--genius-muted)]">{{ stats[c.name]?.not_cleared ?? '—' }}</td>
+							<td class="py-2.5 text-xs text-[color:var(--genius-muted)]">{{ stats[c.name]?.exits ?? '—' }}</td>
 						</tr>
 					</tbody>
 				</table>
@@ -46,12 +56,22 @@
 </template>
 
 <script setup>
-import { createListResource } from 'frappe-ui'
+import { reactive } from 'vue'
+import { call, createListResource } from 'frappe-ui'
+
+const stats = reactive({})
 
 const cohorts = createListResource({
 	doctype: 'Sales Trainee Cohort',
 	fields: ['name', 'cohort_name', 'location', 'start_date', 'trainer'],
 	auto: true,
 	pageLength: 100,
+	onSuccess(rows) {
+		for (const c of rows) {
+			call('lms.lms.trainee_cohort_stats.get_cohort_stats', { cohort: c.name }).then((s) => {
+				stats[c.name] = s
+			})
+		}
+	},
 })
 </script>
