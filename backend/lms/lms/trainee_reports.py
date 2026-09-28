@@ -45,11 +45,15 @@ def export_active_trainees_csv(cohort=None, location=None):
 
 
 @frappe.whitelist()
-def export_weekly_attendance_payroll_report(week_start, week_end):
+def export_weekly_attendance_payroll_report(week_start, week_end, cohort=None):
 	_ensure_report_access()
+	filters = {"attendance_date": ["between", [week_start, week_end]]}
+	if cohort:
+		trainee_names = frappe.get_list("Sales Trainee", filters={"cohort": cohort}, pluck="name", limit_page_length=0)
+		filters["trainee"] = ["in", trainee_names]
 	rows = frappe.get_list(
 		"Sales Trainee Attendance",
-		filters={"attendance_date": ["between", [week_start, week_end]]},
+		filters=filters,
 		fields=["trainee", "attendance_date", "status", "source"],
 		order_by="attendance_date asc",
 		limit_page_length=0,

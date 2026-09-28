@@ -1,6 +1,6 @@
 <!-- frontend/src/pages/Sales/WeeklyPayrollCycle.vue -->
 <template>
-	<div class="p-6 max-w-4xl mx-auto">
+	<div class="min-h-full w-full px-4 pb-8 pt-4 sm:px-6 lg:px-8">
 		<h1 class="mb-4 text-xl font-semibold text-[color:var(--genius-navy)]">Weekly Payroll Cycles</h1>
 		<div class="genius-card rounded-2xl p-4 sm:p-5">
 			<div class="overflow-x-auto">
@@ -42,6 +42,9 @@
 									<Button size="sm" :loading="busy === c.name" @click="advance(c.name, nextStatus(c.status))" v-if="nextStatus(c.status)">
 										Advance to {{ nextStatus(c.status) }}
 									</Button>
+									<Button size="sm" :loading="busy === c.name" @click="exportReconciliation(c.name)" v-if="canExportFinance">
+										Export reconciliation
+									</Button>
 								</div>
 							</td>
 						</tr>
@@ -56,8 +59,12 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { call, createListResource, Button } from 'frappe-ui'
+import { usersStore } from '@/stores/user'
+
+const { userResource } = usersStore()
+const canExportFinance = computed(() => (userResource?.data?.roles || []).includes('Sales Training Finance'))
 
 const SEQUENCE = ['Preparing', 'Ready to Share', 'Shared with Vendor', 'Awaiting Invoice', 'Finance Validation', 'Closed']
 const STATUS_BADGES = {
@@ -100,6 +107,19 @@ async function advance(name, newStatus) {
 	try {
 		await call('run_doc_method', { dt: 'Weekly Payroll Cycle', dn: name, method: 'advance_status', args: { new_status: newStatus } })
 		cycles.reload()
+	} finally {
+		busy.value = null
+	}
+}
+
+async function exportReconciliation(name) {
+	busy.value = name
+	try {
+		const encoded = await call('lms.lms.trainee_reports.export_finance_reconciliation_report', { cycle_name: name })
+		const link = document.createElement('a')
+		link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${encoded}`
+		link.download = `finance-reconciliation-${name}.xlsx`
+		link.click()
 	} finally {
 		busy.value = null
 	}

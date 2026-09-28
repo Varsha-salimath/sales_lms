@@ -152,6 +152,52 @@ class TestTraineeReports(UnitTestCase):
 		row = next(workbook.active.iter_rows(min_row=2, values_only=True))
 		self.assertEqual(row[-1], 95000)
 
+	def test_export_weekly_attendance_payroll_report_filters_by_cohort(self):
+		cohort_a = frappe.get_doc(
+			{"doctype": "Sales Trainee Cohort", "cohort_name": f"WA-{frappe.generate_hash(length=6)}", "location": "Chennai", "start_date": "2026-10-06"}
+		).insert(ignore_permissions=True)
+		cohort_b = frappe.get_doc(
+			{"doctype": "Sales Trainee Cohort", "cohort_name": f"WB-{frappe.generate_hash(length=6)}", "location": "Pune", "start_date": "2026-10-06"}
+		).insert(ignore_permissions=True)
+		trainee_a = frappe.get_doc(
+			{
+				"doctype": "Sales Trainee",
+				"trainee_name": "Weekly A",
+				"personal_email": f"weekly-a-{frappe.generate_hash(length=6)}@example.com",
+				"date_of_joining": "2026-10-06",
+				"training_status": "In Training",
+				"cohort": cohort_a.name,
+			}
+		).insert(ignore_permissions=True)
+		trainee_b = frappe.get_doc(
+			{
+				"doctype": "Sales Trainee",
+				"trainee_name": "Weekly B",
+				"personal_email": f"weekly-b-{frappe.generate_hash(length=6)}@example.com",
+				"date_of_joining": "2026-10-06",
+				"training_status": "In Training",
+				"cohort": cohort_b.name,
+			}
+		).insert(ignore_permissions=True)
+		frappe.get_doc(
+			{"doctype": "Sales Trainee Attendance", "trainee": trainee_a.name, "attendance_date": "2026-10-06", "status": "Present"}
+		).insert(ignore_permissions=True)
+		frappe.get_doc(
+			{"doctype": "Sales Trainee Attendance", "trainee": trainee_b.name, "attendance_date": "2026-10-06", "status": "Present"}
+		).insert(ignore_permissions=True)
+
+		workbook = self._open_workbook(
+			export_weekly_attendance_payroll_report("2026-10-06", "2026-10-12", cohort=cohort_a.name)
+		)
+		trainees_in_sheet = {row[0].value for row in workbook.active.iter_rows(min_row=2)}
+		self.assertIn(trainee_a.name, trainees_in_sheet)
+		self.assertNotIn(trainee_b.name, trainees_in_sheet)
+
+		unfiltered = self._open_workbook(export_weekly_attendance_payroll_report("2026-10-06", "2026-10-12"))
+		unfiltered_trainees = {row[0].value for row in unfiltered.active.iter_rows(min_row=2)}
+		self.assertIn(trainee_a.name, unfiltered_trainees)
+		self.assertIn(trainee_b.name, unfiltered_trainees)
+
 	def test_export_location_cohort_report_lists_every_cohort(self):
 		frappe.get_doc(
 			{"doctype": "Sales Trainee Cohort", "cohort_name": f"Loc-{frappe.generate_hash(length=6)}", "location": "Chennai", "start_date": "2026-10-06"}
