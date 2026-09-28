@@ -1,6 +1,6 @@
 <!-- frontend/src/pages/Sales/TraineeDashboard.vue -->
 <template>
-	<div class="p-6 max-w-4xl mx-auto">
+	<div class="min-h-full w-full px-4 pb-8 pt-4 sm:px-6 lg:px-8">
 		<h1 class="mb-4 text-xl font-semibold text-[color:var(--genius-navy)]">Trainee Dashboard</h1>
 		<div class="genius-card mb-6 flex flex-wrap gap-2 rounded-2xl p-4 sm:p-5">
 			<input
@@ -64,7 +64,10 @@ watch([month, location, cohort], () => {
 })
 
 async function downloadExport() {
-	const encoded = await call('lms.lms.trainee_reports.export_active_trainees_csv')
+	const encoded = await call('lms.lms.trainee_reports.export_active_trainees_csv', {
+		cohort: cohort.value || undefined,
+		location: location.value || undefined,
+	})
 	const link = document.createElement('a')
 	link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${encoded}`
 	link.download = 'active-trainees.xlsx'
