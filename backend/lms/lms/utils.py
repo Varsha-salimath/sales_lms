@@ -1210,13 +1210,17 @@ def get_batch_details(batch: str):
 		return {}
 
 	batch_students = frappe.get_all("LMS Batch Enrollment", {"batch": batch}, pluck="member")
-	is_batch_admin = can_modify_batch(batch)
+	is_batch_admin = can_manage_batch_dashboard(batch)
 	is_batch_published = frappe.db.get_value("LMS Batch", batch, "published")
 	is_student_enrolled = frappe.session.user in batch_students
+	from lms.lms import access
 
-	if not (is_batch_published or is_batch_admin or is_student_enrolled):
+	tm_batch_members = access.training_manager_batch_members(batch, frappe.session.user)
+	is_training_manager_viewer = bool(tm_batch_members)
+
+	if not (is_batch_published or is_batch_admin or is_student_enrolled or is_training_manager_viewer):
 		return {}
-	if not can_access("LMS Batch", batch):
+	if not can_access("LMS Batch", batch) and not is_training_manager_viewer:
 		return {}
 
 	batch_details = frappe.db.get_value(
@@ -1272,10 +1276,9 @@ def get_batch_details(batch: str):
 
 	batch_details.live_course_assessments = get_live_course_assessments_for_batch(batch)
 
-	if can_modify_batch(batch):
-		batch_details.students = batch_students
-	elif is_student_enrolled:
-		batch_details.students = [frappe.session.user]
+	batch_details.students = batch_students_for_session(batch, batch_students)
+	batch_details.can_manage_batch = is_batch_admin
+	batch_details.view_as_training_manager = is_training_manager_viewer and not is_batch_admin
 
 	if batch_details.paid_batch and batch_details.start_date >= getdate():
 		batch_details.amount, batch_details.currency = check_multicurrency(
@@ -1619,45 +1622,46 @@ def get_exercise_details(assessment: dict, member: str) -> dict:
 
 @frappe.whitelist()
 def get_batch_student_progress(member: str, batch: str) -> dict:
-	if not can_modify_batch(batch):
-		frappe.throw(_("You are not authorized to view the students of this batch."))
+	if not can_view_batch_student(batch, member):
+		frappe.throw(_("You are not authorized to view this learner's batch progress."))
 
 	details = get_batch_student_details(member)
 	calculate_student_progress(batch, details)
 	return details
 
 
-def get_course_completion_stats(batch: str) -> list:
+def get_course_completion_stats(batch: str, members: list[str] | None = None) -> list:
 	"""Get completion counts per course in batch"""
 	BatchCourse = frappe.qb.DocType("Batch Course")
 	BatchEnrollment = frappe.qb.DocType("LMS Batch Enrollment")
 	Enrollment = frappe.qb.DocType("LMS Enrollment")
 
-	rows = (
+	query = (
 		frappe.qb.from_(BatchCourse)
 		.left_join(BatchEnrollment)
 		.on(BatchEnrollment.batch == BatchCourse.parent)
 		.left_join(Enrollment)
 		.on((Enrollment.course == BatchCourse.course) & (Enrollment.member == BatchEnrollment.member))
 		.where(BatchCourse.parent == batch)
-		.groupby(BatchCourse.course, BatchCourse.title)
-		.select(
-			BatchCourse.title,
-			fn.Count(Case().when(Enrollment.progress == 100, Enrollment.member)).distinct().as_("completed"),
-		)
+	)
+	if members:
+		query = query.where(BatchEnrollment.member.isin(members))
+	rows = query.groupby(BatchCourse.course, BatchCourse.title).select(
+		BatchCourse.title,
+		fn.Count(Case().when(Enrollment.progress == 100, Enrollment.member)).distinct().as_("completed"),
 	).run(as_dict=True)
 
 	return [{"task": row.title, "value": row.completed or 0} for row in rows]
 
 
-def get_assignment_pass_stats(batch: str) -> list:
+def get_assignment_pass_stats(batch: str, members: list[str] | None = None) -> list:
 	"""Get pass counts per assignment in batch"""
 	Assessment = frappe.qb.DocType("LMS Assessment")
 	Assignment = frappe.qb.DocType("LMS Assignment")
 	BatchEnrollment = frappe.qb.DocType("LMS Batch Enrollment")
 	Submission = frappe.qb.DocType("LMS Assignment Submission")
 
-	rows = (
+	query = (
 		frappe.qb.from_(Assessment)
 		.join(Assignment)
 		.on(Assignment.name == Assessment.assessment_name)
@@ -1669,24 +1673,25 @@ def get_assignment_pass_stats(batch: str) -> list:
 			& (Submission.member == BatchEnrollment.member)
 		)
 		.where((Assessment.parent == batch) & (Assessment.assessment_type == "LMS Assignment"))
-		.groupby(Assessment.assessment_name, Assignment.title)
-		.select(
-			Assignment.title,
-			fn.Count(Case().when(Submission.status == "Pass", Submission.member)).distinct().as_("passed"),
-		)
+	)
+	if members:
+		query = query.where(BatchEnrollment.member.isin(members))
+	rows = query.groupby(Assessment.assessment_name, Assignment.title).select(
+		Assignment.title,
+		fn.Count(Case().when(Submission.status == "Pass", Submission.member)).distinct().as_("passed"),
 	).run(as_dict=True)
 
 	return [{"task": row.title, "value": row.passed or 0} for row in rows]
 
 
-def get_quiz_pass_stats(batch: str) -> list:
+def get_quiz_pass_stats(batch: str, members: list[str] | None = None) -> list:
 	"""Get pass counts per quiz in batch"""
 	Assessment = frappe.qb.DocType("LMS Assessment")
 	Quiz = frappe.qb.DocType("LMS Quiz")
 	BatchEnrollment = frappe.qb.DocType("LMS Batch Enrollment")
 	Submission = frappe.qb.DocType("LMS Quiz Submission")
 
-	rows = (
+	query = (
 		frappe.qb.from_(Assessment)
 		.join(Quiz)
 		.on(Quiz.name == Assessment.assessment_name)
@@ -1695,13 +1700,14 @@ def get_quiz_pass_stats(batch: str) -> list:
 		.left_join(Submission)
 		.on((Submission.quiz == Assessment.assessment_name) & (Submission.member == BatchEnrollment.member))
 		.where((Assessment.parent == batch) & (Assessment.assessment_type == "LMS Quiz"))
-		.groupby(Assessment.assessment_name, Quiz.title)
-		.select(
-			Quiz.title,
-			fn.Count(Case().when(Submission.percentage >= Submission.passing_percentage, Submission.member))
-			.distinct()
-			.as_("passed"),
-		)
+	)
+	if members:
+		query = query.where(BatchEnrollment.member.isin(members))
+	rows = query.groupby(Assessment.assessment_name, Quiz.title).select(
+		Quiz.title,
+		fn.Count(Case().when(Submission.percentage >= Submission.passing_percentage, Submission.member))
+		.distinct()
+		.as_("passed"),
 	).run(as_dict=True)
 
 	return [{"task": row.title, "value": row.passed or 0} for row in rows]
@@ -1710,15 +1716,22 @@ def get_quiz_pass_stats(batch: str) -> list:
 @frappe.whitelist()
 def get_batch_chart_data(batch: str) -> list:
 	"""Get completion counts per course and assessment"""
-	if not can_modify_batch(batch):
+	if not can_view_batch_dashboard(batch):
 		frappe.throw(_("You are not authorized to view the chart data of this batch."))
 	if not frappe.db.exists("LMS Batch", batch):
 		frappe.throw(_("The specified batch does not exist."))
 
-	return get_course_completion_stats(batch) + get_assignment_pass_stats(batch) + get_quiz_pass_stats(batch)
+	scope = _batch_dashboard_member_scope(batch)
+	return (
+		get_course_completion_stats(batch, scope)
+		+ get_assignment_pass_stats(batch, scope)
+		+ get_quiz_pass_stats(batch, scope)
+	)
 
 
 def get_batch_student_details(student: str) -> dict:
+	from lms.lms import team_access
+
 	details = frappe.db.get_value(
 		"User",
 		student,
@@ -1726,6 +1739,8 @@ def get_batch_student_details(student: str) -> dict:
 		as_dict=True,
 	)
 	details.last_active = format_datetime(details.last_active, "dd MMM YY")
+	tm = team_access.get_active_training_manager(student)
+	details.training_manager = tm
 	return details
 
 
@@ -2604,6 +2619,104 @@ def can_modify_batch(batch: str) -> bool:
 		},
 	)
 	return bool(is_instructor)
+
+
+def can_manage_batch_dashboard(batch: str) -> bool:
+	"""Full batch dashboard (all learners, enroll actions): staff or batch instructor."""
+	if can_modify_batch(batch):
+		return True
+	if has_evaluator_role():
+		return True
+	return False
+
+
+def can_view_batch_student(batch: str, member: str) -> bool:
+	"""Batch dashboard progress: admins, the learner, or their Training Manager."""
+	from lms.lms import access
+
+	user = frappe.session.user
+	if user == "Guest":
+		return False
+	if member == user:
+		return True
+	if can_manage_batch_dashboard(batch):
+		return True
+	if not frappe.db.exists("LMS Batch Enrollment", {"batch": batch, "member": member}):
+		return False
+	return member in access.training_manager_tree(user)
+
+
+def batch_students_for_session(batch: str, enrolled: list[str] | None = None) -> list[str]:
+	"""Student list on batch meta: full list for admins; TM sees only their reports."""
+	from lms.lms import access
+
+	members = enrolled if enrolled is not None else frappe.get_all(
+		"LMS Batch Enrollment", {"batch": batch}, pluck="member"
+	)
+	if can_manage_batch_dashboard(batch):
+		return members
+	tree = access.training_manager_tree(frappe.session.user)
+	if tree:
+		return [m for m in members if m in tree]
+	if frappe.session.user in members:
+		return [frappe.session.user]
+	return []
+
+
+def can_view_batch_dashboard(batch: str) -> bool:
+	"""Batch dashboard (learners list, progress): admins or TMs with learners in this batch."""
+	from lms.lms import access
+
+	if can_manage_batch_dashboard(batch):
+		return True
+	return bool(access.training_manager_batch_members(batch, frappe.session.user))
+
+
+def _batch_dashboard_member_scope(batch: str) -> list[str] | None:
+	"""None = all enrolled learners; otherwise restrict to these User names."""
+	if can_manage_batch_dashboard(batch):
+		return None
+	members = batch_students_for_session(batch)
+	if not members:
+		frappe.throw(_("You are not authorized to view this batch dashboard."))
+	return members
+
+
+@frappe.whitelist()
+def get_batch_dashboard_enrollments(batch: str, search: str | None = None) -> list[dict]:
+	if not can_view_batch_dashboard(batch):
+		frappe.throw(_("You are not authorized to view learners in this batch."))
+	filters: dict = {"batch": batch}
+	scope = _batch_dashboard_member_scope(batch)
+	if scope is not None:
+		filters["member"] = ["in", scope]
+	if search:
+		filters["member_name"] = ["like", f"%{search.strip()}%"]
+	return frappe.get_all(
+		"LMS Batch Enrollment",
+		filters=filters,
+		fields=[
+			"name",
+			"member",
+			"member_name",
+			"member_username",
+			"member_image",
+			"creation",
+		],
+		order_by="creation desc",
+		limit_page_length=0,
+	)
+
+
+@frappe.whitelist()
+def get_batch_certified_count(batch: str) -> int:
+	if not can_view_batch_dashboard(batch):
+		frappe.throw(_("You are not authorized to view certification data for this batch."))
+	filters: dict = {"batch_name": batch}
+	scope = _batch_dashboard_member_scope(batch)
+	if scope is not None:
+		filters["member"] = ["in", scope]
+	return frappe.db.count("LMS Certificate", filters)
 
 
 def has_lms_role():

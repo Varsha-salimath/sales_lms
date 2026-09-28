@@ -322,11 +322,18 @@ def get_onboarding_home():
 			eval_status = "Ready"
 		else:
 			eval_status = "Locked"
+	from lms.lms import team_access
+
+	tm = team_access.get_active_training_manager(member)
 	return {
 		"empty": False,
 		"course": COURSE_SLUG,
 		"title": COURSE_TITLE,
-		"learner": {"name": member, "full_name": get_fullname(member)},
+		"learner": {
+			"name": member,
+			"full_name": get_fullname(member),
+			"training_manager": tm,
+		},
 		"is_staff": staff,
 		"overall_progress": overall,
 		"crts": crts,

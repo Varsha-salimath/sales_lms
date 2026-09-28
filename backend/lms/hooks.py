@@ -5,7 +5,7 @@ from . import __version__ as app_version
 app_name = "frappe_lms"
 app_title = "LMS"
 app_publisher = "Varsity Education"
-app_description = "Sales onboarding and classroom readiness training platform"
+app_description = "Sales onboarding and Class Room Training platform"
 app_icon_url = "/assets/lms/images/il-favicon.png"
 app_icon_title = "LMS"
 app_icon_route = "/dashboard"
@@ -196,6 +196,7 @@ scheduler_events = {
 		"lms.lms.doctype.lms_live_class.lms_live_class.update_attendance",
 		"lms.lms.library.scheduled_sync_all_recordings",
 		"lms.lms.library.sync_after_recent_classes",
+		"lms.lms.ojt_certification.scheduled_sync",
 	],
 	"daily": [
 		"lms.job.doctype.job_opportunity.job_opportunity.update_job_openings",

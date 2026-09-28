@@ -219,6 +219,15 @@ def training_manager_tree(user=None) -> set:
 	return reporting_tree(user, active_training_manager_lines())
 
 
+def training_manager_batch_members(batch: str, user=None) -> set:
+	"""Batch enrollees who report to `user` as Training Manager."""
+	user = _user(user)
+	tree = training_manager_tree(user)
+	if not tree:
+		return set()
+	return tree & _members_in_batch(batch)
+
+
 def is_training_manager(user=None) -> bool:
 	user = _user(user)
 	if get_tier(user) >= MANAGER:

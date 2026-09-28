@@ -19,7 +19,7 @@
 						{{
 							continueCourse
 								? __('Pick up your CRT day and keep going.')
-								: __('Open the Sales CRT course — 5 days of classroom readiness training.')
+								: __('Open the Sales CRT course — 5 days of Class Room Training.')
 						}}
 					</p>
 					<div class="mt-6 flex flex-wrap items-center gap-3">

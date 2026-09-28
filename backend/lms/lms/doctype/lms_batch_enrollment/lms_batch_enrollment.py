@@ -11,7 +11,8 @@ from frappe.model.document import Document
 
 class LMSBatchEnrollment(Document):
 	def after_insert(self):
-		send_confirmation_email(self)
+		if not getattr(frappe.flags, "skip_batch_confirmation_email", False):
+			send_confirmation_email(self)
 		self.add_member_to_live_class()
 
 	def validate(self):

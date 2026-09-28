@@ -4333,7 +4333,7 @@ def get_pwa_manifest():
 	manifest = {
 		"name": title,
 		"short_name": title,
-		"description": "Sales onboarding and classroom readiness training platform",
+		"description": "Sales onboarding and Class Room Training platform",
 		"start_url": get_lms_route(),
 		"icons": [
 			{

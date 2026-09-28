@@ -30,7 +30,7 @@
 				Sales CRT
 			</p>
 			<h1 class="mt-2 text-3xl font-semibold tracking-tight text-[color:var(--il-ink)] sm:text-4xl">
-				{{ schedule.data?.title || __('Classroom Readiness Training') }}
+				{{ schedule.data?.title || __('Class Room Training') }}
 			</h1>
 			<p class="mt-3 max-w-2xl text-sm leading-6 text-[color:var(--il-muted)]">
 				{{

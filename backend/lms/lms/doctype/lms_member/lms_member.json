@@ -7,6 +7,7 @@
   "user",
   "full_name",
   "access_role",
+  "access_roles",
   "status",
   "section_departments",
   "departments"
@@ -37,7 +38,13 @@
    "default": "User",
    "reqd": 1,
    "in_list_view": 1,
-   "description": "What this person can do. Whose data they see comes from reporting lines and view grants."
+   "description": "Highest access tier (kept in sync with Access Roles)."
+  },
+  {
+   "fieldname": "access_roles",
+   "fieldtype": "JSON",
+   "label": "Access Roles",
+   "description": "Staff capabilities assigned to this person (e.g. Instructor and Manager together)."
   },
   {
    "fieldname": "status",

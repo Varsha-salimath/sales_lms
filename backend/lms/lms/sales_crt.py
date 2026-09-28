@@ -28,7 +28,19 @@ from lms.lms.ppt_content import build_lesson_content, to_curriculum
 
 COURSE_SLUG = "sales-crt"
 DEMO_LEARNER_EMAIL = "learner@sales.localhost"
-COURSE_TITLE = "Sales CRT - Classroom Readiness Training"
+LEGACY_COURSE_TITLE = "Sales CRT - Classroom Readiness Training"
+COURSE_TITLE = "Sales CRT - Class Room Training"
+CRT_EXPANSION = "Class Room Training"
+
+
+def normalize_crt_display_title(title: str | None) -> str | None:
+	"""Map legacy CRT course labels to the current Class Room Training naming."""
+	if not title:
+		return title
+	text = str(title).strip()
+	if text == LEGACY_COURSE_TITLE:
+		return COURSE_TITLE
+	return text.replace("Classroom Readiness Training", CRT_EXPANSION)
 REQUIRED_COLUMNS = ["day", "time", "stakeholder", "topic", "description", "content link"]
 BUNDLED_EXCEL = os.path.join(os.path.dirname(__file__), "data", "CRT-Schedule.xlsx")
 IMAGE_DATA_PATH = "/opt/sales-lms/data/CRT-Schedule.xlsx"
@@ -389,9 +401,9 @@ def _ensure_course() -> str:
 		{
 			"doctype": "LMS Course",
 			"title": COURSE_TITLE,
-			"short_introduction": "Infinity Learn Sales CRT — Classroom Readiness Training for Academic Counsellors.",
+			"short_introduction": f"Infinity Learn Sales CRT — {CRT_EXPANSION} for Academic Counsellors.",
 			"description": (
-				"<p>Five-day Classroom Readiness Training covering Infinity Learn products, "
+				f"<p>Five-day {CRT_EXPANSION} covering Infinity Learn products, "
 				"call flow, demo conduction, LSQ, and live calling for Academic Counsellors.</p>"
 			),
 			"published": 1,

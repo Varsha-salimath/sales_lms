@@ -61,6 +61,99 @@
 			{{ report.error.messages?.[0] || __('Could not load the report.') }}
 		</div>
 
+		<div
+			v-if="report.data || tab === 'batches' || batchWise.data"
+			class="cr-tabs mt-6"
+		>
+			<button v-for="t in tabs" :key="t.key" :class="{ 'is-active': tab === t.key }" @click="tab = t.key">
+				{{ t.label }}
+			</button>
+		</div>
+
+		<section v-if="tab === 'batches'" class="mt-6 space-y-4">
+			<div v-if="batchWise.loading && !batchWise.data" class="h-40 animate-pulse rounded-3xl bg-[#e6e7e8]" />
+			<div v-else-if="batchWise.error" class="il-card p-8 text-center text-sm text-[color:var(--il-error-50)]">
+				{{ batchWise.error.messages?.[0] || __('Could not load learners by batch.') }}
+			</div>
+			<template v-else-if="batchWise.data">
+				<p class="text-sm text-[color:var(--il-muted)]">
+					{{ __('Your assigned learners grouped by batch.') }}
+					<span class="font-medium text-[color:var(--il-ink)]">
+						{{ batchWise.data.total_learners }} {{ __('learners') }}
+					</span>
+					{{ __('across') }}
+					<span class="font-medium">{{ batchWise.data.batches?.length || 0 }}</span>
+					{{ __('batches') }}.
+				</p>
+				<div v-if="!batchWise.data.batches?.length" class="il-card p-10 text-center text-sm text-[color:var(--il-muted)]">
+					{{ __('No batch enrollments found for your learners yet.') }}
+				</div>
+				<div v-for="group in batchWise.data.batches" :key="group.batch" class="cr-batch-group">
+					<button
+						type="button"
+						class="cr-batch-head"
+						@click="toggleBatch(group.batch)"
+					>
+						<div class="min-w-0 text-left">
+							<div class="font-semibold text-[color:var(--il-ink)] truncate">{{ group.title }}</div>
+							<div class="text-xs text-[color:var(--il-muted)] mt-0.5">
+								<span v-if="group.start_date">{{ fmtDate(group.start_date) }}</span>
+								<span v-if="group.end_date"> – {{ fmtDate(group.end_date) }}</span>
+								· {{ group.learner_count }} {{ __('learners') }}
+							</div>
+						</div>
+						<router-link
+							class="il-btn il-btn-outline shrink-0 text-xs"
+							:to="`/batches/${group.batch}#dashboard`"
+							@click.stop
+						>
+							{{ __('Batch dashboard') }}
+						</router-link>
+					</button>
+					<div v-show="expandedBatches.has(group.batch)" class="cr-batch-body">
+						<table class="cr-mini cr-mini-lg w-full">
+							<thead>
+								<tr>
+									<th>{{ __('Learner') }}</th>
+									<th>{{ __('Email') }}</th>
+									<th>{{ __('Enrolled') }}</th>
+									<th class="text-center">{{ __('Readiness') }}</th>
+									<th></th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr v-for="learner in group.learners" :key="learner.enrollment">
+									<td class="font-medium">{{ learner.member_name || learner.email }}</td>
+									<td class="text-[color:var(--il-muted)] text-sm">{{ learner.email }}</td>
+									<td class="text-sm whitespace-nowrap">{{ fmtDate(learner.enrolled_on) }}</td>
+									<td class="text-center">
+										<span
+											v-if="learner.readiness != null"
+											class="rp-cell rp-cell-strong"
+											:style="cellStyle(learner.readiness_band)"
+										>
+											{{ fmtPct(learner.readiness) }}
+										</span>
+										<span v-else class="text-[color:var(--il-muted)]">—</span>
+									</td>
+									<td class="text-right">
+										<button
+											v-if="learner.report_name"
+											type="button"
+											class="text-xs font-medium text-[color:var(--il-primary-40)]"
+											@click="openReport(learner.report_name)"
+										>
+											{{ __('Report card') }}
+										</button>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</template>
+		</section>
+
 		<template v-else-if="report.data">
 			<!-- Highlights -->
 			<h2 class="cr-h2">{{ __('Highlights') }}</h2>
@@ -76,13 +169,6 @@
 				</div>
 				<InsightsCard :title="__('Insights')" :items="batchInsights" :chip="readyChip.label" :chip-tone="readyChip.tone" />
 			</section>
-
-			<!-- Tabs -->
-			<div class="cr-tabs">
-				<button v-for="t in tabs" :key="t.key" :class="{ 'is-active': tab === t.key }" @click="tab = t.key">
-					{{ t.label }}
-				</button>
-			</div>
 
 			<!-- Overview -->
 			<div v-if="tab === 'overview'" class="space-y-6">
@@ -378,8 +464,8 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, inject, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { createResource } from 'frappe-ui'
 import { ArrowDown, ArrowUp, ArrowUpDown, Download, Search, X } from 'lucide-vue-next'
 import ReportSection from './ReportSection.vue'
@@ -405,6 +491,8 @@ import {
 const TEST_KEYS = ['target_exam', 'cbse', 'test_prep', 'lsq', 'math_champ']
 
 const router = useRouter()
+const route = useRoute()
+const user = inject('$user')
 const filters = reactive({
 	batch_code: '__all__',
 	location: '__all__',
@@ -413,19 +501,73 @@ const filters = reactive({
 const search = ref('')
 const bandFilter = ref(null)
 const sort = reactive({ key: 'readiness', dir: 'desc' })
-const tab = ref('overview')
+const tab = ref(route.query.tab === 'batches' ? 'batches' : 'overview')
+const expandedBatches = ref(new Set())
 
 const tabs = [
+	{ key: 'batches', label: __('By batch') },
 	{ key: 'overview', label: __('Overview') },
 	{ key: 'tests', label: __('Test performance') },
 	{ key: 'calling', label: __('Calling') },
 	{ key: 'learners', label: __('Learners') },
 ]
 
+const isTmPrimaryView = computed(() => {
+	const u = user?.data
+	if (!u?.is_training_manager) return false
+	return !u.is_moderator && !u.is_instructor && !u.is_evaluator && !u.is_system_manager
+})
+
+const batchWise = createResource({
+	url: 'lms.lms.training_manager_dashboard.get_learners_by_batch',
+	auto: true,
+	onSuccess(data) {
+		const ids = (data?.batches || []).map((b) => b.batch)
+		expandedBatches.value = new Set(ids.slice(0, 3))
+	},
+})
+
+function toggleBatch(batchId) {
+	const next = new Set(expandedBatches.value)
+	if (next.has(batchId)) next.delete(batchId)
+	else next.add(batchId)
+	expandedBatches.value = next
+}
+
+function openReport(name) {
+	router.push({ name: 'LearnerReportCard', params: { name } })
+}
+
+watch(tab, (key) => {
+	const q = { ...route.query }
+	if (key === 'batches') q.tab = 'batches'
+	else delete q.tab
+	router.replace({ query: q })
+})
+
+onMounted(() => {
+	if (isTmPrimaryView.value && !route.query.tab) {
+		tab.value = 'batches'
+	}
+})
+
+const tmFilterInitialized = ref(false)
+const skipReportReload = ref(false)
+
 const report = createResource({
 	url: 'lms.lms.learner_report.get_combined_report',
 	makeParams: () => ({ ...filters }),
 	auto: true,
+	onSuccess(data) {
+		if (tmFilterInitialized.value || !data?.default_training_manager) {
+			return
+		}
+		tmFilterInitialized.value = true
+		skipReportReload.value = true
+		filters.training_manager = data.default_training_manager
+		skipReportReload.value = false
+		report.reload()
+	},
 })
 watch(
 	() => filters.training_manager,
@@ -433,7 +575,12 @@ watch(
 		filters.batch_code = '__all__'
 	}
 )
-watch(filters, () => report.reload())
+watch(filters, () => {
+	if (skipReportReload.value) {
+		return
+	}
+	report.reload()
+})
 
 const options = computed(
 	() => report.data?.options || { batch_code: [], location: [], training_manager: [] }
@@ -1068,6 +1215,32 @@ function exportCsv() {
 .rp-cell-strong {
 	min-width: 3.5rem;
 	font-weight: 600;
+}
+
+.cr-batch-group {
+	overflow: hidden;
+	border: 1px solid #edf0f4;
+	border-radius: 16px;
+	background: #fff;
+	box-shadow: 0 2px 10px rgba(0, 37, 76, 0.06);
+}
+
+.cr-batch-head {
+	display: flex;
+	width: 100%;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 1rem 1.25rem;
+	background: #f4f9ff;
+	border: none;
+	cursor: pointer;
+	text-align: left;
+}
+
+.cr-batch-body {
+	padding: 0 1rem 1rem;
+	overflow-x: auto;
 }
 
 @media (max-width: 640px) {

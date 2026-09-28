@@ -191,6 +191,12 @@ def get_meta_from_document(app_path):
 			["title", "meta_image", "batch_details", "category", "medium"],
 			as_dict=True,
 		)
+		if not batch:
+			return {
+				"title": _("Batches"),
+				"keywords": "Batches",
+				"link": get_lms_route("batches"),
+			}
 
 		if batch.batch_details:
 			soup = BeautifulSoup(batch.batch_details, "html.parser")

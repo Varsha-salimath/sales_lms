@@ -556,6 +556,38 @@ def sync_ojt_certification_metrics(sheet_url: str | None = None):
 		frappe.throw(_("Could not sync OJT certification sheet: {0}").format(str(exc)))
 
 
+def scheduled_sync():
+	"""Hourly: pull the OJT sheet so edits there reach the learner report without anyone clicking Sync.
+
+	Same work as the Sync button, minus the permission check (it runs as the scheduler). A failure is
+	recorded on the settings and in the error log, and the rows already stored are left untouched.
+	"""
+	settings = frappe.get_single(SETTINGS)
+	url = (settings.sheet_url or DEFAULT_SHEET_URL).strip()
+	if not url:
+		return
+	try:
+		rows = parse_ojt_certification_csv(_fetch_google_sheet_csv(url))
+		if not rows:
+			raise frappe.ValidationError(_("No learner rows found in the sheet."))
+		saved = replace_ojt_certification_rows(rows)
+		settings.last_synced = now_datetime()
+		settings.last_sync_source = "Google Sheet (hourly)"
+		settings.last_sync_status = "Success"
+		settings.row_count = saved
+		settings.last_sync_message = _("Synced {0} learners from Google Sheet.").format(saved)
+		settings.save(ignore_permissions=True)
+		frappe.db.commit()
+	except Exception as exc:
+		frappe.db.rollback()
+		frappe.log_error(title="OJT sheet: hourly sync failed", message=frappe.get_traceback())
+		settings = frappe.get_single(SETTINGS)
+		settings.last_sync_status = "Failed"
+		settings.last_sync_message = str(exc)[:500]
+		settings.save(ignore_permissions=True)
+		frappe.db.commit()
+
+
 def seed_ojt_certification_metrics_if_empty():
 	"""Load the attached sheet snapshot once, only when the table is empty."""
 	if not frappe.db.exists("DocType", DOCTYPE):
@@ -612,11 +644,12 @@ def parse_ojt_certification_csv(text: str) -> list[dict]:
 
 
 def replace_ojt_certification_rows(rows: list[dict]) -> int:
-	"""Bring stored rows in line with the sheet.
+	"""Bring the sheet's rows into the table: update the ones it has, add the ones that are new.
 
-	Rows are updated in place by `row_key` rather than deleted and re-inserted, so a bad sheet can
-	never leave the table half empty, and anything the sheet doesn't carry (manual edits to other
-	fields) survives. Rows that have left the sheet are removed only after every other row landed.
+	Rows the sheet doesn't mention are never removed. The sheet isn't the only thing that writes
+	here — the attendance CSV import and the report form add and edit rows too — so "not in the
+	sheet" means "recorded somewhere else", not "gone". Removing them would wipe every learner
+	uploaded by CSV the moment the (much shorter) sheet was synced.
 	"""
 	# The sheet can repeat a learner+batch; the last row wins. Duplicates used to break the insert
 	# halfway through, after the whole table had already been deleted.
@@ -645,10 +678,6 @@ def replace_ojt_certification_rows(rows: list[dict]) -> int:
 		doc.flags.from_sheet_sync = True
 		doc.save(ignore_permissions=True) if existing else doc.insert(ignore_permissions=True)
 
-	keys = list(unique)
-	stale = frappe.get_all(DOCTYPE, filters={"row_key": ["not in", keys]}, pluck="name") if keys else []
-	for name in stale:
-		frappe.delete_doc(DOCTYPE, name, ignore_permissions=True, force=True, delete_permanently=True)
 	return len(unique)
 
 

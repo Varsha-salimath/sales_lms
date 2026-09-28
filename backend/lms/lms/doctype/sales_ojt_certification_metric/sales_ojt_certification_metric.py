@@ -12,7 +12,7 @@ from lms.lms.ojt_certification import STAGES, derive_product_avg, derive_stage, 
 class SalesOJTCertificationMetric(Document):
 	def validate(self):
 		self._bind_learner()
-		if self.flags.from_sheet_sync:
+		if self.flags.from_sheet_sync or getattr(self.flags, "from_bulk_enroll", False):
 			return
 		self._validate_admin_metrics()
 
@@ -21,7 +21,7 @@ class SalesOJTCertificationMetric(Document):
 		if not self.email:
 			frappe.throw(_("Email is required"))
 		self.row_key = make_row_key(self.email, self.batch_start)
-		if self.flags.from_sheet_sync:
+		if self.flags.from_sheet_sync or getattr(self.flags, "from_bulk_enroll", False):
 			self.product_avg = derive_product_avg(self)
 			self.stage = derive_stage(self)
 			return
