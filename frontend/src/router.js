@@ -91,41 +91,6 @@ const routes = [
 		component: () => import('@/pages/CRT/SalesImport.vue'),
 	},
 	{
-		path: '/sales-trainees/import',
-		name: 'TraineeImport',
-		component: () => import('@/pages/Sales/TraineeImport.vue'),
-	},
-	{
-		path: '/sales-trainees/cohorts',
-		name: 'TraineeCohortList',
-		component: () => import('@/pages/Sales/TraineeCohortList.vue'),
-	},
-	{
-		path: '/sales-trainees',
-		name: 'TraineeList',
-		component: () => import('@/pages/Sales/TraineeList.vue'),
-	},
-	{
-		path: '/sales-trainees/attendance',
-		name: 'TraineeAttendance',
-		component: () => import('@/pages/Sales/TraineeAttendance.vue'),
-	},
-	{
-		path: '/sales-trainees/attendance-history',
-		name: 'TraineeAttendanceHistory',
-		component: () => import('@/pages/Sales/TraineeAttendanceHistory.vue'),
-	},
-	{
-		path: '/sales-trainees/payroll',
-		name: 'WeeklyPayrollCycle',
-		component: () => import('@/pages/Sales/WeeklyPayrollCycle.vue'),
-	},
-	{
-		path: '/sales-trainees/dashboard',
-		name: 'TraineeDashboard',
-		component: () => import('@/pages/Sales/TraineeDashboard.vue'),
-	},
-	{
 		path: '/crt/session/:sessionKey',
 		name: 'SalesSession',
 		redirect: { name: 'GeniusCourseDetail', params: { courseName: 'sales-crt' } },
@@ -549,13 +514,6 @@ router.beforeEach(async (to, from, next) => {
 		'LearnerReports',
 		'LearnerReportCard',
 		'TeamAccess',
-		'TraineeImport',
-		'TraineeCohortList',
-		'TraineeList',
-		'TraineeAttendance',
-		'TraineeAttendanceHistory',
-		'WeeklyPayrollCycle',
-		'TraineeDashboard',
 		'VivaResults',
 	]
 	if (staffOnlyRoutes.includes(to.name)) {
@@ -579,28 +537,7 @@ router.beforeEach(async (to, from, next) => {
 			(u?.is_training_manager &&
 				['LearnerReports', 'LearnerReportCard', 'AnalyticsDashboard', 'VivaResults'].includes(to.name)) ||
 			(u?.is_manager && ['LearnerReports', 'LearnerReportCard', 'VivaResults'].includes(to.name))
-		// Sales Training screens: the 4 Sales Training roles hold none of the flags above, so they
-		// need their own allow-list (per-screen data access is still enforced by the API).
-		const salesTrainingRoutes = [
-			'TraineeImport',
-			'TraineeCohortList',
-			'TraineeList',
-			'TraineeAttendance',
-			'TraineeAttendanceHistory',
-			'WeeklyPayrollCycle',
-			'TraineeDashboard',
-		]
-		const salesTrainingRoles = [
-			'Sales Training Team',
-			'Sales Trainee Manager',
-			'Sales Training Finance',
-			'Sales Training Leadership',
-		]
-		const isSalesTrainingStaff =
-			salesTrainingRoutes.includes(to.name) &&
-			(['Admin', 'Super Admin'].includes(u?.access_tier) ||
-				(u?.roles || []).some((r) => salesTrainingRoles.includes(r)))
-		if (!staff && !isSalesTrainingStaff) {
+		if (!staff) {
 			return next({ name: 'StudentDashboard' })
 		}
 	}

@@ -18,19 +18,16 @@
 					class="flex items-center w-full duration-300 ease-in-out"
 					:class="isCollapsed ? 'p-1 relative justify-center' : 'px-2 py-1'"
 				>
-					<Tooltip :text="__(label)" placement="right">
+					<Tooltip :text="__('Curriculum')" placement="right">
 						<span class="grid h-5 w-6 flex-shrink-0 place-items-center">
-							<component
-								:is="menuIconComponent"
-								class="sidebar-nav-link__icon h-4 w-4 stroke-1.5"
-							/>
+							<BookOpen class="sidebar-nav-link__icon h-4 w-4 stroke-1.5" />
 						</span>
 					</Tooltip>
 					<span
 						v-if="!isCollapsed"
 						class="ms-2 flex flex-1 items-center justify-between text-sm"
 					>
-						<span>{{ __(label) }}</span>
+						<span>{{ __('Curriculum') }}</span>
 						<ChevronRight
 							class="h-4 w-4 stroke-1.5 opacity-80 transition-transform"
 							:class="{ 'rotate-90': isOpen }"
@@ -44,7 +41,7 @@
 				class="min-w-[220px] rounded-xl bg-surface-modal p-2 shadow-2xl ring-1 ring-black ring-opacity-5"
 			>
 				<div class="px-2 pb-1.5 text-xs font-semibold uppercase tracking-wide text-ink-gray-5">
-					{{ __(label) }}
+					{{ __('Curriculum') }}
 				</div>
 				<nav class="flex flex-col gap-0.5">
 					<button
@@ -80,14 +77,6 @@ import { BookOpen, ChevronRight } from 'lucide-vue-next'
 import * as icons from 'lucide-vue-next'
 
 const props = defineProps({
-	label: {
-		type: String,
-		default: 'Curriculum',
-	},
-	icon: {
-		type: String,
-		default: 'BookOpen',
-	},
 	menuItems: {
 		type: Array,
 		default: () => [],
@@ -97,8 +86,6 @@ const props = defineProps({
 		default: false,
 	},
 })
-
-const menuIconComponent = computed(() => icons[props.icon] || BookOpen)
 
 const router = useRouter()
 const route = useRoute()

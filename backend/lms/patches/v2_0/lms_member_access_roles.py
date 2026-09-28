@@ -1,7 +1,5 @@
 # Copyright (c) 2026, Varsity Education and contributors
 
-import json
-
 import frappe
 
 from lms.lms.doctype.lms_member.lms_member import highest_access_role, normalize_access_roles_list
@@ -31,7 +29,6 @@ def execute():
 		frappe.db.set_value(
 			"LMS Member",
 			row.name,
-			# A JSON column takes JSON text; a Python list here is a SQL syntax error.
-			{"access_roles": json.dumps(roles), "access_role": highest_access_role(roles)},
+			{"access_roles": roles, "access_role": highest_access_role(roles)},
 			update_modified=False,
 		)
