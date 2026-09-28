@@ -54,7 +54,7 @@ def get_ops_checklist():
 	roles = set(frappe.get_roles())
 	items = []
 
-	org_wide_view = access.is_admin() or "Sales Training Team" in roles
+	org_wide_view = access.is_super_admin() or "Sales Training Team" in roles
 	if org_wide_view:
 		items += _safe_section("attendance", _team_attendance_items)
 	elif "Sales Trainee Manager" in roles:
@@ -67,20 +67,21 @@ def get_ops_checklist():
 		items += _safe_section("payroll cycles", _finance_items)
 
 	summary = None
+	summary_error = False
 	if "Sales Training Leadership" in roles:
 		try:
 			summary = get_dashboard_summary()
 		except Exception:
 			frappe.log_error(title="Ops Checklist: leadership summary section failed")
-			summary = None
+			summary_error = True
 
-	return {"items": items, "summary": summary}
+	return {"items": items, "summary": summary, "summary_error": summary_error}
 
 
 def _ensure_ops_checklist_access():
 	_ensure_logged_in()
 	roles = set(frappe.get_roles())
-	if not (access.is_admin() or roles & SALES_TRAINING_ROLES):
+	if not (access.is_super_admin() or roles & SALES_TRAINING_ROLES):
 		frappe.throw(_("You are not permitted to view this."), frappe.PermissionError)
 
 

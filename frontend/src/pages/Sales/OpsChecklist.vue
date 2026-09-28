@@ -46,6 +46,9 @@
 					</template>
 				</dl>
 			</div>
+			<div v-if="summaryError" class="genius-card mt-2 p-4 text-p-base text-red-600">
+				Couldn't load your trainee status summary — try reloading.
+			</div>
 		</div>
 	</div>
 </template>
@@ -71,6 +74,7 @@ const items = computed(() => checklist.data?.items || [])
 const pendingItems = computed(() => items.value.filter((item) => item.action_route))
 const erroredItems = computed(() => items.value.filter((item) => !item.action_route))
 const summary = computed(() => checklist.data?.summary || null)
+const summaryError = computed(() => checklist.data?.summary_error || false)
 const displaySummary = computed(() => {
 	if (!summary.value) return {}
 	const { total, ...rest } = summary.value
@@ -88,7 +92,7 @@ const tourCopy = computed(() => {
 	if (roles.includes('Sales Training Leadership')) {
 		return 'This is your Ops Checklist — a read-only summary of trainee status across the program.'
 	}
-	return 'This is your Ops Checklist — it lists cohorts with unmarked attendance, un-cleared trainees, and the next payroll-export deadline, so nothing in the SOP slips.'
+	return 'This is your Ops Checklist — it lists cohorts with unmarked attendance and the next payroll-export deadline, so nothing in the SOP slips.'
 })
 
 function skipTour() {

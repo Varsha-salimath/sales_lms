@@ -593,7 +593,8 @@ router.beforeEach(async (to, from, next) => {
 			salesTrainingRoutes.includes(to.name) &&
 			(['Admin', 'Super Admin'].includes(u?.access_tier) ||
 				(u?.roles || []).some((r) => salesTrainingRoles.includes(r)))
-		if (!staff && !isSalesTrainingStaff) {
+		const requiresSalesTrainingRole = to.name === 'OpsChecklist'
+		if (requiresSalesTrainingRole ? !isSalesTrainingStaff : !staff && !isSalesTrainingStaff) {
 			return next({ name: 'StudentDashboard' })
 		}
 	}

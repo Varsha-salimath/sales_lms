@@ -1,6 +1,7 @@
 """Ops Checklist: per-user tour-skip state, and the role-scoped live checklist."""
 
 from datetime import date
+from unittest.mock import patch
 
 import frappe
 from frappe.tests import UnitTestCase
@@ -119,6 +120,27 @@ class TestOpsChecklistAggregator(UnitTestCase):
 		deadline_items = [item for item in result["items"] if item["key"] == "payroll-deadline"]
 		self.assertEqual(len(deadline_items), 1)
 		self.assertIn("day", deadline_items[0]["title"])
+
+	def test_moderator_without_sales_role_is_denied(self):
+		moderator = make_user("occ-moderator", "Moderator")
+		run_as(self, moderator)
+		self.assertRaises(frappe.PermissionError, get_ops_checklist)
+
+	def test_leadership_summary_failure_is_reported_not_silently_empty(self):
+		run_as(self, self.leadership_user)
+		with patch("lms.lms.ops_checklist.get_dashboard_summary", side_effect=RuntimeError("boom")):
+			result = get_ops_checklist()
+		self.assertIsNone(result["summary"])
+		self.assertTrue(result["summary_error"])
+
+	def test_one_failing_section_does_not_blank_other_sections(self):
+		run_as(self, self.team_user)
+		with patch("lms.lms.ops_checklist._team_attendance_items", side_effect=RuntimeError("boom")):
+			result = get_ops_checklist()
+		# the failed section renders as an error item, not an empty response
+		self.assertTrue(any(item["key"] == "error:attendance" for item in result["items"]))
+		# the payroll-deadline section (also org_wide_view, independent of attendance) still ran
+		self.assertTrue(any(item["key"] == "payroll-deadline" for item in result["items"]))
 
 
 class TestPayrollDeadlineMath(UnitTestCase):
