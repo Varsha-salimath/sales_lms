@@ -1,6 +1,6 @@
 <!-- frontend/src/pages/Sales/TraineeList.vue -->
 <template>
-	<div class="p-6 max-w-5xl mx-auto">
+	<div class="min-h-full w-full px-4 pb-8 pt-4 sm:px-6 lg:px-8">
 		<h1 class="mb-4 text-xl font-semibold text-[color:var(--genius-navy)]">
 			Trainees{{ cohortFilter ? ` — ${cohortFilter}` : '' }}
 		</h1>

@@ -1,5 +1,5 @@
 <template>
-	<div class="p-6 max-w-4xl mx-auto">
+	<div class="min-h-full w-full px-4 pb-8 pt-4 sm:px-6 lg:px-8">
 		<h1 class="mb-2 text-xl font-semibold text-[color:var(--genius-navy)]">Mark Attendance</h1>
 		<input
 			v-model="date"
