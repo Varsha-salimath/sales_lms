@@ -31,6 +31,7 @@
     "codemirror": "6.0.1",
     "dayjs": "1.11.10",
     "dompurify": "3.2.6",
+    "driver.js": "^1.8.0",
     "feather-icons": "4.28.0",
     "frappe-ui": "^0.1.276",
     "highlight.js": "11.11.1",

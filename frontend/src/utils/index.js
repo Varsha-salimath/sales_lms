@@ -608,6 +608,7 @@ const getSidebarItems = (forMobile = false) => {
 					label: 'Home',
 					icon: 'Home',
 					to: 'StudentDashboard',
+					tourId: 'home',
 					activeFor: [
 						'StudentDashboard',
 						'Home',
@@ -748,6 +749,7 @@ const getSidebarItems = (forMobile = false) => {
 					label: 'Curriculum',
 					icon: 'BookOpen',
 					learningMenu: true,
+					tourId: 'curriculum',
 					menuItems: LEARNING_MENU_ITEMS(forMobile),
 					condition: () => {
 						return !forMobile && userResource?.data
@@ -763,6 +765,7 @@ const getSidebarItems = (forMobile = false) => {
 					label: 'Certificates',
 					icon: 'GraduationCap',
 					to: 'CertifiedParticipants',
+					tourId: 'certificates',
 					activeFor: ['CertifiedParticipants', 'SalesCertificate', 'CertificatePreview'],
 					condition: () => {
 						return userResource?.data

@@ -61,7 +61,11 @@
 								: 'block'
 						"
 					>
-						<div v-for="item in link.items" :key="item.label">
+						<div
+							v-for="item in link.items"
+							:key="item.label"
+							:data-tour-target="item.tourId"
+						>
 							<SidebarLearningMenu
 								v-if="item.learningMenu"
 								:menuItems="item.menuItems"
