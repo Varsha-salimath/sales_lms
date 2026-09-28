@@ -116,11 +116,6 @@ const routes = [
 		component: () => import('@/pages/Sales/WeeklyPayrollCycle.vue'),
 	},
 	{
-		path: '/sales-trainees/ops-checklist',
-		name: 'OpsChecklist',
-		component: () => import('@/pages/Sales/OpsChecklist.vue'),
-	},
-	{
 		path: '/crt/session/:sessionKey',
 		name: 'SalesSession',
 		redirect: { name: 'GeniusCourseDetail', params: { courseName: 'sales-crt' } },
@@ -549,7 +544,6 @@ router.beforeEach(async (to, from, next) => {
 		'TraineeAttendance',
 		'TraineeAttendanceHistory',
 		'WeeklyPayrollCycle',
-		'OpsChecklist',
 		'VivaResults',
 	]
 	if (staffOnlyRoutes.includes(to.name)) {
@@ -581,7 +575,6 @@ router.beforeEach(async (to, from, next) => {
 			'TraineeAttendance',
 			'TraineeAttendanceHistory',
 			'WeeklyPayrollCycle',
-			'OpsChecklist',
 		]
 		const salesTrainingRoles = [
 			'Sales Training Team',
@@ -593,8 +586,7 @@ router.beforeEach(async (to, from, next) => {
 			salesTrainingRoutes.includes(to.name) &&
 			(['Admin', 'Super Admin'].includes(u?.access_tier) ||
 				(u?.roles || []).some((r) => salesTrainingRoles.includes(r)))
-		const requiresSalesTrainingRole = to.name === 'OpsChecklist'
-		if (requiresSalesTrainingRole ? !isSalesTrainingStaff : !staff && !isSalesTrainingStaff) {
+		if (!staff && !isSalesTrainingStaff) {
 			return next({ name: 'StudentDashboard' })
 		}
 	}

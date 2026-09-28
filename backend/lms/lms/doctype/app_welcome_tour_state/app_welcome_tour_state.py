@@ -4,5 +4,5 @@
 from frappe.model.document import Document
 
 
-class OpsChecklistTourState(Document):
+class AppWelcomeTourState(Document):
 	pass

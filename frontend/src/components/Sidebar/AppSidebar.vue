@@ -408,26 +408,6 @@ const streakInfo = createResource({
 	cache: ['sidebar-streak', user],
 })
 
-const opsChecklistCount = createResource({
-	url: 'lms.lms.ops_checklist.get_ops_checklist',
-	auto: !!user,
-	cache: ['ops-checklist-count', user],
-	onSuccess(data) {
-		updateOpsChecklistBadge(data?.items?.length || 0)
-	},
-	onError() {},
-})
-
-const updateOpsChecklistBadge = (count) => {
-	sidebarLinks.value?.forEach((link) => {
-		link.items.forEach((item) => {
-			if (item.label === 'Ops Checklist') {
-				item.count = count
-			}
-		})
-	})
-}
-
 const updateUnreadCount = () => {
 	sidebarLinks.value?.forEach((link) => {
 		link.items.forEach((item) => {
@@ -525,7 +505,6 @@ const updateSidebarLinks = () => {
 	sidebarLinks.value = getSidebarLinks()
 	updateSidebarLinksVisibility()
 	updateUnreadCount()
-	updateOpsChecklistBadge(opsChecklistCount.data?.items?.length || 0)
 }
 
 const isStudent = computed(() => {
