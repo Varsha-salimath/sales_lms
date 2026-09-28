@@ -696,6 +696,20 @@ const getSidebarItems = (forMobile = false) => {
 					},
 				},
 				{
+					label: 'Attendance history',
+					icon: 'History',
+					to: 'TraineeAttendanceHistory',
+					activeFor: ['TraineeAttendanceHistory'],
+					condition: () => {
+						const tier = userResource?.data?.access_tier
+						const roles = userResource?.data?.roles || []
+						return !forMobile && (
+							['Admin', 'Super Admin'].includes(tier) ||
+							['Sales Training Team', 'Sales Trainee Manager', 'Sales Training Finance', 'Sales Training Leadership'].some((r) => roles.includes(r))
+						)
+					},
+				},
+				{
 					label: 'Payroll cycles',
 					icon: 'Wallet',
 					to: 'WeeklyPayrollCycle',

@@ -111,6 +111,11 @@ const routes = [
 		component: () => import('@/pages/Sales/TraineeAttendance.vue'),
 	},
 	{
+		path: '/sales-trainees/attendance-history',
+		name: 'TraineeAttendanceHistory',
+		component: () => import('@/pages/Sales/TraineeAttendanceHistory.vue'),
+	},
+	{
 		path: '/sales-trainees/payroll',
 		name: 'WeeklyPayrollCycle',
 		component: () => import('@/pages/Sales/WeeklyPayrollCycle.vue'),
@@ -548,6 +553,7 @@ router.beforeEach(async (to, from, next) => {
 		'TraineeCohortList',
 		'TraineeList',
 		'TraineeAttendance',
+		'TraineeAttendanceHistory',
 		'WeeklyPayrollCycle',
 		'TraineeDashboard',
 		'VivaResults',
@@ -580,6 +586,7 @@ router.beforeEach(async (to, from, next) => {
 			'TraineeCohortList',
 			'TraineeList',
 			'TraineeAttendance',
+			'TraineeAttendanceHistory',
 			'WeeklyPayrollCycle',
 			'TraineeDashboard',
 		]
