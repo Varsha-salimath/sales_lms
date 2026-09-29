@@ -18,8 +18,10 @@ from functools import wraps
 import frappe
 from frappe import _
 
-SIGNED_IN_LIMIT = 3000  # per hour, per person: far above real use, still catches a runaway loop
-GUEST_LIMIT = 300  # per hour, per IP
+# An internal tool: the whole office sits behind one IP, so both limits are set far above real use.
+# They exist only to stop a runaway loop or a script, not to ration people.
+SIGNED_IN_LIMIT = 10000  # per hour, per person
+GUEST_LIMIT = 10000  # per hour, per IP (everyone in an office shares one before they log in)
 
 
 def portal_rate_limit(limit: int = SIGNED_IN_LIMIT, guest_limit: int = GUEST_LIMIT, seconds: int = 3600):
