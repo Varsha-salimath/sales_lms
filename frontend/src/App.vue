@@ -4,6 +4,7 @@
 			<router-view />
 		</Layout>
 		<InstallPrompt v-if="isMobile && !settings.data?.disable_pwa" />
+		<WelcomeTour />
 		<Dialogs />
 	</FrappeUIProvider>
 </template>
@@ -18,6 +19,7 @@ import DesktopLayout from './components/Layouts/DesktopLayout.vue'
 import MobileLayout from './components/Layouts/MobileLayout.vue'
 import NoSidebarLayout from './components/Layouts/NoSidebarLayout.vue'
 import InstallPrompt from './components/InstallPrompt.vue'
+import WelcomeTour from './components/WelcomeTour.vue'
 import { useActivityTracking } from '@/utils/useActivityTracking'
 
 const { isMobile } = useScreenSize()

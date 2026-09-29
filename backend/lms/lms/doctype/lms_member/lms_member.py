@@ -74,7 +74,10 @@ class LMSMember(Document):
 			self.access_role = self.default_access_role() or "User"
 
 		roles = normalize_access_roles_list(self.access_roles or [self.access_role or "User"])
-		self.access_roles = roles
+		# Stored as JSON text: Frappe refuses a Python list in a non-table field, so assigning the
+		# list made every save of a member fail. Readers go through normalize_access_roles_list,
+		# which accepts the text.
+		self.access_roles = json.dumps(roles)
 		self.access_role = highest_access_role(roles)
 
 		enabled = frappe.db.get_value("User", self.user, "enabled")

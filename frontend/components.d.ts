@@ -11,6 +11,7 @@ declare module 'vue' {
     ActivityHeatmap: typeof import('./src/components/Analytics/ActivityHeatmap.vue')['default']
     AddEvaluatorModal: typeof import('./src/components/Modals/AddEvaluatorModal.vue')['default']
     AnalyticsOperationsSection: typeof import('./src/components/Analytics/AnalyticsOperationsSection.vue')['default']
+    AnalyticsSalesTraineeSection: typeof import('./src/components/Analytics/AnalyticsSalesTraineeSection.vue')['default']
     AnalyticsSectionNav: typeof import('./src/components/Analytics/AnalyticsSectionNav.vue')['default']
     Apps: typeof import('./src/components/Sidebar/Apps.vue')['default']
     AppSidebar: typeof import('./src/components/Sidebar/AppSidebar.vue')['default']

@@ -91,6 +91,35 @@ const routes = [
 		component: () => import('@/pages/CRT/SalesImport.vue'),
 	},
 	{
+		path: '/sales-trainees/cohorts',
+		redirect: (to) => ({
+			name: 'LearnerReports',
+			query: { ...to.query },
+		}),
+	},
+	{
+		path: '/sales-trainees',
+		redirect: (to) => ({
+			name: 'LearnerReports',
+			query: { ...to.query },
+		}),
+	},
+	{
+		path: '/sales-trainees/attendance',
+		name: 'TraineeAttendance',
+		component: () => import('@/pages/Sales/TraineeAttendance.vue'),
+	},
+	{
+		path: '/sales-trainees/attendance-history',
+		name: 'TraineeAttendanceHistory',
+		component: () => import('@/pages/Sales/TraineeAttendanceHistory.vue'),
+	},
+	{
+		path: '/sales-trainees/payroll',
+		name: 'WeeklyPayrollCycle',
+		component: () => import('@/pages/Sales/WeeklyPayrollCycle.vue'),
+	},
+	{
 		path: '/crt/session/:sessionKey',
 		name: 'SalesSession',
 		redirect: { name: 'GeniusCourseDetail', params: { courseName: 'sales-crt' } },
@@ -514,6 +543,9 @@ router.beforeEach(async (to, from, next) => {
 		'LearnerReports',
 		'LearnerReportCard',
 		'TeamAccess',
+		'TraineeAttendance',
+		'TraineeAttendanceHistory',
+		'WeeklyPayrollCycle',
 		'VivaResults',
 	]
 	if (staffOnlyRoutes.includes(to.name)) {
@@ -537,7 +569,27 @@ router.beforeEach(async (to, from, next) => {
 			(u?.is_training_manager &&
 				['LearnerReports', 'LearnerReportCard', 'AnalyticsDashboard', 'VivaResults'].includes(to.name)) ||
 			(u?.is_manager && ['LearnerReports', 'LearnerReportCard', 'VivaResults'].includes(to.name))
-		if (!staff) {
+		// Sales Training screens: the 4 Sales Training roles hold none of the flags above, so they
+		// need their own allow-list (per-screen data access is still enforced by the API).
+		const salesTrainingRoutes = [
+			'AnalyticsDashboard',
+			'LearnerReports',
+			'LearnerReportCard',
+			'TraineeAttendance',
+			'TraineeAttendanceHistory',
+			'WeeklyPayrollCycle',
+		]
+		const salesTrainingRoles = [
+			'Sales Training Team',
+			'Sales Trainee Manager',
+			'Sales Training Finance',
+			'Sales Training Leadership',
+		]
+		const isSalesTrainingStaff =
+			salesTrainingRoutes.includes(to.name) &&
+			(['Admin', 'Super Admin'].includes(u?.access_tier) ||
+				(u?.roles || []).some((r) => salesTrainingRoles.includes(r)))
+		if (!staff && !isSalesTrainingStaff) {
 			return next({ name: 'StudentDashboard' })
 		}
 	}

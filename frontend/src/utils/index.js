@@ -608,6 +608,7 @@ const getSidebarItems = (forMobile = false) => {
 					label: 'Home',
 					icon: 'Home',
 					to: 'StudentDashboard',
+					tourId: 'home',
 					activeFor: [
 						'StudentDashboard',
 						'Home',
@@ -631,10 +632,17 @@ const getSidebarItems = (forMobile = false) => {
 					activeFor: ['LearnerReports', 'LearnerReportCard'],
 					condition: () => {
 						const user = userResource?.data
+						const roles = user?.roles || []
+						const salesTraining = [
+							'Sales Training Team',
+							'Sales Trainee Manager',
+							'Sales Training Finance',
+							'Sales Training Leadership',
+						].some((r) => roles.includes(r))
 						return (
 							!forMobile &&
 							user &&
-							(isAdmin() || user.is_manager || user.is_training_manager)
+							(isAdmin() || user.is_manager || user.is_training_manager || salesTraining)
 						)
 					},
 				},
@@ -661,16 +669,57 @@ const getSidebarItems = (forMobile = false) => {
 					},
 				},
 				{
+					label: 'Mark attendance',
+					icon: 'CalendarCheck',
+					to: 'TraineeAttendance',
+					activeFor: ['TraineeAttendance'],
+					condition: () => {
+						const roles = userResource?.data?.roles || []
+						return !forMobile && (roles.includes('Sales Training Team') || roles.includes('Sales Trainee Manager'))
+					},
+				},
+				{
+					label: 'Attendance history',
+					icon: 'History',
+					to: 'TraineeAttendanceHistory',
+					activeFor: ['TraineeAttendanceHistory'],
+					condition: () => {
+						const tier = userResource?.data?.access_tier
+						const roles = userResource?.data?.roles || []
+						return !forMobile && (
+							['Admin', 'Super Admin'].includes(tier) ||
+							['Sales Training Team', 'Sales Trainee Manager', 'Sales Training Finance', 'Sales Training Leadership'].some((r) => roles.includes(r))
+						)
+					},
+				},
+				{
+					label: 'Payroll cycles',
+					icon: 'Wallet',
+					to: 'WeeklyPayrollCycle',
+					activeFor: ['WeeklyPayrollCycle'],
+					condition: () => {
+						const roles = userResource?.data?.roles || []
+						return !forMobile && (roles.includes('Sales Training Finance') || roles.includes('Sales Training Team'))
+					},
+				},
+				{
 					label: 'Analytics',
 					icon: 'BarChart2',
 					to: 'AnalyticsDashboard',
 					activeFor: ['AnalyticsDashboard', 'AdminDashboard'],
 					condition: () => {
 						const user = userResource?.data
+						const roles = user?.roles || []
+						const salesTraining = [
+							'Sales Training Team',
+							'Sales Trainee Manager',
+							'Sales Training Finance',
+							'Sales Training Leadership',
+						].some((r) => roles.includes(r))
 						return (
 							!forMobile &&
 							user &&
-							(isAdmin() || user.is_training_manager)
+							(isAdmin() || user.is_training_manager || salesTraining)
 						)
 					},
 				},
@@ -700,6 +749,7 @@ const getSidebarItems = (forMobile = false) => {
 					label: 'Curriculum',
 					icon: 'BookOpen',
 					learningMenu: true,
+					tourId: 'curriculum',
 					menuItems: LEARNING_MENU_ITEMS(forMobile),
 					condition: () => {
 						return !forMobile && userResource?.data
@@ -715,6 +765,7 @@ const getSidebarItems = (forMobile = false) => {
 					label: 'Certificates',
 					icon: 'GraduationCap',
 					to: 'CertifiedParticipants',
+					tourId: 'certificates',
 					activeFor: ['CertifiedParticipants', 'SalesCertificate', 'CertificatePreview'],
 					condition: () => {
 						return userResource?.data
