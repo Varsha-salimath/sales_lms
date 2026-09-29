@@ -92,13 +92,17 @@ const routes = [
 	},
 	{
 		path: '/sales-trainees/cohorts',
-		name: 'TraineeCohortList',
-		component: () => import('@/pages/Sales/TraineeCohortList.vue'),
+		redirect: (to) => ({
+			name: 'LearnerReports',
+			query: { ...to.query },
+		}),
 	},
 	{
 		path: '/sales-trainees',
-		name: 'TraineeList',
-		component: () => import('@/pages/Sales/TraineeList.vue'),
+		redirect: (to) => ({
+			name: 'LearnerReports',
+			query: { ...to.query },
+		}),
 	},
 	{
 		path: '/sales-trainees/attendance',
@@ -539,8 +543,6 @@ router.beforeEach(async (to, from, next) => {
 		'LearnerReports',
 		'LearnerReportCard',
 		'TeamAccess',
-		'TraineeCohortList',
-		'TraineeList',
 		'TraineeAttendance',
 		'TraineeAttendanceHistory',
 		'WeeklyPayrollCycle',
@@ -570,8 +572,9 @@ router.beforeEach(async (to, from, next) => {
 		// Sales Training screens: the 4 Sales Training roles hold none of the flags above, so they
 		// need their own allow-list (per-screen data access is still enforced by the API).
 		const salesTrainingRoutes = [
-			'TraineeCohortList',
-			'TraineeList',
+			'AnalyticsDashboard',
+			'LearnerReports',
+			'LearnerReportCard',
 			'TraineeAttendance',
 			'TraineeAttendanceHistory',
 			'WeeklyPayrollCycle',

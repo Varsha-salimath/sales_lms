@@ -19,6 +19,25 @@ from lms.lms.ojt_certification import DOCTYPE
 # OJT sheet rows are Sales CRT trainees; until they have LMS accounts they belong to this team.
 OJT_DEPARTMENT = "Retail Sales"
 
+ORG_WIDE_SALES_TRAINING_REPORT_ROLES = {
+	"Sales Training Team",
+	"Sales Training Finance",
+	"Sales Training Leadership",
+}
+
+
+def _sales_training_report_access(user=None):
+	user = user or frappe.session.user
+	roles = set(frappe.get_roles(user))
+	return bool(roles & ORG_WIDE_SALES_TRAINING_REPORT_ROLES) or "Sales Trainee Manager" in roles
+
+
+def _sales_training_sees_all_report_rows(user=None):
+	user = user or frappe.session.user
+	if access.is_admin(user):
+		return True
+	return bool(set(frappe.get_roles(user)) & ORG_WIDE_SALES_TRAINING_REPORT_ROLES)
+
 
 def _ensure_report_access():
 	"""Training Managers and above (and trainers) may open learner reports.
@@ -29,6 +48,8 @@ def _ensure_report_access():
 	"""
 	if frappe.session.user == "Guest":
 		frappe.throw(_("You do not have access to learner reports."), frappe.PermissionError)
+	if _sales_training_report_access():
+		return
 	if access.get_tier() < access.INSTRUCTOR and not access.is_training_manager():
 		frappe.throw(_("You do not have access to learner reports."), frappe.PermissionError)
 
@@ -36,6 +57,8 @@ def _ensure_report_access():
 def _scoped(rows):
 	"""Rows the current user may see: their department, their people, or trainees they manage."""
 	user = frappe.session.user
+	if _sales_training_sees_all_report_rows(user):
+		return rows
 	if access.can_view_department(OJT_DEPARTMENT, user):
 		return rows
 	me = user.lower()

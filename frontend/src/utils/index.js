@@ -632,10 +632,17 @@ const getSidebarItems = (forMobile = false) => {
 					activeFor: ['LearnerReports', 'LearnerReportCard'],
 					condition: () => {
 						const user = userResource?.data
+						const roles = user?.roles || []
+						const salesTraining = [
+							'Sales Training Team',
+							'Sales Trainee Manager',
+							'Sales Training Finance',
+							'Sales Training Leadership',
+						].some((r) => roles.includes(r))
 						return (
 							!forMobile &&
 							user &&
-							(isAdmin() || user.is_manager || user.is_training_manager)
+							(isAdmin() || user.is_manager || user.is_training_manager || salesTraining)
 						)
 					},
 				},
@@ -659,20 +666,6 @@ const getSidebarItems = (forMobile = false) => {
 						// refuses instructors and evaluators, so don't offer them the page.
 						const tier = userResource?.data?.access_tier
 						return !forMobile && ['Admin', 'Super Admin'].includes(tier)
-					},
-				},
-				{
-					label: 'Trainees',
-					icon: 'Users',
-					to: 'TraineeList',
-					activeFor: ['TraineeList', 'TraineeCohortList'],
-					condition: () => {
-						const tier = userResource?.data?.access_tier
-						const roles = userResource?.data?.roles || []
-						return !forMobile && (
-							['Admin', 'Super Admin'].includes(tier) ||
-							['Sales Training Team', 'Sales Trainee Manager', 'Sales Training Finance', 'Sales Training Leadership'].some((r) => roles.includes(r))
-						)
 					},
 				},
 				{
@@ -716,10 +709,17 @@ const getSidebarItems = (forMobile = false) => {
 					activeFor: ['AnalyticsDashboard', 'AdminDashboard'],
 					condition: () => {
 						const user = userResource?.data
+						const roles = user?.roles || []
+						const salesTraining = [
+							'Sales Training Team',
+							'Sales Trainee Manager',
+							'Sales Training Finance',
+							'Sales Training Leadership',
+						].some((r) => roles.includes(r))
 						return (
 							!forMobile &&
 							user &&
-							(isAdmin() || user.is_training_manager)
+							(isAdmin() || user.is_training_manager || salesTraining)
 						)
 					},
 				},

@@ -50,6 +50,12 @@ def _ensure_dashboard_access():
 	trainee headcounts."""
 	if frappe.session.user == "Guest":
 		frappe.throw(_("You are not permitted to view the trainee dashboard."), frappe.PermissionError)
-	if access.is_admin() or "Sales Training Leadership" in frappe.get_roles():
+	roles = set(frappe.get_roles())
+	if access.is_admin() or roles & {
+		"Sales Training Team",
+		"Sales Trainee Manager",
+		"Sales Training Finance",
+		"Sales Training Leadership",
+	}:
 		return
 	frappe.throw(_("You are not permitted to view the trainee dashboard."), frappe.PermissionError)

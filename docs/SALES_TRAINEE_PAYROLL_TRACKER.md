@@ -13,8 +13,7 @@ New screens live inside the existing LMS Vue app, under the **Sales Trainee** se
 | Sidebar label | Route | Component |
 |---|---|---|
 | Trainee onboarding | `/sales-trainees/import` | [`TraineeImport.vue`](../frontend/src/pages/Sales/TraineeImport.vue) |
-| Trainees | `/sales-trainees` | [`TraineeList.vue`](../frontend/src/pages/Sales/TraineeList.vue) |
-| (cohorts, linked from Trainees) | `/sales-trainees/cohorts` | [`TraineeCohortList.vue`](../frontend/src/pages/Sales/TraineeCohortList.vue) |
+| Learner roster (CRT) | `/reports` | [`CombinedReport.vue`](../frontend/src/pages/Reports/CombinedReport.vue) |
 | Mark attendance | `/sales-trainees/attendance` | [`TraineeAttendance.vue`](../frontend/src/pages/Sales/TraineeAttendance.vue) |
 | Payroll cycles | `/sales-trainees/payroll` | [`WeeklyPayrollCycle.vue`](../frontend/src/pages/Sales/WeeklyPayrollCycle.vue) |
 | Trainee dashboard | `/sales-trainees/dashboard` | [`TraineeDashboard.vue`](../frontend/src/pages/Sales/TraineeDashboard.vue) |

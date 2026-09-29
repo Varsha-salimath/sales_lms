@@ -700,7 +700,15 @@ const canViewOperations = computed(() => {
 const canViewSalesTrainees = computed(() => {
 	const tier = userResource.data?.access_tier
 	const roles = userResource.data?.roles || []
-	return ['Admin', 'Super Admin'].includes(tier) || roles.includes('Sales Training Leadership')
+	return (
+		['Admin', 'Super Admin'].includes(tier) ||
+		[
+			'Sales Training Team',
+			'Sales Trainee Manager',
+			'Sales Training Finance',
+			'Sales Training Leadership',
+		].some((r) => roles.includes(r))
+	)
 })
 
 // Full analytics staff; Training Managers without these roles get tree-scoped data only.

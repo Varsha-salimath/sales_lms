@@ -56,11 +56,27 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { createResource, call, Button } from 'frappe-ui'
+
+const route = useRoute()
+
+function cohortFromQuery(raw) {
+	if (raw == null || raw === '') return ''
+	const value = Array.isArray(raw) ? raw[0] : String(raw)
+	return value || ''
+}
 
 const month = ref('')
 const location = ref('')
-const cohort = ref('')
+const cohort = ref(cohortFromQuery(route.query.cohort))
+
+watch(
+	() => route.query.cohort,
+	(raw) => {
+		cohort.value = cohortFromQuery(raw)
+	}
+)
 
 const summary = createResource({
 	url: 'lms.lms.trainee_dashboard.get_dashboard_summary',
